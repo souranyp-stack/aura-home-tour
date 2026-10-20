@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AURA — The Living Sanctuary</title>
+  <meta name="description" content="A cliffside residence that begins as a sculpture. A scroll-driven architectural film rendered live in your browser." />
+  <meta name="theme-color" content="#0b0a09" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0a09'/%3E%3Ccircle cx='16' cy='14' r='8' fill='none' stroke='%23c9a36b' stroke-width='1.6'/%3E%3Cpath d='M5 22h22' stroke='%23efe9df' stroke-width='1.6'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="gl" aria-hidden="true"></canvas>
+
+  <div class="loader" id="loader" role="status" aria-live="polite">
+    <svg class="mark mark--xl" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="27" r="17" />
+      <path d="M6 45h52" />
+    </svg>
+    <p class="loader__word">AURA</p>
+    <p class="loader__status" id="loaderStatus">Quarrying stone</p>
+    <div class="loader__bar"><span id="loaderBar"></span></div>
+  </div>
+
+  <header class="top">
+    <a class="brand" href="#" data-jump="0" aria-label="AURA, back to the beginning">
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="27" r="17" />
+        <path d="M6 45h52" />
+      </svg>
+      <span>AURA</span>
+    </a>
+    <p class="top__chapter" id="chapterLabel"><span id="chapterNum">00</span><span id="chapterName">Prologue</span></p>
+    <a class="pill" href="#viewing" data-jump="1">Private viewing</a>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="Chapters"></nav>
+
+  <main class="story" id="story">
+    <section class="frame frame--hero" data-in="-1" data-out="0.055">
+      <p class="eyebrow">A residence in nine masses</p>
+      <h1 class="hero__word">AURA</h1>
+      <p class="hero__sub"><em>The living sanctuary</em></p>
+      <p class="hero__lede">It starts as a sculpture with no doors, no rooms and no address. Keep scrolling and it becomes a home on the edge of the sea.</p>
+    </section>
+
+    <section class="frame frame--left" data-in="0.075" data-out="0.145">
+      <p class="numeral">I</p>
+      <h2>Nine stones<br /><em>in balance</em></h2>
+      <p>Before it had a programme, it had proportions. Two blades, three plates, a hearth and a pool. Nothing here is decoration, and every piece will carry weight.</p>
+    </section>
+
+    <section class="frame frame--right" data-in="0.17" data-out="0.30">
+      <p class="numeral">II</p>
+      <h2>Gravity<br /><em>decides</em></h2>
+      <p>Each mass falls into its place. The limestone blade drives into the rock. The floor plate reaches nearly five metres past the cliff, and the roof lands last, light as a sheet of paper.</p>
+    </section>
+
+    <section class="frame frame--left frame--low" data-in="0.345" data-out="0.44">
+      <p class="numeral">III</p>
+      <h2>Matter rises<br /><em>from the ground</em></h2>
+      <ul class="spec">
+        <li><span>Walls</span>Split-face limestone, quarried on site</li>
+        <li><span>Floors</span>Vein-cut travertine &amp; white oak</li>
+        <li><span>Edges</span>Patinated bronze</li>
+        <li><span>Openings</span>Low-iron glass, floor to ceiling</li>
+      </ul>
+    </section>
+
+    <section class="frame frame--right frame--low" data-in="0.5" data-out="0.6">
+      <p class="numeral">IV</p>
+      <h2>Then the world<br /><em>arrives</em></h2>
+      <p>A limestone headland, an open western sea and a horizon that belongs to no one.</p>
+      <dl class="stats">
+        <div><dt>38 m</dt><dd>above the sea</dd></div>
+        <div><dt>580 m²</dt><dd>of living space</dd></div>
+        <div><dt>4.5 m</dt><dd>terrace beyond the edge</dd></div>
+      </dl>
+    </section>
+
+    <section class="frame frame--center" data-in="0.665" data-out="0.735">
+      <p class="numeral">V</p>
+      <h2>The glass<br /><em>steps aside</em></h2>
+    </section>
+
+    <section class="frame frame--left" data-in="0.78" data-out="0.875">
+      <p class="numeral">VI</p>
+      <h2>Inside, the horizon<br /><em>is the fourth wall</em></h2>
+      <p>Oak underfoot, a fire set into the stone, and twenty metres of glass facing the sunset.</p>
+    </section>
+
+    <section class="frame frame--left frame--atmo" data-in="0.925" data-out="2">
+      <p class="numeral">VII</p>
+      <h2>Live in it<br /><em>at any hour</em></h2>
+      <p>The house is rendered live. Change the hour, the weather, the lights and the fire, and watch the stone respond.</p>
+      <div class="cta" id="viewing">
+        <a class="pill pill--solid" href="#" data-jump="0">Watch again</a>
+        <a class="link" href="#" id="requestViewing">Request a private viewing</a>
+      </div>
+      <p class="toast" id="toast" hidden>AURA is an architectural concept. There is nothing to book yet, but thank you for asking.</p>
+    </section>
+  </main>
+
+  <aside class="controls" id="controls" aria-label="Environment controls">
+    <div class="controls__head">
+      <p class="eyebrow">Atmosphere</p>
+      <p class="controls__clock" id="clock">19:45</p>
+    </div>
+    <div class="presets" role="group" aria-label="Time presets">
+      <button type="button" data-preset="dawn">Dawn</button>
+      <button type="button" data-preset="noon">Noon</button>
+      <button type="button" data-preset="golden">Golden</button>
+      <button type="button" data-preset="night">Night</button>
+    </div>
+    <label class="ctl">
+      <span class="ctl__row"><span>Daylight</span><output id="timeOut">19:45</output></span>
+      <input type="range" id="time" min="5" max="23.5" step="0.05" value="19.75" />
+    </label>
+    <div class="ctl">
+      <span class="ctl__row"><span>Weather</span><output id="mistOut">Clear</output></span>
+      <div class="seg" role="radiogroup" aria-label="Weather">
+        <button type="button" role="radio" data-mist="0.06" aria-checked="true">Clear</button>
+        <button type="button" role="radio" data-mist="0.42" aria-checked="false">Haze</button>
+        <button type="button" role="radio" data-mist="0.9" aria-checked="false">Sea fog</button>
+      </div>
+    </div>
+    <label class="ctl">
+      <span class="ctl__row"><span>Interior light</span><output id="lightOut">75%</output></span>
+      <input type="range" id="light" min="0" max="1" step="0.01" value="0.75" />
+    </label>
+    <label class="ctl">
+      <span class="ctl__row"><span>Sheer curtains</span><output id="veilOut">Open</output></span>
+      <input type="range" id="veil" min="0" max="1" step="0.01" value="0" />
+    </label>
+    <div class="ctl ctl--toggle">
+      <span>Hearth</span>
+      <button type="button" class="switch" id="fire" role="switch" aria-checked="true"><span></span></button>
+    </div>
+  </aside>
+
+  <div class="cue" id="cue" aria-hidden="true"><span>Scroll</span><i></i></div>
+  <div class="spacer" id="spacer"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
