@@ -125,22 +125,29 @@ export function createVegetation(M, plantings) {
     group.add(trunkMesh);
   }
 
-  const cardGeo = new THREE.PlaneGeometry(1, 1);
-  const leaves = new THREE.InstancedMesh(cardGeo, M.leaves, cards.length);
-  const canopyN = new Float32Array(cards.length * 3);
+  // Foliage is split by distance: only planting near the house can fall inside
+  // the sun's shadow frustum, so only that set renders into the shadow map.
+  const near = cards.filter((c) => Math.hypot(c.p.x - 3, c.p.z - 4) < 46);
+  const far = cards.filter((c) => Math.hypot(c.p.x - 3, c.p.z - 4) >= 46);
   const mtx = new THREE.Matrix4();
   const col = new THREE.Color();
-  cards.forEach((c, i) => {
-    mtx.compose(c.p, c.q, new THREE.Vector3(c.s, c.s, c.s));
-    leaves.setMatrixAt(i, mtx);
-    leaves.setColorAt(i, col.setRGB(c.c[0], c.c[1], c.c[2]));
-    canopyN.set([c.n.x, c.n.y, c.n.z], i * 3);
-  });
-  cardGeo.setAttribute('aCanopyN', new THREE.InstancedBufferAttribute(canopyN, 3));
-  leaves.castShadow = true;
-  leaves.receiveShadow = true;
-  leaves.frustumCulled = false;
-  group.add(leaves);
+  for (const [set, shadows] of [[near, true], [far, false]]) {
+    if (!set.length) continue;
+    const cardGeo = new THREE.PlaneGeometry(1, 1);
+    const leaves = new THREE.InstancedMesh(cardGeo, M.leaves, set.length);
+    const canopyN = new Float32Array(set.length * 3);
+    set.forEach((c, i) => {
+      mtx.compose(c.p, c.q, new THREE.Vector3(c.s, c.s, c.s));
+      leaves.setMatrixAt(i, mtx);
+      leaves.setColorAt(i, col.setRGB(c.c[0], c.c[1], c.c[2]));
+      canopyN.set([c.n.x, c.n.y, c.n.z], i * 3);
+    });
+    cardGeo.setAttribute('aCanopyN', new THREE.InstancedBufferAttribute(canopyN, 3));
+    leaves.castShadow = shadows;
+    leaves.receiveShadow = true;
+    leaves.computeBoundingSphere();
+    group.add(leaves);
+  }
 
   return group;
 }

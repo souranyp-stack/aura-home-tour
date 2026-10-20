@@ -129,12 +129,12 @@ export function createMaterials(renderer) {
   if (cache) return cache;
   const t = {
     travertine: bakeSurface(renderer, S.TRAVERTINE, { size: 1024, depth: 0.012 }),
-    limestone: bakeSurface(renderer, S.LIMESTONE, { size: 1024, depth: 0.05 }),
+    limestone: bakeSurface(renderer, S.LIMESTONE, { size: 1024, depth: 0.03 }),
     oak: bakeSurface(renderer, S.OAK, { size: 1024, depth: 0.006 }),
     boucle: bakeSurface(renderer, S.BOUCLE, { size: 512, depth: 0.004 }),
     wool: bakeSurface(renderer, S.WOOL, { size: 512, depth: 0.003 }),
     render: bakeSurface(renderer, S.RENDER, { size: 512, depth: 0.004 }),
-    rock: bakeSurface(renderer, S.ROCK, { size: 1024, depth: 0.05 }),
+    rock: bakeSurface(renderer, S.ROCK, { size: 1024, depth: 0.08 }),
     ground: bakeSurface(renderer, S.GROUND, { size: 1024, depth: 0.012 }),
     waves: bakeSurface(renderer, S.WAVES, { size: 512, depth: 0.05 }),
     art: bakeSurface(renderer, S.ARTWORK, { size: 1024, depth: 0.004 }),

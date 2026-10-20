@@ -13,7 +13,8 @@ const SUNRISE = 6.4, SUNSET = 20.1;
 export function sunDirection(hours, out = new THREE.Vector3()) {
   const t = (hours - SUNRISE) / (SUNSET - SUNRISE);
   const elev = THREE.MathUtils.degToRad(Math.sin(Math.PI * THREE.MathUtils.clamp(t, -0.2, 1.2)) * 58 - 2.5);
-  const az = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(40, 213.5, t));
+  // rises over the land, sets over the sea to the south-west of the terrace
+  const az = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(290, 115, t));
   out.set(Math.sin(az) * Math.cos(elev), Math.sin(elev), Math.cos(az) * Math.cos(elev));
   return out;
 }
@@ -56,14 +57,17 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     sunDirection: new THREE.Vector3(),
     sunColor: 0xffffff,
     waterColor: 0x0b2630,
-    distortionScale: 2.4,
+    distortionScale: 3.2,
     fog: true,
   });
   water.rotation.x = -Math.PI / 2;
   water.position.y = SEA;
-  water.material.uniforms.size.value = 3.2;
+  water.material.uniforms.size.value = 1.6;
   Object.assign(water.material.uniforms, { uWorldR: aura.uWorldR, uVoid: aura.uVoid });
   water.material.fragmentShader = water.material.fragmentShader
+    // physically plausible reflectance (F0 ≈ 0.02) and no grey lift in the mirror term
+    .replace('float rf0 = 0.3;', 'float rf0 = 0.02;')
+    .replace('( vec3( 0.1 ) + reflectionSample * 0.9 + reflectionSample * specularLight )', '( reflectionSample + reflectionSample * specularLight )')
     .replace('uniform vec3 waterColor;', 'uniform vec3 waterColor;\nuniform float uWorldR;\nuniform vec3 uVoid;')
     .replace(
       '#include <fog_fragment>',
@@ -73,6 +77,14 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
       gl_FragColor.rgb = mix(uVoid, gl_FragColor.rgb, wv);`
     );
   scene.add(water);
+  const mirrorExcluded = [];
+  const mirrorWasVisible = [];
+  const renderMirror = water.onBeforeRender;
+  water.onBeforeRender = (...args) => {
+    mirrorExcluded.forEach((o, i) => { mirrorWasVisible[i] = o.visible; o.visible = false; });
+    renderMirror(...args);
+    mirrorExcluded.forEach((o, i) => { o.visible = mirrorWasVisible[i]; });
+  };
 
   // Lights
   const sun = new THREE.DirectionalLight(0xffffff, 3);
@@ -86,6 +98,12 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   const focus = new THREE.Vector3(3, 3, 2);
   sun.target.position.copy(focus);
   scene.add(sun, sun.target);
+
+  // gallery rim light for the sculpture, faded out as the world arrives
+  const rim = new THREE.DirectionalLight(0xfff1e0, 0);
+  rim.position.set(-40, 30, 70);
+  rim.target.position.copy(focus);
+  scene.add(rim, rim.target);
 
   const moon = new THREE.DirectionalLight(0x8fa6d8, 0);
   moon.position.set(-60, 80, -40);
@@ -123,12 +141,12 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   function skyParams(target, elevDeg, mist) {
     const gold = 1 - THREE.MathUtils.smoothstep(elevDeg, 3, 28);
     const u = target.material.uniforms;
-    u.turbidity.value = THREE.MathUtils.lerp(2.2, 5.5, gold) + mist * 8;
-    u.rayleigh.value = THREE.MathUtils.lerp(0.9, 2.4, gold) + mist * 0.5;
-    u.mieCoefficient.value = 0.004 + mist * 0.02;
-    u.mieDirectionalG.value = 0.82;
+    u.turbidity.value = THREE.MathUtils.lerp(2.0, 3.6, gold) + mist * 8;
+    u.rayleigh.value = THREE.MathUtils.lerp(1.4, 2.2, gold) + mist * 0.5;
+    u.mieCoefficient.value = THREE.MathUtils.lerp(0.003, 0.007, gold) + mist * 0.02;
+    u.mieDirectionalG.value = 0.86;
     u.sunPosition.value.copy(sunDir);
-    u.uGain.value = 0.42 * (1 - mist * 0.35);
+    u.uGain.value = THREE.MathUtils.lerp(0.36, 0.5, gold) * (1 - mist * 0.35);
   }
 
   /**
@@ -148,17 +166,20 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     lightDir.copy(sunDir).lerp(studioDir, state.studio).normalize();
     if (lightDir.y < 0.02) lightDir.y = 0.02;
     sun.position.copy(focus).addScaledVector(lightDir, 90);
-    const sunCol = tmpC.setRGB(1.0, 0.95, 0.89).lerp(C(1.0, 0.56, 0.27), gold);
-    const sunI = 3.4 * THREE.MathUtils.smoothstep(elev, -2.5, 7) * (1 - state.mist * 0.75);
+    const sunCol = tmpC.setRGB(1.0, 0.95, 0.89).lerp(C(1.0, 0.6, 0.3), gold);
+    const sunI = THREE.MathUtils.lerp(3.6, 4.2, gold) * THREE.MathUtils.smoothstep(elev, -2.5, 5) * (1 - state.mist * 0.75);
     sun.color.copy(sunCol).lerp(C(1.0, 0.95, 0.9), state.studio);
     sun.intensity = THREE.MathUtils.lerp(sunI, 3.0, state.studio);
     sun.castShadow = sun.intensity > 0.05;
 
     moon.intensity = (1 - day) * 0.35 * (1 - state.studio);
+    rim.intensity = 2.4 * state.studio;
 
-    hemi.color.setRGB(0.62, 0.72, 0.86).lerp(C(0.92, 0.72, 0.56), gold).lerp(C(0.12, 0.14, 0.24), 1 - day);
-    hemi.groundColor.setRGB(0.36, 0.30, 0.24).multiplyScalar(0.3 + 0.7 * day);
-    hemi.intensity = THREE.MathUtils.lerp(0.06 + 0.32 * day, 0.08, state.studio);
+    hemi.color.setRGB(0.62, 0.72, 0.86).lerp(C(0.92, 0.72, 0.56), gold).lerp(C(0.12, 0.14, 0.24), 1 - day)
+      .lerp(C(1.0, 0.9, 0.78), state.studio);
+    hemi.groundColor.setRGB(0.36, 0.30, 0.24).multiplyScalar(0.3 + 0.7 * day).lerp(C(0.32, 0.24, 0.17), state.studio);
+    // the gallery fill is warm and soft so plaster shadows stay umber, not slate
+    hemi.intensity = THREE.MathUtils.lerp(0.05 + 0.22 * day * (1 - 0.5 * gold), 0.55, state.studio);
 
     // fog colour follows the horizon
     const fc = tmpC.copy(fogNight)
@@ -175,12 +196,12 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     aura.uWorldR.value = state.worldR;
 
     water.material.uniforms.sunDirection.value.copy(sunDir.y > 0 ? sunDir : moon.position.clone().normalize());
-    water.material.uniforms.sunColor.value.copy(sunCol).multiplyScalar(0.25 + 0.75 * day).lerp(C(0.25, 0.3, 0.42), 1 - day);
-    water.material.uniforms.waterColor.value.setRGB(0.04, 0.15, 0.19).multiplyScalar(0.25 + 0.75 * day);
+    water.material.uniforms.sunColor.value.copy(sunCol).multiplyScalar(0.4 + 0.9 * day).lerp(C(0.25, 0.3, 0.42), 1 - day);
+    water.material.uniforms.waterColor.value.setRGB(0.012, 0.07, 0.095).multiplyScalar(0.3 + 0.7 * day);
     water.material.uniforms.time.value = state.now * 0.6;
     water.visible = state.worldR > 1;
 
-    scene.environmentIntensity = THREE.MathUtils.lerp(0.12 + 0.88 * day * (1 - 0.3 * gold), 0.32, state.studio);
+    scene.environmentIntensity = THREE.MathUtils.lerp(0.1 + 0.9 * day * (1 - 0.45 * gold), 0.08, state.studio);
 
     // regenerate the environment map when the sky has visibly changed
     const key = `${state.time.toFixed(2)}|${state.mist.toFixed(2)}`;
@@ -197,5 +218,5 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     return out;
   }
 
-  return { update, sun, water, sky, hemi };
+  return { update, sun, water, sky, hemi, excludeFromReflection: (list) => mirrorExcluded.push(...list) };
 }

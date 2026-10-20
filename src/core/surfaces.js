@@ -36,15 +36,15 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
   r = 0.46 + 0.08 * band + pit * 0.35 + joint * 0.3;
 }`;
 
-// Split-face limestone in random-length courses, 3 m tile.
+// Stacked limestone ashlar: long, low courses with fine recessed joints, 3 m tile.
 export const LIMESTONE = /* glsl */ `
 void surface(vec2 uv, out vec3 col, out float h, out float r){
-  float rows = 8.0;
+  float rows = 22.0;
   float ry = uv.y * rows;
   float row = floor(ry);
   float fy = fract(ry);
   float rh = hash12(vec2(row, 7.0));
-  float n = 3.0 + floor(rh * 3.0);
+  float n = 3.0 + floor(rh * 4.0);
   float off = hash12(vec2(row, 13.0));
   float rx = uv.x * n + off;
   float ci = floor(rx);
@@ -54,23 +54,20 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
   float dx = min(fx, 1.0 - fx) * (3.0 / n);
   float dy = min(fy, 1.0 - fy) * (3.0 / rows);
   float d = min(dx, dy);
-  float mortar = 1.0 - smoothstep(0.004, 0.009, d);
-  float bevel = smoothstep(0.004, 0.06, d);
+  float joint = 1.0 - smoothstep(0.002, 0.0055, d);
+  float arris = smoothstep(0.002, 0.02, d);
 
-  float relief = pfbm(uv + bid, vec2(10.0, 10.0), 6);
-  float fine = pfbm(uv, vec2(80.0, 80.0), 3);
+  float chisel = pfbm(uv + bid * 3.1, vec2(14.0, 40.0), 5);
+  float fine = pfbm(uv, vec2(96.0, 96.0), 3);
+  float cloud = pfbm(uv, vec2(3.0, 3.0), 4);
 
-  vec3 a = vec3(0.84, 0.78, 0.68);
-  vec3 b = vec3(0.72, 0.68, 0.60);
-  vec3 c = vec3(0.80, 0.69, 0.54);
-  col = mix(a, b, smoothstep(0.2, 0.8, bid));
-  col = mix(col, c, smoothstep(0.65, 0.95, hash12(vec2(bid, 5.0))) * 0.7);
-  col *= 0.9 + 0.12 * relief + 0.05 * fine;
-  col *= mix(0.86, 1.0, bevel);
-  col = mix(col, vec3(0.56, 0.52, 0.47), mortar);
+  col = mix(vec3(0.87, 0.82, 0.73), vec3(0.80, 0.74, 0.64), bid);
+  col = mix(col, vec3(0.84, 0.76, 0.62), smoothstep(0.7, 0.95, hash12(vec2(bid, 5.0))) * 0.6);
+  col *= 0.95 + 0.06 * chisel + 0.03 * fine + 0.04 * cloud;
+  col = mix(col, col * 0.62, joint);
 
-  h = mortar > 0.5 ? 0.05 : 0.35 + 0.45 * bevel * (0.65 + 0.5 * relief) + 0.04 * fine;
-  r = mix(0.82 + 0.1 * fine, 0.95, mortar);
+  h = 0.55 + 0.25 * arris + 0.12 * chisel + 0.03 * fine - joint * 0.5;
+  r = 0.86 + 0.06 * fine;
 }`;
 
 // Wide-plank white oak, 2 m tile, 200 mm boards.
@@ -134,22 +131,42 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
   r = 0.86 + 0.06 * f;
 }`;
 
-// Stratified coastal limestone for the cliff, 14 m tile (triplanar).
+// Bedded coastal limestone for the cliff, 24 m tile (triplanar; y is vertical).
+// Horizontal beds of varying thickness, sparse vertical joints, rain streaks.
 export const ROCK = /* glsl */ `
 void surface(vec2 uv, out vec3 col, out float h, out float r){
-  float warp = pfbm(uv, vec2(3.0, 3.0), 4);
-  float strata = pfbm(vec2(uv.x + 0.1 * warp, uv.y), vec2(2.0, 26.0), 5);
-  vec3 vo = pvoronoi(uv + warp * 0.05, vec2(9.0, 14.0));
-  float crack = 1.0 - smoothstep(0.0, 0.06, vo.y - vo.x);
-  float detail = pfbm(uv, vec2(40.0, 40.0), 4);
-  float big = pfbm(uv, vec2(2.0, 2.0), 3);
-  col = mix(vec3(0.64, 0.57, 0.47), vec3(0.50, 0.46, 0.40), smoothstep(-0.4, 0.5, strata));
-  col = mix(col, vec3(0.66, 0.50, 0.36), smoothstep(0.2, 0.6, big) * 0.45);
-  col = mix(col, vec3(0.30, 0.28, 0.25), smoothstep(0.3, 0.75, detail + strata * 0.3) * 0.35);
-  col *= 0.9 + 0.15 * vo.z;
-  col = mix(col, col * 0.45, crack);
-  h = 0.5 + 0.25 * strata + 0.15 * detail + 0.1 * vo.x - crack * 0.4;
-  r = 0.9;
+  float warp = pfbm(uv, vec2(3.0, 2.0), 4);
+  float by = uv.y * 11.0 + warp * 0.7;
+  float layer = floor(by);
+  float lf = fract(by);
+  float lid = hash12(vec2(mod(layer, 11.0), 1.3));
+  float lid2 = hash12(vec2(mod(layer, 11.0), 8.9));
+
+  // each bed weathers back at its top and bottom
+  float bed = smoothstep(0.0, 0.07 + 0.06 * lid, lf) * smoothstep(1.0, 0.9 - 0.06 * lid2, lf);
+
+  // vertical joints, a few per bed, slightly wandering
+  float jn = 2.0 + floor(lid * 4.0);
+  float jx = fract(uv.x * jn + lid2 * 3.0 + warp * 0.08);
+  float joint = (1.0 - smoothstep(0.0, 0.018, min(jx, 1.0 - jx))) * step(0.35, lid2);
+
+  float pit = pfbm(uv, vec2(28.0, 28.0), 5);
+  float streak = pfbm(vec2(uv.x, uv.y), vec2(48.0, 2.0), 4);
+  float patchy = pfbm(uv, vec2(6.0, 6.0), 4);
+
+  vec3 cream = vec3(0.80, 0.73, 0.61);
+  vec3 grey = vec3(0.66, 0.63, 0.58);
+  vec3 ochre = vec3(0.76, 0.60, 0.43);
+  col = mix(cream, grey, smoothstep(0.25, 0.85, lid));
+  col = mix(col, ochre, smoothstep(0.75, 0.95, lid2) * 0.55);
+  col *= 0.9 + 0.12 * pit;
+  col = mix(col, vec3(0.40, 0.38, 0.35), smoothstep(0.05, 0.45, streak) * 0.42);
+  col = mix(col, vec3(0.70, 0.69, 0.58), smoothstep(0.35, 0.6, patchy) * 0.18);
+  col *= mix(0.74, 1.0, bed);
+  col = mix(col, col * 0.4, joint);
+
+  h = 0.25 + 0.45 * bed + 0.18 * pit - joint * 0.35;
+  r = 0.92;
 }`;
 
 // Dry Mediterranean ground cover, 8 m tile.

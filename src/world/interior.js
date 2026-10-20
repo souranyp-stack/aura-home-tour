@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { metricUV } from './materials.js';
 import { FL } from './house.js';
+import { mergeStatic } from '../core/merge.js';
 
 // Living pavilion interior: x -9…11, z -4…8, floor FL, ceiling FL + 3.45.
 // Every material here uses 'reveal' mode, so it prints in behind the sweep.
@@ -211,6 +212,9 @@ export function createInterior(M) {
     l.rotation.y = Math.PI;
     root.add(l);
   }
+
+  // furniture is static: collapse ~120 parts into one draw per material
+  mergeStatic(root, [...flames, curtain]);
 
   const outdoorOlivePos = new THREE.Vector3(9.5, FL + 0.6, -2.7);
 

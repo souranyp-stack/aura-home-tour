@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { metricUV } from './materials.js';
+import { mergeStatic } from '../core/merge.js';
 
 // The residence is nine masses. Each has a "sculpture" pose (an abstract
 // composition floating in the void) and a "built" pose. Scroll interpolates
@@ -34,7 +35,7 @@ export function createHouse(M) {
       name, group, win,
       buildPos: build.clone(), buildQuat: new THREE.Quaternion(),
       sculptPos: sculpt.pos, sculptQuat: sculpt.quat,
-      spin: sculpt.spin ?? 1,
+      spin: sculpt.spin ?? 1, orbit: !!sculpt.orbit, angle: 0,
     });
   };
 
@@ -47,7 +48,7 @@ export function createHouse(M) {
     g.add(box(20.2, 0.07, 0.16, M.bronze, 1.5, -0.46, -6.04));
     for (let i = 0; i <= 8; i++) g.add(box(0.05, 1.35, 0.14, M.bronze, -8.5 + i * 2.5, 0.25, -6.05));
     add('plinth', g, new THREE.Vector3(1, 1.8, 4),
-      { pos: new THREE.Vector3(3, -2.2, 2), quat: q(0, 16, 0), spin: 0.6 }, [0.0, 0.42]);
+      { pos: new THREE.Vector3(3, -1.2, 2), quat: q(0, 12, 0), spin: 0.35 }, [0.08, 0.42]);
   }
 
   // 2 — Spine: a limestone blade that anchors into the cliff and runs past the edge.
@@ -55,7 +56,7 @@ export function createHouse(M) {
     const g = new THREE.Group();
     g.add(box(1.2, 16, 26, M.limestone));
     add('spine', g, new THREE.Vector3(-9.6, 1.5, 2),
-      { pos: new THREE.Vector3(-3.5, 7.5, 4), quat: q(-38, 28, 6), spin: 1 }, [0.04, 0.5]);
+      { pos: new THREE.Vector3(-19, 5, 2), quat: q(0, 25, 0), spin: 0.25, orbit: true }, [0.12, 0.5]);
   }
 
   // 3 — East fin: a second, shorter blade that carries the roof's far end.
@@ -63,7 +64,7 @@ export function createHouse(M) {
     const g = new THREE.Group();
     g.add(box(0.8, 7.5, 6, M.limestone));
     add('fin', g, new THREE.Vector3(17.1, 3.75, 4),
-      { pos: new THREE.Vector3(12.5, 4.5, -3), quat: q(84, -20, 0), spin: 1.3 }, [0.1, 0.54]);
+      { pos: new THREE.Vector3(3, 5.65, 2), quat: q(0, 30, 0), spin: 0.9 }, [0.02, 0.32]);
   }
 
   // 4 — Hearth mass: the chimney that rises through the roof.
@@ -71,7 +72,7 @@ export function createHouse(M) {
     const g = new THREE.Group();
     g.add(box(1.8, 6.15, 2.5, M.limestone));
     add('hearth', g, new THREE.Vector3(-8.1, 7.125, 5.75),
-      { pos: new THREE.Vector3(9, 0.5, 7.5), quat: q(12, 40, -24), spin: 1.6 }, [0.16, 0.6]);
+      { pos: new THREE.Vector3(3, 20.15, 2), quat: q(0, -20, 0), spin: 1.1 }, [0.74, 1.0]);
   }
 
   // 5 — Floor plate: the upper level and its 5 m terrace over the cliff.
@@ -85,7 +86,7 @@ export function createHouse(M) {
     b.position.set(-6.25, 0, -7.2);
     for (const s of [a, b]) { s.castShadow = s.receiveShadow = true; g.add(s); }
     add('slab', g, new THREE.Vector3(3, FL - 0.225, 1),
-      { pos: new THREE.Vector3(5, 4.2, 0), quat: q(0, -12, 24), spin: 0.8 }, [0.24, 0.68]);
+      { pos: new THREE.Vector3(3, 9.85, 2), quat: q(0, 22, 0), spin: 0.55 }, [0.3, 0.62]);
   }
 
   // 6 — Glass pavilion: mullion cage, glazing, and the travertine back wall.
@@ -115,7 +116,7 @@ export function createHouse(M) {
     // back wall, interior face travertine
     pav.add(box(20, H, 0.35, M.travertine, 0, 0, 6.175));
     add('pavilion', pav, new THREE.Vector3(1, FL + H / 2, 2),
-      { pos: new THREE.Vector3(3.5, 8.5, 1.5), quat: q(14, 45, -8), spin: 1.2 }, [0.34, 0.78]);
+      { pos: new THREE.Vector3(3, 12.125, 2), quat: q(0, -8, 0), spin: -0.5 }, [0.4, 0.72]);
   }
 
   // 7 — Infinity pool, hung under the terrace with its vanishing edge to the sea.
@@ -132,7 +133,7 @@ export function createHouse(M) {
     poolWater.receiveShadow = true;
     g.add(poolWater);
     add('pool', g, new THREE.Vector3(10.25, FL - 0.75, -6.2),
-      { pos: new THREE.Vector3(10, 13.5, -1), quat: q(-20, -30, 16), spin: 1.4 }, [0.42, 0.86]);
+      { pos: new THREE.Vector3(3, 15.0, 2), quat: q(0, 35, 0), spin: 0.8 }, [0.48, 0.8]);
   }
 
   // 8 — Entry court at grade on the landward side.
@@ -140,7 +141,7 @@ export function createHouse(M) {
     const g = new THREE.Group();
     g.add(box(24, 0.24, 6, M.travertine));
     add('court', g, new THREE.Vector3(3, 0.12, 13),
-      { pos: new THREE.Vector3(-6, 14.5, 7), quat: q(28, 10, -14), spin: 0.9 }, [0.3, 0.74]);
+      { pos: new THREE.Vector3(3, 1.4, 2), quat: q(0, -18, 0), spin: -0.7 }, [0.0, 0.3]);
   }
 
   // 9 — Roof plate: thin, deep overhang, bronze edge, oak soffit. It lands last.
@@ -151,11 +152,15 @@ export function createHouse(M) {
     roof.castShadow = roof.receiveShadow = true;
     g.add(roof);
     add('roof', g, new THREE.Vector3(3.75, FL + H + 0.275, 0.25),
-      { pos: new THREE.Vector3(4, 15.5, 3), quat: q(-14, -22, 10), spin: 0.7 }, [0.55, 1.0]);
+      { pos: new THREE.Vector3(3, 16.4, 2), quat: q(0, -14, 0), spin: -0.3 }, [0.6, 0.92]);
   }
 
-  // Sculpture-state pivot: the whole composition slowly turns about this point.
-  const pivot = new THREE.Vector3(3, 6, 2);
+  // one draw per material per mass; the sliding door stays separate so it can move
+  for (const p of pieces) mergeStatic(p.group, p.name === 'pavilion' ? [door] : []);
+
+  // Sculpture: a stacked tower on a stone column. Each layer turns slowly at
+  // its own rate and direction, like a kinetic mobile; the spine blade orbits.
+  const pivot = new THREE.Vector3(3, 9, 2);
 
   const _p = new THREE.Vector3();
   const _q = new THREE.Quaternion();
@@ -165,23 +170,23 @@ export function createHouse(M) {
 
   /**
    * @param assemble 0 = sculpture, 1 = built
-   * @param time seconds, for the idle drift of the sculpture
+   * @param time seconds, for the gentle breathing of the sculpture
+   * @param dt seconds since last frame; layers only turn while the sculpture is idle
    */
-  function update(assemble, time) {
-    const idle = 1 - THREE.MathUtils.smoothstep(assemble, 0, 0.35);
+  function update(assemble, time, dt = 0) {
+    const idle = 1 - THREE.MathUtils.smoothstep(assemble, 0, 0.12);
     for (const p of pieces) {
       const [a, b] = p.win;
       const t = THREE.MathUtils.clamp((assemble - a) / (b - a), 0, 1);
       const e = ease(t);
-      // sculpture pose with slow turn and float
-      const ang = (time * 0.05 * p.spin + 0.0) * idle;
-      _spin.setFromAxisAngle(up, ang * 0.25);
-      _p.copy(p.sculptPos).sub(pivot).applyQuaternion(_spin).add(pivot);
-      _p.y += Math.sin(time * 0.6 + p.spin * 4) * 0.25 * idle;
+      p.angle += dt * 0.06 * p.spin * idle;
+      _spin.setFromAxisAngle(up, p.angle);
+      _p.copy(p.sculptPos);
+      if (p.orbit) _p.sub(pivot).applyQuaternion(_spin).add(pivot);
+      _p.y += Math.sin(time * 0.5 + p.sculptPos.y * 0.12) * 0.12 * idle;
       _q.copy(_spin).multiply(p.sculptQuat);
-      // interpolate to built pose along a gentle lifted arc
       p.group.position.lerpVectors(_p, p.buildPos, e);
-      p.group.position.y += Math.sin(Math.PI * e) * 1.6;
+      p.group.position.y += Math.sin(Math.PI * e) * 0.6;
       p.group.quaternion.slerpQuaternions(_q, p.buildQuat, e);
     }
   }

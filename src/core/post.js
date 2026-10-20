@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
-// Film finish applied after tone mapping: lens falloff and fine grain.
-const GradeShader = {
+// Final pass: ACES tone mapping and sRGB output (what OutputPass does), plus
+// the film finish — lens falloff and fine grain — in the same full-screen draw.
+const FinalShader = {
   uniforms: {
     tDiffuse: { value: null },
+    uExposure: { value: 1 },
     uTime: { value: 0 },
     uRes: { value: new THREE.Vector2(1, 1) },
     uVignette: { value: 0.28 },
@@ -16,13 +17,21 @@ const GradeShader = {
   },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
   fragmentShader: /* glsl */ `
-    uniform sampler2D tDiffuse; uniform float uTime; uniform vec2 uRes; uniform float uVignette; uniform float uGrain;
+    uniform sampler2D tDiffuse; uniform float uExposure; uniform float uTime; uniform vec2 uRes; uniform float uVignette; uniform float uGrain;
     varying vec2 vUv;
+    // ACES filmic fit (Hill), matching three.js ACESFilmicToneMapping
+    vec3 rrtOdt(vec3 v){ vec3 a = v * (v + 0.0245786) - 0.000090537; vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081; return a / b; }
+    vec3 aces(vec3 c){
+      const mat3 inM = mat3(vec3(0.59719, 0.07600, 0.02840), vec3(0.35458, 0.90834, 0.13383), vec3(0.04823, 0.01566, 0.83777));
+      const mat3 outM = mat3(vec3(1.60475, -0.10208, -0.00327), vec3(-0.53108, 1.10813, -0.07276), vec3(-0.07367, -0.00605, 1.07602));
+      c *= uExposure / 0.6;
+      return clamp(outM * rrtOdt(inM * c), 0.0, 1.0);
+    }
+    vec3 toSRGB(vec3 c){ return mix(pow(c, vec3(0.41666)) * 1.055 - 0.055, c * 12.92, vec3(lessThanEqual(c, vec3(0.0031308)))); }
     void main(){
-      vec3 c = texture2D(tDiffuse, vUv).rgb;
+      vec3 c = toSRGB(aces(texture2D(tDiffuse, vUv).rgb));
       vec2 d = vUv - 0.5; d.x *= uRes.x / uRes.y;
-      float v = smoothstep(1.15, 0.2, length(d));
-      c *= mix(1.0 - uVignette, 1.0, v);
+      c *= mix(1.0 - uVignette, 1.0, smoothstep(1.15, 0.2, length(d)));
       float g = fract(sin(dot(floor(vUv * uRes) + fract(uTime * 7.13) * 91.0, vec2(12.9898, 78.233))) * 43758.5453) - 0.5;
       c += g * uGrain * (1.0 - 0.6 * dot(c, vec3(0.333)));
       gl_FragColor = vec4(c, 1.0);
@@ -39,13 +48,16 @@ export function createPost(renderer, scene, camera, { mobile }) {
   composer.addPass(new RenderPass(scene, camera));
   const bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.2, 0.5, 1.05);
   composer.addPass(bloom);
-  composer.addPass(new OutputPass());
-  const grade = new ShaderPass(GradeShader);
+  const grade = new ShaderPass(FinalShader);
+  grade.material.toneMapped = false;
+  grade.uniforms.uExposure.value = renderer.toneMappingExposure;
   composer.addPass(grade);
 
   function setSize(w, h, dpr) {
     composer.setPixelRatio(dpr);
     composer.setSize(w, h);
+    // the bloom is a soft glow; a quarter-resolution chain looks the same and costs far less
+    bloom.setSize(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
     grade.uniforms.uRes.value.set(w * dpr, h * dpr);
   }
   setSize(innerWidth, innerHeight, renderer.getPixelRatio());

@@ -40,7 +40,7 @@ export function heightAt(x, z) {
   top -= smooth(16, 26, dHouse) * 0 ;
   // cliff
   const ez = edgeZ(x);
-  const ragged = fbm(x * 0.06, z * 0.06, 4) * 3.5 * smooth(18, 35, Math.abs(x - 3));
+  const ragged = fbm(x * 0.05, z * 0.05, 4) * (1.4 + 4.5 * smooth(16, 40, Math.abs(x - 3))) + fbm(x * 0.17, z * 0.17, 3) * 1.2;
   const o = ez - z + ragged;
   if (o <= 0) return top;
   const face = Math.pow(smooth(0, 11, o), 0.85);
@@ -61,10 +61,12 @@ const TRIPLANAR_COLOR = /* glsl */ `
 vec3 wn = normalize(vWN);
 vec3 bw = pow(abs(wn), vec3(5.0)); bw /= dot(bw, vec3(1.0));
 vec3 P = vAuraWP;
-const float RS = 1.0 / 14.0;
+const float RS = 1.0 / 24.0;
 vec3 rock = texture2D(tRock, P.zy * RS).rgb * bw.x + texture2D(tRock, P.xz * RS).rgb * bw.y + texture2D(tRock, P.xy * RS).rgb * bw.z;
-vec3 rockFar = texture2D(tRock, P.xz * RS * 0.17 + 0.3).rgb;
-rock *= mix(vec3(1.0), rockFar * 1.6, 0.35);
+float macro = auraFbm(P * 0.012) ;
+float macro2 = auraFbm(P * 0.045 + 7.0);
+rock *= mix(0.78, 1.12, macro) * mix(0.9, 1.06, macro2);
+rock = mix(rock, rock * vec3(1.05, 0.95, 0.85), smoothstep(0.55, 0.75, macro2) * 0.6);
 vec3 gr = texture2D(tGround, P.xz / 8.0).rgb * mix(vec3(1.0), texture2D(tGround, P.xz / 61.0).rgb * 1.7, 0.5);
 float flatness = smoothstep(0.62, 0.88, wn.y);
 float plateau = smoothstep(-9.0, -2.0, P.y);

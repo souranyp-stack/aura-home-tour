@@ -6,23 +6,25 @@ import * as THREE from 'three';
 
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
+// shift: horizontal framing offset (fraction of width) that keeps the subject
+// clear of the chapter copy; positive moves the subject right.
 export const CAMERA_KEYS = [
-  { p: 0.0, pos: V(40.8, 12.7, -62.5), tgt: V(3, 6, 2), fov: 30 },
-  { p: 0.07, pos: V(28.2, 10.2, -65.2), tgt: V(3, 6, 2), fov: 30 },
-  { p: 0.15, pos: V(1.1, 8.9, -66.4), tgt: V(3, 5.5, 2), fov: 32 },
-  { p: 0.24, pos: V(-33.8, 14, -49.2), tgt: V(3, 4.5, 2), fov: 34 },
-  { p: 0.33, pos: V(-42.6, 14.8, -16.9), tgt: V(2, 4, 2), fov: 34 },
-  { p: 0.39, pos: V(-31.6, 6.5, -26.8), tgt: V(2, 3.5, 2), fov: 32 },
-  { p: 0.45, pos: V(-24, 9, -40), tgt: V(2, 3, 1), fov: 34 },
-  { p: 0.52, pos: V(-70, 18, -95), tgt: V(0, -2, 0), fov: 36 },
-  { p: 0.6, pos: V(-30, -22, -150), tgt: V(2, -6, 0), fov: 30 },
-  { p: 0.66, pos: V(34, 10, -58), tgt: V(4, 3, 0), fov: 36 },
-  { p: 0.71, pos: V(6, 6.2, -18), tgt: V(3, 5.3, 0), fov: 40 },
-  { p: 0.745, pos: V(2.3, 5.7, -7.2), tgt: V(2.3, 5.5, 2), fov: 44 },
-  { p: 0.79, pos: V(2.0, 5.65, 0.0), tgt: V(-4, 5.0, 5.5), fov: 46 },
-  { p: 0.85, pos: V(-1.0, 5.6, 6.6), tgt: V(1.0, 5.1, -6), fov: 44 },
-  { p: 0.92, pos: V(-6.0, 5.55, 7.0), tgt: V(3.0, 5.0, -5), fov: 42 },
-  { p: 1.0, pos: V(-6.5, 5.6, 7.2), tgt: V(3.0, 5.0, -5), fov: 42 },
+  { p: 0.0, pos: V(46, 15, -70), tgt: V(3, 9, 2), fov: 30, shift: 0.17 },
+  { p: 0.07, pos: V(30, 12, -74), tgt: V(3, 9, 2), fov: 30, shift: 0.17 },
+  { p: 0.15, pos: V(4, 11, -74), tgt: V(3, 7.5, 2), fov: 32, shift: 0.1 },
+  { p: 0.24, pos: V(34, 15, -52), tgt: V(3, 4.5, 2), fov: 34, shift: -0.14 },
+  { p: 0.33, pos: V(44, 9, -26), tgt: V(3, 4, 2), fov: 32, shift: -0.12 },
+  { p: 0.39, pos: V(24, 3.2, -30), tgt: V(3, 4.5, 0), fov: 30, shift: 0.12 },
+  { p: 0.45, pos: V(10, 9, -52), tgt: V(2, 3, 1), fov: 32, shift: 0.06 },
+  { p: 0.52, pos: V(-40, 26, -125), tgt: V(2, -4, 0), fov: 34, shift: -0.06 },
+  { p: 0.6, pos: V(-95, -16, -128), tgt: V(4, -5, 0), fov: 24, shift: -0.1 },
+  { p: 0.66, pos: V(-46, 10, -52), tgt: V(4, 3, 0), fov: 34, shift: 0 },
+  { p: 0.71, pos: V(-6, 6.3, -21), tgt: V(3, 5.3, 0), fov: 40, shift: 0 },
+  { p: 0.745, pos: V(2.3, 5.7, -7.2), tgt: V(2.3, 5.5, 2), fov: 44, shift: 0 },
+  { p: 0.79, pos: V(2.0, 5.65, 0.0), tgt: V(-4, 5.0, 5.5), fov: 46, shift: 0 },
+  { p: 0.85, pos: V(-1.0, 5.6, 6.6), tgt: V(1.0, 5.1, -6), fov: 44, shift: 0.1 },
+  { p: 0.92, pos: V(-6.0, 5.55, 7.0), tgt: V(3.0, 5.0, -5), fov: 42, shift: 0 },
+  { p: 1.0, pos: V(-6.5, 5.6, 7.2), tgt: V(3.0, 5.0, -5), fov: 42, shift: 0 },
 ];
 
 export const CHAPTERS = [
@@ -65,7 +67,7 @@ function hermite(keys, field, p, out) {
 export function cameraAt(p, pos, tgt) {
   hermite(CAMERA_KEYS, 'pos', p, pos);
   hermite(CAMERA_KEYS, 'tgt', p, tgt);
-  return hermite(CAMERA_KEYS, 'fov', p);
+  return { fov: hermite(CAMERA_KEYS, 'fov', p), shift: hermite(CAMERA_KEYS, 'shift', p) };
 }
 
 const clamp01 = (x) => Math.min(1, Math.max(0, x));
@@ -75,17 +77,18 @@ const lerp = THREE.MathUtils.lerp;
 
 // The scripted environment along the film.
 export function storyAt(p) {
+  // the day moves with the story: late afternoon, golden hour, then dusk indoors
   const time =
-    p < 0.45 ? 17.9 :
-    p < 0.6 ? lerp(17.9, 18.6, sstep(p, 0.45, 0.6)) :
-    p < 0.75 ? lerp(18.6, 19.2, sstep(p, 0.6, 0.75)) :
-    lerp(19.2, 19.75, sstep(p, 0.75, 0.9));
-  const worldT = remap(p, 0.44, 0.6);
+    p < 0.45 ? 18.7 :
+    p < 0.6 ? lerp(18.7, 19.1, sstep(p, 0.45, 0.6)) :
+    p < 0.75 ? lerp(19.1, 19.4, sstep(p, 0.6, 0.75)) :
+    lerp(19.4, 19.72, sstep(p, 0.75, 0.9));
+  const worldT = remap(p, 0.435, 0.58);
   return {
     assemble: remap(p, 0.13, 0.33),
     sweep: lerp(-12, 18, sstep(p, 0.33, 0.45)),
     studio: 1 - sstep(p, 0.43, 0.53),
-    voidOpacity: 1 - sstep(p, 0.45, 0.58),
+    voidOpacity: 1 - sstep(p, 0.44, 0.53),
     worldR: 2800 * Math.pow(worldT, 2.2),
     door: sstep(p, 0.7, 0.745),
     env: {

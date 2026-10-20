@@ -6,7 +6,7 @@ const ROMAN = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 const PRESETS = {
   dawn: { time: 6.85, interior: 0.25, fire: 0, mist: 0.42 },
   noon: { time: 13.0, interior: 0, fire: 0, mist: 0.06 },
-  golden: { time: 19.45, interior: 0.55, fire: 1, mist: 0.06 },
+  golden: { time: 19.3, interior: 0.5, fire: 1, mist: 0.06 },
   night: { time: 22.4, interior: 0.9, fire: 1, mist: 0.06 },
 };
 
@@ -45,7 +45,7 @@ export function createUI({ onJump }) {
   });
 
   // environment controls: values the user sets, eased toward each frame
-  const target = { time: 19.75, mist: 0.06, interior: 0.75, fire: 1, veil: 0 };
+  const target = { time: 19.72, mist: 0.06, interior: 0.75, fire: 1, veil: 0 };
   const eased = { ...target };
   const timeIn = $('time'), lightIn = $('light'), veilIn = $('veil'), fireBtn = $('fire');
   const segButtons = [...document.querySelectorAll('.seg button')];

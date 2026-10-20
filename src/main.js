@@ -19,7 +19,7 @@ let dpr = maxDpr;
 renderer.setPixelRatio(dpr);
 renderer.setSize(innerWidth, innerHeight, false);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 0.92;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -73,6 +73,8 @@ async function boot() {
   status('Waiting for the light', 0.72);
   await nextFrame();
   const atmo = createAtmosphere(renderer, scene, M, { mobile });
+  // the interior can never be seen reflected in the sea; skip it in the mirror pass
+  atmo.excludeFromReflection([interior.root]);
   const post = createPost(renderer, scene, camera, { mobile });
 
   const ui = createUI({
@@ -88,7 +90,7 @@ async function boot() {
 
   function apply(p, time, dt) {
     const s = storyAt(p);
-    house.update(s.assemble, reducedMotion ? 0 : time);
+    house.update(s.assemble, reducedMotion ? 0 : time, reducedMotion ? 0 : dt);
     aura.uSweep.value = s.sweep;
     aura.uTime.value = time;
     interior.root.visible = s.sweep > 2.5;
@@ -110,7 +112,7 @@ async function boot() {
     M.textures.waves.normalMap.offset.set(time * 0.012, time * 0.007);
 
     // camera
-    let fov = cameraAt(p, camPos, camTgt);
+    let { fov, shift } = cameraAt(p, camPos, camTgt);
     if (!reducedMotion) {
       const breathe = 1 - s.controls * 0.6;
       camPos.y += Math.sin(time * 0.31) * 0.06 * breathe;
@@ -127,6 +129,10 @@ async function boot() {
     }
     camera.fov = fov;
     camera.aspect = aspect;
+    // compose the subject opposite the copy: sideways on wide screens, upward on tall ones
+    const W = innerWidth, H = innerHeight;
+    if (aspect >= 1) camera.setViewOffset(W, H, -shift * W, 0, W, H);
+    else camera.setViewOffset(W, H, 0, H * 0.09, W, H);
     camera.updateProjectionMatrix();
     camera.position.copy(camPos);
     camera.lookAt(camTgt);
@@ -148,7 +154,8 @@ async function boot() {
 
   // ---- loop ----
   const clock = new THREE.Clock();
-  let frameAcc = 0, frameCount = 0, lastTune = 0;
+  let frameAcc = 0, frameCount = 0, lastFrameAt = 0, lastRaise = 0, ceiling = maxDpr;
+  document.addEventListener('visibilitychange', () => { frameAcc = 0; frameCount = 0; lastFrameAt = 0; });
   readScroll();
   prog = target;
 
@@ -173,13 +180,23 @@ async function boot() {
     post.grade.uniforms.uTime.value = time;
     post.composer.render();
 
-    // adaptive resolution: keep the film smooth on slower GPUs
-    frameAcc += dt; frameCount++;
-    if (time - lastTune > 2 && frameCount > 30) {
+    // adaptive resolution: drop detail when frames run long, recover after a
+    // hitch, and stop climbing once a level has proven too slow
+    const now = performance.now();
+    if (!document.hidden && lastFrameAt > 0) { frameAcc += now - lastFrameAt; frameCount++; }
+    lastFrameAt = now;
+    if (frameCount >= 90) {
       const avg = frameAcc / frameCount;
-      if (avg > 1 / 40 && dpr > 0.75) { dpr = Math.max(0.75, dpr - 0.25); onResize(); }
-      else if (avg < 1 / 75 && dpr < maxDpr) { dpr = Math.min(maxDpr, dpr + 0.25); onResize(); }
-      frameAcc = 0; frameCount = 0; lastTune = time;
+      if (avg > 26 && dpr > 0.75) {
+        if (now - lastRaise < 12000) ceiling = Math.max(0.75, dpr - 0.25);
+        dpr = Math.max(0.75, dpr - 0.25);
+        onResize();
+      } else if (avg < 18.5 && dpr < ceiling) {
+        dpr = Math.min(ceiling, dpr + 0.25);
+        lastRaise = now;
+        onResize();
+      }
+      frameAcc = 0; frameCount = 0;
     }
   });
 
@@ -188,7 +205,8 @@ async function boot() {
     window.__aura = {
       scene, camera, renderer, M, house, atmo,
       setProgress: (p) => { prog = target = p; },
-      renderAt: (p, t = 10) => { prog = target = p; onResize(); apply(p, t, 0.016); post.composer.render(); },
+      post,
+      renderAt: (p, t = 10) => { prog = target = p; apply(p, t, 0.016); post.composer.render(); },
     };
   }
 }
