@@ -16,32 +16,55 @@ const fmtTime = (h) => {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 };
 
-export function createUI({ onJump }) {
+export function createUI({ onJump, onAnchor }) {
   const $ = (id) => document.getElementById(id);
   const frames = [...document.querySelectorAll('.frame')].map((el) => ({
     el, a: parseFloat(el.dataset.in), b: parseFloat(el.dataset.out), live: false,
   }));
 
-  // chapter rail
+  // chapter index: one hairline per chapter that fills as you scroll through it
   const rail = $('rail');
   const railButtons = CHAPTERS.map((c, i) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.innerHTML = `<span>${NAMES[i]}</span>${ROMAN[i]}`;
+    b.dataset.n = ROMAN[i] === '0' ? '00' : ROMAN[i];
+    b.innerHTML = '<i><b></b></i>';
     b.setAttribute('aria-label', `Chapter ${ROMAN[i]}: ${NAMES[i]}`);
+    b.title = NAMES[i];
     b.addEventListener('click', () => onJump(c.p + 0.012));
     rail.appendChild(b);
     return b;
   });
+  const railFills = railButtons.map((b) => b.querySelector('b'));
   document.querySelectorAll('[data-jump]').forEach((a) => {
+    a.addEventListener('click', (e) => { e.preventDefault(); onJump(0); });
+  });
+  // in-page anchors glide rather than jump across 17 screens of film
+  document.querySelectorAll('a[href^="#"]:not([data-jump])').forEach((a) => {
+    const id = a.getAttribute('href').slice(1);
+    if (!id) return;
     a.addEventListener('click', (e) => {
+      const el = document.getElementById(id);
+      if (!el) return;
       e.preventDefault();
-      onJump(a.dataset.jump === '1' ? CHAPTERS[7].p + 0.03 : 0);
+      onAnchor(el);
     });
   });
-  $('requestViewing').addEventListener('click', (e) => {
+
+  // enquiry form: validates locally; AURA is a concept, so nothing is sent
+  const form = $('enquireForm');
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
-    $('toast').hidden = false;
+    let ok = true;
+    for (const input of form.querySelectorAll('[required]')) {
+      const bad = !input.value.trim() || (input.type === 'email' && !/^\S+@\S+\.\S+$/.test(input.value));
+      input.setAttribute('aria-invalid', String(bad));
+      ok = ok && !bad;
+    }
+    const name = form.elements.name.value.trim().split(' ')[0];
+    $('formStatus').textContent = ok
+      ? `Thank you${name ? ', ' + name : ''}. AURA is still a concept, so nothing was sent, but this is where your enquiry would go.`
+      : 'Please add your name and a valid email address.';
   });
 
   // environment controls: values the user sets, eased toward each frame
@@ -105,6 +128,11 @@ export function createUI({ onJump }) {
       $('chapterName').textContent = NAMES[ch];
       railButtons.forEach((b, i) => b.classList.toggle('is-active', i === ch));
     }
+    CHAPTERS.forEach((c, i) => {
+      const end = CHAPTERS[i + 1]?.p ?? 1;
+      const f = Math.min(1, Math.max(0, (p - c.p) / (end - c.p)));
+      railFills[i].style.setProperty('--fill', f.toFixed(3));
+    });
     cue.style.opacity = p > 0.015 ? '0' : '1';
     controlsEl.classList.toggle('is-live', controlsWeight > 0.5);
 

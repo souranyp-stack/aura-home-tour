@@ -46,7 +46,28 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   });
   const voidMesh = new THREE.Mesh(new THREE.SphereGeometry(4000, 48, 24), voidMat);
   voidMesh.frustumCulled = false;
+  voidMesh.renderOrder = -10; // draw the backdrop before any other transparent surface
   scene.add(voidMesh);
+
+  // Gallery floor under the sculpture: dark, softly reflective, fading into the
+  // void at its rim. It catches the sculpture's shadow and leaves with the void.
+  const floorTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+    grd.addColorStop(0, '#fff'); grd.addColorStop(0.45, '#bbb'); grd.addColorStop(1, '#000');
+    g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(c);
+  })();
+  const galleryFloor = new THREE.Mesh(
+    new THREE.CircleGeometry(70, 64),
+    new THREE.MeshStandardMaterial({ color: 0x24201b, roughness: 0.9, metalness: 0, transparent: true, alphaMap: floorTex, envMapIntensity: 0.08, depthWrite: false })
+  );
+  galleryFloor.rotation.x = -Math.PI / 2;
+  galleryFloor.position.set(3, -5.4, 2);
+  galleryFloor.receiveShadow = true;
+  scene.add(galleryFloor);
 
   // Sea
   const waterGeo = new THREE.PlaneGeometry(14000, 14000);
@@ -105,6 +126,18 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   rim.target.position.copy(focus);
   scene.add(rim, rim.target);
 
+  // overhead gallery spot: pools light on the floor under the sculpture
+  const pool = new THREE.SpotLight(0xfff0dc, 0, 0, 0.26, 0.85, 2);
+  pool.position.set(10, 70, -8);
+  pool.target.position.set(3, -5, 2);
+  pool.castShadow = true;
+  pool.shadow.mapSize.setScalar(mobile ? 512 : 1024);
+  pool.shadow.camera.near = 30;
+  pool.shadow.camera.far = 110;
+  pool.shadow.bias = -0.0004;
+  pool.shadow.radius = 6;
+  scene.add(pool, pool.target);
+
   const moon = new THREE.DirectionalLight(0x8fa6d8, 0);
   moon.position.set(-60, 80, -40);
   scene.add(moon);
@@ -125,12 +158,37 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   envSea.rotation.x = -Math.PI / 2;
   envSea.position.y = -8;
   envScene.add(envSea);
+
+  // Studio: a dark enclosure with two softboxes, crossfaded over the sky while
+  // the sculpture is in the void. Plaster picks up soft gradients and its
+  // arrises catch the strip light, as a maquette does under gallery lights.
+  const studio = new THREE.Group();
+  const enclosure = new THREE.Mesh(
+    new THREE.SphereGeometry(400, 32, 16),
+    new THREE.MeshBasicMaterial({ color: 0x080706, side: THREE.BackSide, transparent: true })
+  );
+  studio.add(enclosure);
+  const softbox = (w, h, pos, intensity, color = 0xfff3e4) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: true }));
+    m.position.copy(pos);
+    m.lookAt(0, 0, 0);
+    m.userData.intensity = intensity;
+    m.renderOrder = 1; // always over the enclosure, regardless of distance sorting
+    studio.add(m);
+    return m;
+  };
+  const boxes = [
+    softbox(160, 110, new THREE.Vector3(120, 150, -110), 2.6),          // key, high front-right
+    softbox(22, 240, new THREE.Vector3(-170, 40, 130), 6.0),            // vertical strip behind-left: rim
+    softbox(200, 40, new THREE.Vector3(-60, -60, -150), 0.18, 0xffd9b0), // warm floor bounce
+  ];
+  envScene.add(studio);
   let envRT = null;
   let lastEnvKey = '';
   let lastEnvAt = -1;
 
   const sunDir = new THREE.Vector3();
-  const studioDir = new THREE.Vector3(0.55, 0.62, -0.56).normalize();
+  const studioDir = new THREE.Vector3(0.78, 0.5, -0.38).normalize();
   const lightDir = new THREE.Vector3();
   const tmpC = new THREE.Color();
   const fogDay = C(0.70, 0.77, 0.86), fogGold = C(0.95, 0.72, 0.52), fogDusk = C(0.36, 0.33, 0.40), fogNight = C(0.025, 0.03, 0.05);
@@ -174,12 +232,14 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
 
     moon.intensity = (1 - day) * 0.35 * (1 - state.studio);
     rim.intensity = 2.4 * state.studio;
+    pool.intensity = 11000 * state.studio * state.voidOpacity;
+    pool.visible = pool.intensity > 1;
 
     hemi.color.setRGB(0.62, 0.72, 0.86).lerp(C(0.92, 0.72, 0.56), gold).lerp(C(0.12, 0.14, 0.24), 1 - day)
       .lerp(C(1.0, 0.9, 0.78), state.studio);
     hemi.groundColor.setRGB(0.36, 0.30, 0.24).multiplyScalar(0.3 + 0.7 * day).lerp(C(0.32, 0.24, 0.17), state.studio);
     // the gallery fill is warm and soft so plaster shadows stay umber, not slate
-    hemi.intensity = THREE.MathUtils.lerp(0.05 + 0.22 * day * (1 - 0.5 * gold), 0.55, state.studio);
+    hemi.intensity = THREE.MathUtils.lerp(0.05 + 0.22 * day * (1 - 0.5 * gold), 0.12, state.studio);
 
     // fog colour follows the horizon
     const fc = tmpC.copy(fogNight)
@@ -192,6 +252,8 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     scene.fog.density = (0.0011 + Math.pow(state.mist, 1.6) * 0.022) * (1 - state.voidOpacity * 0.9);
 
     voidMat.uniforms.uOpacity.value = state.voidOpacity;
+    galleryFloor.material.opacity = Math.pow(state.voidOpacity, 2);
+    galleryFloor.visible = state.voidOpacity > 0.01;
     voidMesh.visible = state.voidOpacity > 0.001;
     aura.uWorldR.value = state.worldR;
 
@@ -201,15 +263,21 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     water.material.uniforms.time.value = state.now * 0.6;
     water.visible = state.worldR > 1;
 
-    scene.environmentIntensity = THREE.MathUtils.lerp(0.1 + 0.9 * day * (1 - 0.45 * gold), 0.08, state.studio);
+    scene.environmentIntensity = THREE.MathUtils.lerp(0.1 + 0.9 * day * (1 - 0.45 * gold), 0.42, state.studio);
 
     // regenerate the environment map when the sky has visibly changed
-    const key = `${state.time.toFixed(2)}|${state.mist.toFixed(2)}`;
+    const key = `${state.time.toFixed(2)}|${state.mist.toFixed(2)}|${state.studio.toFixed(2)}`;
     if (key !== lastEnvKey && (state.now - lastEnvAt > 0.12 || lastEnvAt < 0)) {
       lastEnvKey = key;
       lastEnvAt = state.now;
       skyParams(envSky, elev, state.mist);
       envSea.material.color.setRGB(0.03, 0.07, 0.09).multiplyScalar(0.3 + 0.7 * day);
+      studio.visible = state.studio > 0.005;
+      enclosure.material.opacity = state.studio;
+      for (const b of boxes) {
+        b.material.color.set(0xfff3e4).multiplyScalar(b.userData.intensity);
+        b.material.opacity = state.studio;
+      }
       const next = pmrem.fromScene(envScene, 0, 0.1, 3000);
       scene.environment = next.texture;
       envRT?.dispose();

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { metricUV } from './materials.js';
 import { mergeStatic } from '../core/merge.js';
 
@@ -11,8 +12,15 @@ import { mergeStatic } from '../core/merge.js';
 
 export const FL = 4.05;
 
-function box(w, h, d, mat, x = 0, y = 0, z = 0) {
-  const g = metricUV(new THREE.BoxGeometry(w, h, d));
+// Every block gets a small eased arris (as cut stone and folded metal have),
+// so edges catch a highlight instead of meeting at a CG-perfect corner.
+function bevelled(w, h, d, r) {
+  const radius = Math.min(r ?? 0.025, Math.min(w, h, d) * 0.22);
+  return metricUV(new RoundedBoxGeometry(w, h, d, 2, radius));
+}
+
+function box(w, h, d, mat, x = 0, y = 0, z = 0, r) {
+  const g = bevelled(w, h, d, r);
   const mesh = new THREE.Mesh(g, mat);
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
@@ -39,14 +47,21 @@ export function createHouse(M) {
     });
   };
 
-  // 1 — Plinth: the stone ground floor (bedrooms), a long horizontal window band to the sea.
+  // 1 — Plinth: the stone ground floor (bedrooms). The window band is a true
+  // opening: a 300 mm stone skin around it, glass set back in deep reveals.
   {
     const g = new THREE.Group();
-    g.add(box(28, 3.6, 12, M.limestone));
-    g.add(box(20, 1.35, 0.1, M.glassDark, 1.5, 0.25, -6.02));
-    g.add(box(20.2, 0.07, 0.16, M.bronze, 1.5, 0.96, -6.04));
-    g.add(box(20.2, 0.07, 0.16, M.bronze, 1.5, -0.46, -6.04));
-    for (let i = 0; i <= 8; i++) g.add(box(0.05, 1.35, 0.14, M.bronze, -8.5 + i * 2.5, 0.25, -6.05));
+    const bx0 = -8.5, bx1 = 11.5, by0 = -0.425, by1 = 0.925; // band, local coords
+    g.add(box(28, 3.6, 11.7, M.limestone, 0, 0, 0.15));
+    g.add(box(28, by0 + 1.8, 0.3, M.limestone, 0, (-1.8 + by0) / 2, -5.85));
+    g.add(box(28, 1.8 - by1, 0.3, M.limestone, 0, (by1 + 1.8) / 2, -5.85));
+    g.add(box(bx0 + 14, by1 - by0, 0.3, M.limestone, (-14 + bx0) / 2, (by0 + by1) / 2, -5.85));
+    g.add(box(14 - bx1, by1 - by0, 0.3, M.limestone, (bx1 + 14) / 2, (by0 + by1) / 2, -5.85));
+    const cx = (bx0 + bx1) / 2, cy = (by0 + by1) / 2, bw = bx1 - bx0, bh = by1 - by0;
+    g.add(box(bw, bh, 0.04, M.glassDark, cx, cy, -5.72, 0.004));
+    g.add(box(bw, 0.05, 0.1, M.bronze, cx, by1 - 0.025, -5.76, 0.006));
+    g.add(box(bw, 0.05, 0.1, M.bronze, cx, by0 + 0.025, -5.76, 0.006));
+    for (let i = 0; i <= 8; i++) g.add(box(0.05, bh, 0.09, M.bronze, bx0 + i * 2.5, cy, -5.77, 0.006));
     add('plinth', g, new THREE.Vector3(1, 1.8, 4),
       { pos: new THREE.Vector3(3, -1.2, 2), quat: q(0, 12, 0), spin: 0.35 }, [0.08, 0.42]);
   }
@@ -56,7 +71,7 @@ export function createHouse(M) {
     const g = new THREE.Group();
     g.add(box(1.2, 16, 26, M.limestone));
     add('spine', g, new THREE.Vector3(-9.6, 1.5, 2),
-      { pos: new THREE.Vector3(-19, 5, 2), quat: q(0, 25, 0), spin: 0.25, orbit: true }, [0.12, 0.5]);
+      { pos: new THREE.Vector3(-8, 6, 30), quat: q(0, -40, 0), spin: 0 }, [0.5, 0.86]);
   }
 
   // 3 — East fin: a second, shorter blade that carries the roof's far end.
@@ -80,11 +95,21 @@ export function createHouse(M) {
     const g = new THREE.Group();
     const mats = [M.travertine, M.travertine, M.travertine, M.render, M.travertine, M.travertine];
     // Two parts leave the opening the pool hangs in (x 3.5…16, z -8…-4.4).
-    const a = new THREE.Mesh(metricUV(new THREE.BoxGeometry(26, 0.45, 14.4)), mats);
+    const a = new THREE.Mesh(bevelled(26, 0.45, 14.4, 0.03), mats);
     a.position.set(0, 0, 1.8);
-    const b = new THREE.Mesh(metricUV(new THREE.BoxGeometry(13.5, 0.45, 3.6)), mats);
+    const b = new THREE.Mesh(bevelled(13.5, 0.45, 3.6, 0.03), mats);
     b.position.set(-6.25, 0, -7.2);
     for (const s of [a, b]) { s.castShadow = s.receiveShadow = true; g.add(s); }
+    // frameless low-iron balustrade along the terrace edge, bronze shoe and cap
+    const rail = (len, x, z, alongX) => {
+      const [w, d] = alongX ? [len, 0.016] : [0.016, len];
+      const pane = box(w, 1.0, d, M.glass, x, 0.225 + 0.52, z, 0.004);
+      pane.castShadow = false;
+      g.add(pane);
+      g.add(box(alongX ? len : 0.05, 0.03, alongX ? 0.05 : len, M.bronze, x, 0.225 + 1.035, z, 0.008));
+      g.add(box(alongX ? len : 0.08, 0.05, alongX ? 0.08 : len, M.bronze, x, 0.225 + 0.025, z, 0.008));
+    };
+    rail(13.3, -6.25, -8.9, true);
     add('slab', g, new THREE.Vector3(3, FL - 0.225, 1),
       { pos: new THREE.Vector3(3, 9.85, 2), quat: q(0, 22, 0), spin: 0.55 }, [0.3, 0.62]);
   }
@@ -147,10 +172,23 @@ export function createHouse(M) {
   // 9 — Roof plate: thin, deep overhang, bronze edge, oak soffit. It lands last.
   {
     const g = new THREE.Group();
-    const roof = new THREE.Mesh(metricUV(new THREE.BoxGeometry(27.5, 0.55, 19.5)),
-      [M.bronze, M.bronze, M.render, M.oak, M.bronze, M.bronze]);
-    roof.castShadow = roof.receiveShadow = true;
-    g.add(roof);
+    // a 450 mm plate held 120 mm behind a 220 mm bronze fascia: from the
+    // ground the roof reads as one thin bronze line over a band of shadow
+    const W = 27.5, D = 19.5, T = 0.55;
+    const core = new THREE.Mesh(bevelled(W - 0.24, 0.45, D - 0.24, 0.02),
+      [M.render, M.render, M.render, M.oak, M.render, M.render]);
+    core.position.y = -T / 2 + 0.225;
+    core.castShadow = core.receiveShadow = true;
+    g.add(core);
+    const fy = T / 2 - 0.11;
+    g.add(box(W, 0.22, 0.03, M.bronze, 0, fy, -D / 2 + 0.015, 0.006));
+    g.add(box(W, 0.22, 0.03, M.bronze, 0, fy, D / 2 - 0.015, 0.006));
+    g.add(box(0.03, 0.22, D, M.bronze, -W / 2 + 0.015, fy, 0, 0.006));
+    g.add(box(0.03, 0.22, D, M.bronze, W / 2 - 0.015, fy, 0, 0.006));
+    // the 86 m² photovoltaic field sits inside the fascia, invisible from below
+    for (let i = 0; i < 10; i++)
+      for (let j = 0; j < 5; j++)
+        g.add(box(1.68, 0.04, 1.0, M.pv, -8.6 + i * 1.78 + 1.2, T / 2 - 0.08, -3.2 + j * 1.08 + 0.6, 0.006));
     add('roof', g, new THREE.Vector3(3.75, FL + H + 0.275, 0.25),
       { pos: new THREE.Vector3(3, 16.4, 2), quat: q(0, -14, 0), spin: -0.3 }, [0.6, 0.92]);
   }

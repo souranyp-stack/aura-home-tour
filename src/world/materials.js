@@ -5,7 +5,7 @@ import * as S from '../core/surfaces.js';
 // Uniforms shared by every patched material. The story timeline drives them.
 export const aura = {
   uSweep: { value: -40 },                         // material front, metres along SWEEP_DIR
-  uPlaster: { value: new THREE.Color(0xe7e2d8) },  // maquette colour before materials arrive
+  uPlaster: { value: new THREE.Color(0xdcd5c9) },  // maquette colour before materials arrive
   uEdge: { value: new THREE.Color(1.0, 0.66, 0.36).multiplyScalar(5) },
   uWorldR: { value: 0 },                          // radius of the revealed landscape
   uVoid: { value: new THREE.Color(0x0b0a09) },
@@ -91,7 +91,9 @@ float auraWV = 1.0;
   auraGlow *= 0.35;
 #endif
 #ifdef AURA_SOLID
-  diffuseColor.rgb = mix(uPlaster, diffuseColor.rgb, auraM);
+  // cast plaster: soft cloudy mottling and a fine trowelled grain
+  vec3 plaster = uPlaster * (0.94 + 0.07 * auraFbm(vAuraWP * 0.9) + 0.025 * auraNoise(vAuraWP * 31.0));
+  diffuseColor.rgb = mix(plaster, diffuseColor.rgb, auraM);
 #endif
 #ifdef AURA_WORLD
   float wd = length(vAuraWP.xz - vec2(3.0, 2.0)) + (auraFbm(vAuraWP * 0.015) - 0.5) * 70.0;
@@ -159,6 +161,7 @@ export function createMaterials(renderer) {
       { mode: 'glass' }
     ),
     glassDark: std({ color: 0x101415, metalness: 0.2, roughness: 0.04, envMapIntensity: 1.5 }, {}),
+    pv: std({ color: 0x0b1118, metalness: 0.35, roughness: 0.12, envMapIntensity: 1.3 }, {}),
     poolWater: std({
       color: 0x15646a, metalness: 0, roughness: 0.03, normalMap: t.waves.normalMap, normalScale: new THREE.Vector2(0.4, 0.4),
       envMapIntensity: 1.5, transparent: true, opacity: 0.94,

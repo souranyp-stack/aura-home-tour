@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 
 // Final pass: ACES tone mapping and sRGB output (what OutputPass does), plus
 // the film finish — lens falloff and fine grain — in the same full-screen draw.
@@ -38,6 +39,20 @@ const FinalShader = {
     }`,
 };
 
+// Ground-truth AO whose depth/normal pre-pass ignores everything that isn't an
+// opaque surface: glass, sea, sky, the void and alpha-cut foliage would
+// otherwise occlude like solid slabs.
+class SurfaceAOPass extends GTAOPass {
+  overrideVisibility() {
+    super.overrideVisibility();
+    this.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      const m = o.material;
+      if (o.userData.noAO || (m && (m.transparent || m.alphaTest > 0 || m.isShaderMaterial))) o.visible = false;
+    });
+  }
+}
+
 export function createPost(renderer, scene, camera, { mobile }) {
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   const rt = new THREE.WebGLRenderTarget(size.x, size.y, {
@@ -46,6 +61,14 @@ export function createPost(renderer, scene, camera, { mobile }) {
   });
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
+  let ao = null;
+  if (!mobile) {
+    ao = new SurfaceAOPass(scene, camera, size.x / 2, size.y / 2, undefined,
+      { radius: 0.9, distanceExponent: 1.6, thickness: 1.6, scale: 1.15, samples: 12, distanceFallOff: 1 },
+      { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+    ao.blendIntensity = 0.9;
+    composer.addPass(ao);
+  }
   const bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.2, 0.5, 1.05);
   composer.addPass(bloom);
   const grade = new ShaderPass(FinalShader);
@@ -58,9 +81,11 @@ export function createPost(renderer, scene, camera, { mobile }) {
     composer.setSize(w, h);
     // the bloom is a soft glow; a quarter-resolution chain looks the same and costs far less
     bloom.setSize(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
+    // contact shadows are low-frequency too: half resolution, denoised
+    ao?.setSize(Math.round((w * dpr) / 2), Math.round((h * dpr) / 2));
     grade.uniforms.uRes.value.set(w * dpr, h * dpr);
   }
   setSize(innerWidth, innerHeight, renderer.getPixelRatio());
 
-  return { composer, bloom, grade, setSize };
+  return { composer, bloom, grade, ao, setSize };
 }

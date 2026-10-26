@@ -33,10 +33,22 @@ const status = (text, t) => { statusEl.textContent = text; barEl.style.width = `
 const nextFrame = () => new Promise((r) => { requestAnimationFrame(() => r()); setTimeout(r, 60); });
 
 // ---- scroll → progress ----
+// The film plays across the spacer; the landing page then scrolls up over it.
 let target = 0;
 let prog = 0;
-const maxScroll = () => document.documentElement.scrollHeight - innerHeight;
-const readScroll = () => { const m = maxScroll(); target = m > 0 ? Math.min(1, Math.max(0, scrollY / m)) : 0; };
+const spacer = document.getElementById('spacer');
+const filmUi = document.getElementById('filmUi');
+const header = document.getElementById('top');
+const filmEnd = () => spacer.offsetTop + spacer.offsetHeight - innerHeight;
+let covered = false;
+const readScroll = () => {
+  const end = filmEnd();
+  target = end > 0 ? Math.min(1, Math.max(0, scrollY / end)) : 0;
+  const past = scrollY - end;
+  covered = past > innerHeight * 1.02;
+  filmUi.classList.toggle('is-hidden', past > innerHeight * 0.3);
+  header.classList.toggle('is-solid', past > innerHeight * 0.7);
+};
 addEventListener('scroll', readScroll, { passive: true });
 
 const pointer = new THREE.Vector2();
@@ -78,7 +90,16 @@ async function boot() {
   const post = createPost(renderer, scene, camera, { mobile });
 
   const ui = createUI({
-    onJump: (p) => window.scrollTo({ top: p * maxScroll(), behavior: reducedMotion ? 'auto' : 'smooth' }),
+    onJump: (p) => {
+      // from deep in the page, cut straight to the film rather than scrolling back through it
+      const far = Math.abs(scrollY - p * filmEnd()) > innerHeight * 4 && scrollY > filmEnd();
+      window.scrollTo({ top: p * filmEnd(), behavior: reducedMotion || far ? 'auto' : 'smooth' });
+    },
+    onAnchor: (el) => {
+      const top = el.getBoundingClientRect().top + scrollY - (el.id === 'enquire' ? 40 : 0);
+      const far = Math.abs(top - scrollY) > innerHeight * 4;
+      window.scrollTo({ top, behavior: reducedMotion || far ? 'auto' : 'smooth' });
+    },
   });
 
   const doorX = house.door.position.x;
@@ -176,6 +197,8 @@ async function boot() {
     if (key !== sizeKey) { sizeKey = key; onResize(); }
     prog += (target - prog) * (1 - Math.exp(-dt * 4.2));
     pointerEased.lerp(pointer, 1 - Math.exp(-dt * 2.5));
+    // once the landing page covers the canvas there is nothing to draw
+    if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; return; }
     apply(prog, time, dt);
     post.grade.uniforms.uTime.value = time;
     post.composer.render();
@@ -207,6 +230,31 @@ async function boot() {
       setProgress: (p) => { prog = target = p; },
       post,
       renderAt: (p, t = 10) => { prog = target = p; apply(p, t, 0.016); post.composer.render(); },
+    };
+    // contact sheets of exact scroll positions, posted to a local capture server
+    const send = (name, c) => fetch(`http://127.0.0.1:5299/save?name=${name}`, { method: 'POST', body: c.toDataURL('image/jpeg', 0.88) });
+    window.__aura.sheet = async (list, name, cols = 3, w = 640) => {
+      const h = Math.round((w * innerHeight) / innerWidth);
+      const c = document.createElement('canvas');
+      c.width = cols * w; c.height = Math.ceil(list.length / cols) * h;
+      const g = c.getContext('2d');
+      g.font = '600 18px sans-serif';
+      list.forEach((p, i) => {
+        window.__aura.renderAt(p);
+        const x = (i % cols) * w, y = Math.floor(i / cols) * h;
+        g.drawImage(canvas, x, y, w, h);
+        g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(x, y, 70, 26); g.fillStyle = '#fff'; g.fillText(p.toFixed(3), x + 6, y + 19);
+      });
+      await send(name, c);
+      return name;
+    };
+    window.__aura.shot = async (p, name, w = 1440) => {
+      window.__aura.renderAt(p);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = Math.round((w * innerHeight) / innerWidth);
+      c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height);
+      await send(name, c);
+      return name;
     };
   }
 }
