@@ -64,7 +64,7 @@ export function createPost(renderer, scene, camera, { mobile }) {
   let ao = null;
   if (!mobile) {
     ao = new SurfaceAOPass(scene, camera, size.x / 2, size.y / 2, undefined,
-      { radius: 0.9, distanceExponent: 1.6, thickness: 1.6, scale: 1.15, samples: 12, distanceFallOff: 1 },
+      { radius: 0.9, distanceExponent: 1.6, thickness: 1.6, scale: 1.15, samples: 10, distanceFallOff: 1 },
       { lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
     ao.blendIntensity = 0.9;
     composer.addPass(ao);

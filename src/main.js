@@ -20,7 +20,7 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-const maxDpr = Math.min(window.devicePixelRatio, mobile ? 1.5 : 1.75);
+const maxDpr = Math.min(window.devicePixelRatio, 1.5);
 let dpr = maxDpr;
 renderer.setPixelRatio(dpr);
 renderer.setSize(innerWidth, innerHeight, false);
@@ -150,6 +150,9 @@ async function boot() {
     // lit rooms read from outside after dark
     M.glassDark.emissive.copy(warmGlow).multiplyScalar(env.interior * (1 - sky.daylight) * 0.35);
     M.textures.waves.normalMap.offset.set(time * 0.012, time * 0.007);
+
+    // contact shadows matter for the maquette and the rooms, not for wide landscape shots
+    if (post.ao) post.ao.enabled = !(p > 0.47 && p < 0.69);
 
     // camera
     let { fov, shift } = cameraAt(p, camPos, camTgt);
