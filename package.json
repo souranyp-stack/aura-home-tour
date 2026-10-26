@@ -9,6 +9,8 @@
     "preview": "vite preview --port 4173"
   },
   "dependencies": {
+    "gsap": "^3.13.0",
+    "lenis": "^1.1.14",
     "three": "^0.169.0"
   },
   "devDependencies": {

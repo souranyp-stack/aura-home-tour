@@ -1,3 +1,4 @@
+import './style.css';
 import * as THREE from 'three';
 import { createMaterials, aura } from './world/materials.js';
 import { createHouse } from './world/house.js';
@@ -8,6 +9,11 @@ import { createAtmosphere } from './world/atmosphere.js';
 import { cameraAt, storyAt } from './story/timeline.js';
 import { createPost } from './core/post.js';
 import { createUI } from './ui/ui.js';
+import { initPage } from './ui/page.js';
+import { renderSamples } from './world/samples.js';
+import Lenis from 'lenis';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 const mobile = matchMedia('(max-width: 900px)').matches || /Mobi|Android/i.test(navigator.userAgent);
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -89,17 +95,30 @@ async function boot() {
   atmo.excludeFromReflection([interior.root]);
   const post = createPost(renderer, scene, camera, { mobile });
 
+  // Smooth scrolling on GSAP's ticker, so ScrollTrigger and the film read the same scroll.
+  const lenis = reducedMotion ? null : new Lenis({ duration: 1.15, easing: (t) => 1 - Math.pow(1 - t, 3.2), smoothWheel: true });
+  if (lenis) {
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add((t) => lenis.raf(t * 1000));
+    gsap.ticker.lagSmoothing(0);
+  }
+  const scrollToY = (y, far) => {
+    if (lenis) lenis.scrollTo(y, { immediate: far, duration: far ? 0 : 2.2 });
+    else window.scrollTo({ top: y, behavior: 'auto' });
+  };
+
+  let page = null;
   const ui = createUI({
     onJump: (p) => {
       // from deep in the page, cut straight to the film rather than scrolling back through it
       const far = Math.abs(scrollY - p * filmEnd()) > innerHeight * 4 && scrollY > filmEnd();
-      window.scrollTo({ top: p * filmEnd(), behavior: reducedMotion || far ? 'auto' : 'smooth' });
+      scrollToY(p * filmEnd(), far);
     },
     onAnchor: (el) => {
-      const top = el.getBoundingClientRect().top + scrollY - (el.id === 'enquire' ? 40 : 0);
-      const far = Math.abs(top - scrollY) > innerHeight * 4;
-      window.scrollTo({ top, behavior: reducedMotion || far ? 'auto' : 'smooth' });
+      const top = el.getBoundingClientRect().top + scrollY;
+      scrollToY(top, Math.abs(top - scrollY) > innerHeight * 4);
     },
+    onFrameLive: (el) => page?.frameIn(el),
   });
 
   const doorX = house.door.position.x;
@@ -159,6 +178,35 @@ async function boot() {
     camera.lookAt(camTgt);
   }
 
+  // Stills for the Spaces section: the finished house at three hours.
+  const STILLS = {
+    terrace: { pos: [22, 5.3, -23], tgt: [1, 4.9, -5], fov: 36, env: { time: 19.5, mist: 0.06, interior: 0.45, fire: 0, veil: 0 } },
+    hearth: { pos: [0.9, 5.35, 1.0], tgt: [-7.2, 4.85, 5.75], fov: 46, env: { time: 21.7, mist: 0.06, interior: 0.85, fire: 1, veil: 0.65 } },
+    fog: { pos: [-46, -4, -72], tgt: [4, 1, 0], fov: 30, env: { time: 7.1, mist: 0.55, interior: 0.3, fire: 0, veil: 0 } },
+  };
+  let stillN = 0;
+  function still(kind) {
+    const c = STILLS[kind];
+    const t = 40 + stillN++;
+    house.update(1, 0, 0);
+    aura.uSweep.value = 18;
+    interior.root.visible = true;
+    house.door.position.x = doorX;
+    house.door.position.z = doorZ;
+    land.group.visible = veg.visible = true;
+    const sky = atmo.update({ studio: 0, time: c.env.time, mist: c.env.mist, worldR: 2800, voidOpacity: 0, now: t, forceEnv: true });
+    interior.update(c.env, t);
+    M.glassDark.emissive.copy(warmGlow).multiplyScalar(c.env.interior * (1 - sky.daylight) * 0.35);
+    camera.clearViewOffset();
+    camera.fov = c.fov;
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    camera.position.set(...c.pos);
+    camera.lookAt(...c.tgt);
+    post.composer.render();
+    return canvas.toDataURL('image/jpeg', 0.9);
+  }
+
   // Compile every program up front so reveals never hitch.
   mark('atmosphere');
   status('Polishing the glass', 0.86);
@@ -172,6 +220,41 @@ async function boot() {
   status('', 1);
   await nextFrame();
   document.getElementById('loader').classList.add('is-done');
+
+  // ---- landing page: drawings, swatches and stills rendered from the live model
+  const setBg = (el, url) => { el.style.backgroundImage = `url(${url})`; el.classList.add('is-ready'); };
+  let swatchesDone = false, stillsDone = false;
+  page = initPage({
+    filmEnd,
+    onReadySwatches: () => {
+      if (swatchesDone) return;
+      swatchesDone = true;
+      const run = () => {
+        const urls = renderSamples(renderer, M, scene.environment);
+        document.querySelectorAll('[data-swatch]').forEach((li) => {
+          const box = li.querySelector('.swatch__img');
+          setBg(box.querySelector('i'), urls[li.dataset.swatch]);
+          box.classList.add('is-ready');
+        });
+      };
+      (window.requestIdleCallback || setTimeout)(run);
+    },
+    onReadyStills: () => {
+      if (stillsDone) return;
+      stillsDone = true;
+      const shots = {};
+      const go = () => {
+        // stills need the canvas hidden behind the page; wait until it is
+        if (!covered) { setTimeout(go, 250); return; }
+        for (const kind of ['terrace', 'hearth', 'fog']) shots[kind] = still(kind);
+        document.querySelectorAll('[data-still]').forEach((el) => setBg(el, shots[el.dataset.still]));
+        document.querySelectorAll('[data-still-bg]').forEach((el) => setBg(el, shots[el.dataset.stillBg]));
+      };
+      go();
+    },
+  });
+  setTimeout(() => page.heroIn(), 250);
+  ScrollTrigger.refresh();
 
   // ---- loop ----
   const clock = new THREE.Clock();
@@ -195,7 +278,8 @@ async function boot() {
     // the viewport can change before a resize event reaches us (hidden tabs, embeds)
     const key = `${innerWidth}x${innerHeight}`;
     if (key !== sizeKey) { sizeKey = key; onResize(); }
-    prog += (target - prog) * (1 - Math.exp(-dt * 4.2));
+    // Lenis already eases the scroll; this only removes the last bit of jitter
+    prog += (target - prog) * (1 - Math.exp(-dt * (reducedMotion ? 4.2 : 9)));
     pointerEased.lerp(pointer, 1 - Math.exp(-dt * 2.5));
     // once the landing page covers the canvas there is nothing to draw
     if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; return; }
@@ -226,7 +310,15 @@ async function boot() {
   if (import.meta.env.DEV) {
     // Dev hook: render an exact scroll position synchronously (for capture in throttled tabs).
     window.__aura = {
-      scene, camera, renderer, M, house, atmo,
+      scene, camera, renderer, M, house, atmo, lenis,
+      // jump the page to an element (fraction of its height) through Lenis
+      go: async (sel, frac = 0, wait = 1800) => {
+        const el = document.querySelector(sel);
+        const y = el.getBoundingClientRect().top + scrollY + el.offsetHeight * frac;
+        if (lenis) lenis.scrollTo(y, { immediate: true, force: true }); else window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, wait));
+        return Math.round(scrollY);
+      },
       setProgress: (p) => { prog = target = p; },
       post,
       renderAt: (p, t = 10) => { prog = target = p; apply(p, t, 0.016); post.composer.render(); },

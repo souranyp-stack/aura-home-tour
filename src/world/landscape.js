@@ -27,7 +27,7 @@ const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a
 
 export function edgeZ(x) {
   const d = Math.max(0, Math.abs(x - 3) - 15);
-  return -3.5 + 92 * (1 - Math.exp(-(d * d) / 3200)) + fbm(x * 0.012, 3.1, 4) * 14 * smooth(0, 25, d) + 30 * Math.sin((x - 3) * 0.004);
+  return -3.5 + 92 * (1 - Math.exp(-(d * d) / 3200)) + fbm(x * 0.012, 3.1, 4) * 14 * smooth(0, 25, d) + 30 * Math.sin((x - 3) * 0.004) * smooth(0, 30, d);
 }
 
 export function heightAt(x, z) {
@@ -210,6 +210,8 @@ export function createLandscape(M) {
   const plantings = [];
   // a garden olive in the entry court and a cypress line along the drive
   plantings.push({ type: 'olive', x: 9.5, y: 0.24, z: 13.2, scale: 1.35, seed: 4 });
+  // a young olive in the terracotta pot inside the glass corner of the pavilion
+  plantings.push({ type: 'olive', x: 9.5, y: 4.05 + 0.55, z: -2.7, scale: 0.5, seed: 11 });
   for (let i = 0; i < 6; i++) plantings.push({ type: 'cypress', x: -16 - i * 0.2, y: heightAt(-16, 14 + i * 4.2), z: 14 + i * 4.2, scale: 0.9 + (i % 2) * 0.12, seed: 30 + i });
   for (let i = 0; i < 4; i++) plantings.push({ type: 'cypress', x: 22 + (i % 2) * 1.5, y: heightAt(22, 18 + i * 5), z: 18 + i * 5, scale: 0.85 + (i % 3) * 0.1, seed: 50 + i });
   // stone pines framing the headland

@@ -129,14 +129,19 @@ let cache = null;
 
 export function createMaterials(renderer) {
   if (cache) return cache;
+  // key surfaces bake at 2048 on desktop so they hold up at eye level indoors
+  const hi = renderer.capabilities.maxTextureSize >= 4096 && !/Mobi|Android/i.test(navigator.userAgent) ? 2048 : 1024;
   const t = {
-    travertine: bakeSurface(renderer, S.TRAVERTINE, { size: 1024, depth: 0.012 }),
-    limestone: bakeSurface(renderer, S.LIMESTONE, { size: 1024, depth: 0.03 }),
-    oak: bakeSurface(renderer, S.OAK, { size: 1024, depth: 0.006 }),
+    travertine: bakeSurface(renderer, S.TRAVERTINE, { size: hi, depth: 0.012 }),
+    limestone: bakeSurface(renderer, S.LIMESTONE, { size: hi, depth: 0.045 }),
+    oak: bakeSurface(renderer, S.OAK, { size: hi, depth: 0.005 }),
+    walnut: bakeSurface(renderer, S.WALNUT, { size: 1024, depth: 0.004 }),
+    leather: bakeSurface(renderer, S.LEATHER, { size: 1024, depth: 0.003 }),
+    bronze: bakeSurface(renderer, S.BRONZE, { size: 1024, depth: 0.002 }),
     boucle: bakeSurface(renderer, S.BOUCLE, { size: 512, depth: 0.004 }),
     wool: bakeSurface(renderer, S.WOOL, { size: 512, depth: 0.003 }),
     render: bakeSurface(renderer, S.RENDER, { size: 512, depth: 0.004 }),
-    rock: bakeSurface(renderer, S.ROCK, { size: 1024, depth: 0.08 }),
+    rock: bakeSurface(renderer, S.ROCK, { size: hi, depth: 0.08 }),
     ground: bakeSurface(renderer, S.GROUND, { size: 1024, depth: 0.012 }),
     waves: bakeSurface(renderer, S.WAVES, { size: 512, depth: 0.05 }),
     art: bakeSurface(renderer, S.ARTWORK, { size: 1024, depth: 0.004 }),
@@ -150,9 +155,9 @@ export function createMaterials(renderer) {
     textures: t,
     travertine: std({ ...set(t.travertine), roughness: 1 }, { uvScale: 1 / 2.4 }),
     limestone: std({ ...set(t.limestone), roughness: 1 }, { uvScale: 1 / 3 }),
-    oak: std({ ...set(t.oak), roughness: 1 }, { uvScale: 1 / 2 }),
+    oak: std({ ...set(t.oak), roughness: 1 }, { uvScale: 1 / 2.4 }),
     render: std({ ...set(t.render), roughness: 1 }, { uvScale: 1 / 4 }),
-    bronze: std({ color: 0x3b2d20, metalness: 1, roughness: 0.36, normalMap: t.render.normalMap, normalScale: new THREE.Vector2(0.3, 0.3) }, { uvScale: 1 / 2 }),
+    bronze: std({ ...set(t.bronze), metalness: 1, roughness: 1 }, { uvScale: 1 }),
     glass: auraPatch(
       new THREE.MeshPhysicalMaterial({
         color: 0xd7e3e2, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.16,
@@ -168,15 +173,17 @@ export function createMaterials(renderer) {
     }, { uvScale: 1 / 3 }),
 
     // Interior (printed in by the sweep)
-    floorOak: std({ ...set(t.oak), roughness: 1 }, { uvScale: 1 / 2, mode: 'reveal' }),
+    floorOak: std({ ...set(t.oak), roughness: 1 }, { uvScale: 1 / 2.4, mode: 'reveal' }),
     wallTravertine: std({ ...set(t.travertine), roughness: 1 }, { uvScale: 1 / 2.4, mode: 'reveal' }),
     boucle: std({ ...set(t.boucle), roughness: 1, color: 0xf3efe7 }, { uvScale: 1 / 0.4, mode: 'reveal' }),
     wool: std({ ...set(t.wool), roughness: 1 }, { uvScale: 1, mode: 'reveal' }),
-    walnut: std({ ...set(t.oak), roughness: 1, color: 0x8a6448 }, { uvScale: 1 / 2, mode: 'reveal' }),
-    cognac: std({ color: 0x7b4a2b, roughness: 0.55, normalMap: t.render.normalMap, normalScale: new THREE.Vector2(0.4, 0.4) }, { uvScale: 2, mode: 'reveal' }),
+    walnut: std({ ...set(t.walnut), roughness: 1 }, { uvScale: 1 / 1.2, mode: 'reveal' }),
+    cognac: std({ ...set(t.leather), roughness: 1 }, { uvScale: 1 / 0.3, mode: 'reveal' }),
     basalt: std({ color: 0x2b2926, roughness: 0.62, normalMap: t.render.normalMap }, { uvScale: 1, mode: 'reveal' }),
-    bronzeInterior: std({ color: 0x3b2d20, metalness: 1, roughness: 0.32 }, { mode: 'reveal' }),
+    bronzeInterior: std({ ...set(t.bronze), metalness: 1, roughness: 1 }, { uvScale: 1, mode: 'reveal' }),
     ceramic: std({ color: 0xcfc6b8, roughness: 0.45 }, { mode: 'reveal' }),
+    steel: std({ color: 0x1b1a19, metalness: 0.85, roughness: 0.55, normalMap: t.bronze.normalMap }, { uvScale: 1, mode: 'reveal' }),
+    soot: std({ color: 0x050505, roughness: 1 }, { mode: 'reveal' }),
     ceramicDark: std({ color: 0x3a3430, roughness: 0.5 }, { mode: 'reveal' }),
     terracotta: std({ color: 0x9c5a3c, roughness: 0.85, normalMap: t.render.normalMap }, { uvScale: 2, mode: 'reveal' }),
     art: std({ ...set(t.art), roughness: 1 }, { uvScale: 1, mode: 'reveal' }),
@@ -195,7 +202,7 @@ export function createMaterials(renderer) {
       return mat;
     })(),
     outdoorFabric: std({ ...set(t.boucle), roughness: 1, color: 0xe9e2d4 }, { uvScale: 1 / 0.4, mode: 'reveal' }),
-    teak: std({ ...set(t.oak), roughness: 1, color: 0x9a7356 }, { uvScale: 1 / 2, mode: 'reveal' }),
+    teak: std({ ...set(t.oak), roughness: 1, color: 0xc29a74 }, { uvScale: 1 / 2.4, mode: 'reveal' }),
   };
   cache = m;
   return m;

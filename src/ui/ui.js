@@ -16,7 +16,7 @@ const fmtTime = (h) => {
   return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
 };
 
-export function createUI({ onJump, onAnchor }) {
+export function createUI({ onJump, onAnchor, onFrameLive = () => {} }) {
   const $ = (id) => document.getElementById(id);
   const frames = [...document.querySelectorAll('.frame')].map((el) => ({
     el, a: parseFloat(el.dataset.in), b: parseFloat(el.dataset.out), live: false,
@@ -113,7 +113,7 @@ export function createUI({ onJump, onAnchor }) {
       const fadeOut = Math.min(1, Math.max(0, (f.b - p) / 0.018));
       const o = Math.min(fadeIn, fadeOut);
       const live = o > 0.001;
-      if (live !== f.live) { f.el.classList.toggle('is-live', live); f.live = live; }
+      if (live !== f.live) { f.el.classList.toggle('is-live', live); f.live = live; if (live) onFrameLive(f.el); }
       if (live) {
         f.el.style.opacity = o.toFixed(3);
         f.el.style.transform = `translateY(${((1 - fadeIn) * 24 - (1 - fadeOut) * 24).toFixed(1)}px)`;

@@ -49,6 +49,20 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   voidMesh.renderOrder = -10; // draw the backdrop before any other transparent surface
   scene.add(voidMesh);
 
+  // Fog dome: the sky itself disappears into sea fog, densest at the horizon.
+  const fogDomeMat = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color() }, uAmount: { value: 0 } },
+    vertexShader: 'varying vec3 vDir; void main(){ vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `uniform vec3 uColor; uniform float uAmount; varying vec3 vDir;
+      void main(){ float h = clamp(vDir.y, 0.0, 1.0); float a = uAmount * mix(1.0, 0.55, smoothstep(0.0, 0.7, h));
+      gl_FragColor = vec4(uColor, a); }`,
+    side: THREE.BackSide, transparent: true, depthWrite: false, fog: false,
+  });
+  const fogDome = new THREE.Mesh(new THREE.SphereGeometry(3800, 32, 16), fogDomeMat);
+  fogDome.frustumCulled = false;
+  fogDome.renderOrder = -9;
+  scene.add(fogDome);
+
   // Gallery floor under the sculpture: dark, softly reflective, fading into the
   // void at its rim. It catches the sculpture's shadow and leaves with the void.
   const floorTex = (() => {
@@ -249,6 +263,9 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     const mistTone = fogMist.clone().multiplyScalar(0.15 + 0.85 * day);
     fc.lerp(mistTone, state.mist * 0.8);
     scene.fog.color.copy(fc).lerp(aura.uVoid.value, state.voidOpacity);
+    fogDomeMat.uniforms.uColor.value.copy(fc);
+    fogDomeMat.uniforms.uAmount.value = THREE.MathUtils.smoothstep(state.mist, 0.2, 0.95) * 0.92 * (1 - state.voidOpacity);
+    fogDome.visible = fogDomeMat.uniforms.uAmount.value > 0.005;
     scene.fog.density = (0.0011 + Math.pow(state.mist, 1.6) * 0.022) * (1 - state.voidOpacity * 0.9);
 
     voidMat.uniforms.uOpacity.value = state.voidOpacity;
@@ -267,9 +284,10 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
 
     // regenerate the environment map when the sky has visibly changed
     const key = `${state.time.toFixed(2)}|${state.mist.toFixed(2)}|${state.studio.toFixed(2)}`;
-    if (key !== lastEnvKey && (state.now - lastEnvAt > 0.12 || lastEnvAt < 0)) {
-      lastEnvKey = key;
-      lastEnvAt = state.now;
+    if (state.forceEnv || (key !== lastEnvKey && (state.now - lastEnvAt > 0.12 || lastEnvAt < 0))) {
+      // a forced rebuild (stills) is a one-off: the live film rebuilds on its next frame
+      lastEnvKey = state.forceEnv ? '' : key;
+      if (!state.forceEnv) lastEnvAt = state.now;
       skyParams(envSky, elev, state.mist);
       envSea.material.color.setRGB(0.03, 0.07, 0.09).multiplyScalar(0.3 + 0.7 * day);
       studio.visible = state.studio > 0.005;
