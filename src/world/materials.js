@@ -6,7 +6,7 @@ import * as S from '../core/surfaces.js';
 export const aura = {
   uSweep: { value: -40 },                         // material front, metres along SWEEP_DIR
   uPlaster: { value: new THREE.Color(0xdcd5c9) },  // maquette colour before materials arrive
-  uEdge: { value: new THREE.Color(1.0, 0.66, 0.36).multiplyScalar(5) },
+  uEdge: { value: new THREE.Color(1.0, 0.7, 0.42).multiplyScalar(0.8) },
   uWorldR: { value: 0 },                          // radius of the revealed landscape
   uVoid: { value: new THREE.Color(0x0b0a09) },
   uTime: { value: 0 },
@@ -26,7 +26,7 @@ float auraNoise(vec3 p){
              mix(mix(auraHash(i + vec3(0,0,1)), auraHash(i + vec3(1,0,1)), f.x), mix(auraHash(i + vec3(0,1,1)), auraHash(i + vec3(1,1,1)), f.x), f.y), f.z);
 }
 float auraFbm(vec3 p){ return auraNoise(p) * 0.55 + auraNoise(p * 2.1) * 0.3 + auraNoise(p * 4.3) * 0.15; }
-float auraS(){ return dot(vAuraWP, vec3(0.24, 0.96, 0.12)) + (auraFbm(vAuraWP * 0.35) - 0.5) * 1.8; }
+float auraS(){ return dot(vAuraWP, vec3(0.24, 0.96, 0.12)) + (auraFbm(vAuraWP * 0.35) - 0.5) * 0.7; }
 `;
 
 /**
@@ -80,7 +80,7 @@ float auraWV = 1.0;
 #if defined(AURA_SOLID) || defined(AURA_GLASS) || defined(AURA_REVEAL)
   float aS = auraS();
   auraM = 1.0 - smoothstep(uSweep - 0.6, uSweep, aS);
-  auraGlow = 1.0 - smoothstep(0.0, 0.3, abs(aS - uSweep + 0.25));
+  auraGlow = 1.0 - smoothstep(0.0, 0.1, abs(aS - uSweep + 0.25));
 #endif
 #ifdef AURA_REVEAL
   if (aS > uSweep + 0.02) discard;
@@ -153,7 +153,7 @@ export function createMaterials(renderer) {
 
   const std = (params, opts) => auraPatch(new THREE.MeshStandardMaterial(params), opts);
   // physical layers where the eye expects them: fabric sheen, leather and oiled
-  // wood clearcoat, brushed-metal anisotropy
+  // wood clearcoat
   const phys = (params, opts) => auraPatch(new THREE.MeshPhysicalMaterial(params), opts);
   const set = (tx) => ({ map: tx.map, normalMap: tx.normalMap, roughnessMap: tx.roughnessMap });
 
@@ -163,7 +163,7 @@ export function createMaterials(renderer) {
     limestone: std({ ...set(t.limestone), roughness: 1 }, { uvScale: 1 / 3 }),
     oak: std({ ...set(t.oak), roughness: 1 }, { uvScale: 1 / 2.4 }),
     render: std({ ...set(t.render), roughness: 1 }, { uvScale: 1 / 4 }),
-    bronze: phys({ ...set(t.bronze), metalness: 1, roughness: 1, anisotropy: 0.55 }, { uvScale: 1 }),
+    bronze: phys({ ...set(t.bronze), metalness: 1, roughness: 1 }, { uvScale: 1 }),
     glass: auraPatch(
       new THREE.MeshPhysicalMaterial({
         color: 0xd7e3e2, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.16,
@@ -188,7 +188,7 @@ export function createMaterials(renderer) {
     cognac: phys({ ...set(t.leather), roughness: 1, clearcoat: 0.08, clearcoatRoughness: 0.6, sheen: 0.25, sheenRoughness: 0.7, sheenColor: 0x8a4a2a }, { uvScale: 1 / 0.3, mode: 'reveal' }),
     cognacDark: phys({ ...set(t.leather), roughness: 1, color: 0x6a4f42, clearcoat: 0.08, clearcoatRoughness: 0.6 }, { uvScale: 1 / 0.3, mode: 'reveal' }),
     basalt: std({ color: 0x2b2926, roughness: 0.62, normalMap: t.render.normalMap }, { uvScale: 1, mode: 'reveal' }),
-    bronzeInterior: phys({ ...set(t.bronze), metalness: 1, roughness: 1, anisotropy: 0.55 }, { uvScale: 1, mode: 'reveal' }),
+    bronzeInterior: phys({ ...set(t.bronze), metalness: 1, roughness: 1 }, { uvScale: 1, mode: 'reveal' }),
     ceramic: std({ color: 0xcfc6b8, roughness: 0.45 }, { mode: 'reveal' }),
     steel: std({ color: 0x1b1a19, metalness: 0.85, roughness: 0.55, normalMap: t.bronze.normalMap }, { uvScale: 1, mode: 'reveal' }),
     soot: std({ color: 0x050505, roughness: 1 }, { mode: 'reveal' }),

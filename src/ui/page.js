@@ -367,7 +367,6 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
       x: () => -distance(), ease: 'none',
       scrollTrigger: {
         trigger: '#materials', pin, start: 'top top', end: () => `+=${distance()}`, scrub: 0.9, invalidateOnRefresh: true,
-        onUpdate: (st) => { $('#matIndex').textContent = String(1 + Math.min(5, Math.floor(st.progress * 6))).padStart(2, '0'); },
       },
     });
     $$('#swatches li').forEach((li) => {
@@ -476,7 +475,7 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
     const split = frameSplits.get(frame);
     if (!split) return;
     gsap.fromTo(split.lines, { yPercent: 110 }, { yPercent: 0, duration: 1.3, ease: EASE, stagger: 0.09, overwrite: true });
-    gsap.fromTo($$('.numeral, p, .spec li, .stats > div, .frame__cta', frame), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 1.2, ease: EASE, stagger: 0.06, delay: 0.15, overwrite: true });
+    gsap.fromTo($$('p, .spec li, .stats > div, .frame__cta', frame), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 1.2, ease: EASE, stagger: 0.06, delay: 0.15, overwrite: true });
   };
 
   return { heroIn, frameIn };

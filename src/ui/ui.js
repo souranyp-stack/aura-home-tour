@@ -1,7 +1,6 @@
 import { CHAPTERS } from '../story/timeline.js';
 
 const NAMES = ['Prologue', 'Sculpture', 'Gravity', 'Matter', 'Ground', 'Threshold', 'Interior', 'Atmosphere'];
-const ROMAN = ['0', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII'];
 
 const PRESETS = {
   dawn: { time: 6.85, interior: 0.25, fire: 0, mist: 0.42 },
@@ -27,9 +26,8 @@ export function createUI({ onJump, onAnchor, onFrameLive = () => {} }) {
   const railButtons = CHAPTERS.map((c, i) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.dataset.n = ROMAN[i] === '0' ? '00' : ROMAN[i];
     b.innerHTML = '<i><b></b></i>';
-    b.setAttribute('aria-label', `Chapter ${ROMAN[i]}: ${NAMES[i]}`);
+    b.setAttribute('aria-label', `Go to ${NAMES[i]}`);
     b.title = NAMES[i];
     b.addEventListener('click', () => onJump(c.p + 0.012));
     rail.appendChild(b);
@@ -125,7 +123,6 @@ export function createUI({ onJump, onAnchor, onFrameLive = () => {} }) {
     CHAPTERS.forEach((c, i) => { if (p >= c.p - 0.005) ch = i; });
     if (ch !== lastChapter) {
       lastChapter = ch;
-      $('chapterNum').textContent = ROMAN[ch] === '0' ? '00' : ROMAN[ch];
       $('chapterName').textContent = NAMES[ch];
       railButtons.forEach((b, i) => b.classList.toggle('is-active', i === ch));
     }

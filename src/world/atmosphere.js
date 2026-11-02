@@ -178,7 +178,7 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   beam.userData.noAO = true;
   scene.add(beam);
 
-  const DUST = mobile ? 700 : 1800;
+  const DUST = mobile ? 140 : 360;
   const dustPos = new Float32Array(DUST * 3);
   const dustSeed = new Float32Array(DUST);
   for (let i = 0; i < DUST; i++) {
@@ -205,7 +205,7 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         // motes near the lens would read as snow: fade them and cap their size
         vLit *= smoothstep(18.0, 45.0, -mv.z);
-        gl_PointSize = min((1.2 + aSeed * 2.4) * uScale * (90.0 / -mv.z), 3.5 * uScale);
+        gl_PointSize = min((0.9 + aSeed * 1.2) * uScale * (90.0 / -mv.z), 2.2 * uScale);
         gl_Position = projectionMatrix * mv; }`,
     fragmentShader: `uniform float uAmount; varying float vLit; varying float vSeed;
       void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d);
@@ -323,8 +323,8 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     pool.intensity = 7500 * state.studio * state.voidOpacity;
     pool.visible = pool.intensity > 1;
     const gallery = state.studio * state.voidOpacity;
-    beamMat.uniforms.uAmount.value = 0.075 * gallery;
-    dustMat.uniforms.uAmount.value = 1.6 * gallery * (state.dust ?? 1);
+    beamMat.uniforms.uAmount.value = 0.055 * gallery;
+    dustMat.uniforms.uAmount.value = 0.55 * gallery * (state.dust ?? 1);
     dustMat.uniforms.uTime.value = state.now;
     dustMat.uniforms.uScale.value = renderer.getPixelRatio();
     beam.visible = dust.visible = gallery > 0.01;
