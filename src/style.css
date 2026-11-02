@@ -33,7 +33,7 @@ em { font-style: italic; }
 ::selection { background: var(--bronze); color: var(--ink); }
 
 #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100lvh; display: block; z-index: 0; }
-.spacer { height: 1700vh; }
+.spacer { height: 1840vh; }
 
 /* ---------- mark ---------- */
 .mark { width: 26px; height: 26px; fill: none; stroke-width: 2.4; flex: none; }
@@ -702,3 +702,20 @@ body.is-walking > *:not(#gl):not(#walk):not(script), body.is-walking > *:not(#gl
   .walk__switches button { height: 32px; padding: 0 8px; }
   .walk__stick { bottom: calc(var(--gutter) + 268px); }
 }
+
+/* the plans drawn white on cyanotype, for the desk at the opening */
+.blue-svg .drw text { fill: rgba(232, 242, 255, 0.82); }
+.blue-svg .drw .t-room { fill: #f2f7ff; }
+.blue-svg .drw .t-dim { fill: rgba(232, 242, 255, 0.66); }
+.blue-svg .drw .l-cut, .blue-svg .drw .l-break { stroke: #f2f7ff; }
+.blue-svg .drw .l-solid { stroke: #f2f7ff; fill: rgba(242, 247, 255, 0.14); }
+.blue-svg .drw .l-thin, .blue-svg .drw .l-ground { stroke: rgba(232, 242, 255, 0.78); }
+.blue-svg .drw .l-fur, .blue-svg .drw .l-dim { stroke: rgba(232, 242, 255, 0.58); }
+.blue-svg .drw .l-glass, .blue-svg .drw .l-sea { stroke: #bfe2ff; }
+.blue-svg .drw .f-water { fill: rgba(150, 210, 255, 0.2); stroke: #bfe2ff; }
+.blue-svg .drw .f-hatch, .blue-svg .drw .f-conc { stroke: #f2f7ff; }
+.blue-svg .drw .f-wall { fill: rgba(242, 247, 255, 0.55); stroke: #f2f7ff; }
+.blue-svg .drw .f-bronze, .blue-svg .drw .f-datum { fill: #f2f7ff; }
+.blue-svg .drw .f-light { fill: #f2f7ff; filter: none; }
+.blue-svg .drw .f-fire { fill: rgba(242, 247, 255, 0.3); stroke: #f2f7ff; }
+.blue-svg .drw .g-block { fill: #143f76; }

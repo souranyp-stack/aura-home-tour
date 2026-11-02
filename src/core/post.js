@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
 // Final pass: ACES tone mapping and sRGB output (what OutputPass does), plus
 // the film finish — lens falloff and fine grain — in the same full-screen draw.
@@ -53,6 +54,38 @@ class SurfaceAOPass extends GTAOPass {
   }
 }
 
+// Draws a second scene over the film, with its own alpha, so the film shows through
+// wherever that scene paints nothing. Sits before the bloom and the film finish.
+class OverlayPass extends Pass {
+  constructor(samples) {
+    super();
+    this.scene = null;
+    this.camera = null;
+    this.rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples });
+    this.quad = new FullScreenQuad(new THREE.ShaderMaterial({
+      uniforms: { tFilm: { value: null }, tOver: { value: null } },
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader: `uniform sampler2D tFilm; uniform sampler2D tOver; varying vec2 vUv;
+        void main(){ vec4 o = texture2D(tOver, vUv); gl_FragColor = vec4(o.rgb + texture2D(tFilm, vUv).rgb * (1.0 - o.a), 1.0); }`,
+      depthTest: false, depthWrite: false,
+    }));
+  }
+  setSize(w, h) { this.rt.setSize(w, h); }
+  render(renderer, writeBuffer, readBuffer) {
+    const clear = renderer.getClearColor(new THREE.Color()), alpha = renderer.getClearAlpha(), auto = renderer.autoClear;
+    renderer.setRenderTarget(this.rt);
+    renderer.setClearColor(0x000000, 0);
+    renderer.autoClear = true;
+    renderer.render(this.scene, this.camera);
+    renderer.setClearColor(clear, alpha);
+    renderer.autoClear = auto;
+    this.quad.material.uniforms.tFilm.value = readBuffer.texture;
+    this.quad.material.uniforms.tOver.value = this.rt.texture;
+    renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+    this.quad.render(renderer);
+  }
+}
+
 export function createPost(renderer, scene, camera, { mobile }) {
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   const rt = new THREE.WebGLRenderTarget(size.x, size.y, {
@@ -60,7 +93,8 @@ export function createPost(renderer, scene, camera, { mobile }) {
     samples: mobile ? 0 : 4,
   });
   const composer = new EffectComposer(renderer, rt);
-  composer.addPass(new RenderPass(scene, camera));
+  const film = new RenderPass(scene, camera);
+  composer.addPass(film);
   let ao = null;
   if (!mobile) {
     ao = new SurfaceAOPass(scene, camera, size.x / 2, size.y / 2, undefined,
@@ -69,6 +103,9 @@ export function createPost(renderer, scene, camera, { mobile }) {
     ao.blendIntensity = 0.9;
     composer.addPass(ao);
   }
+  const overlay = new OverlayPass(mobile ? 0 : 4);
+  overlay.enabled = false;
+  composer.addPass(overlay);
   const bloom = new UnrealBloomPass(new THREE.Vector2(size.x / 2, size.y / 2), 0.2, 0.5, 1.05);
   composer.addPass(bloom);
   const grade = new ShaderPass(FinalShader);
@@ -87,5 +124,13 @@ export function createPost(renderer, scene, camera, { mobile }) {
   }
   setSize(innerWidth, innerHeight, renderer.getPixelRatio());
 
-  return { composer, bloom, grade, ao, setSize };
+  // show a scene over the film; with hideFilm the film isn't drawn at all, since nothing can see it
+  function setOverlay(sc, cam, on, hideFilm) {
+    overlay.scene = sc;
+    overlay.camera = cam;
+    overlay.enabled = on;
+    film.enabled = !(on && hideFilm);
+  }
+
+  return { composer, bloom, grade, ao, setSize, setOverlay };
 }

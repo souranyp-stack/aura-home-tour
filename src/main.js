@@ -12,6 +12,7 @@ import { createUI } from './ui/ui.js';
 import { initPage } from './ui/page.js';
 import { renderSamples } from './world/samples.js';
 import { snapshot } from './core/snapshot.js';
+import { createDesk } from './world/desk.js';
 import { createWalk } from './ui/walk.js';
 import { createSound } from './core/sound.js';
 import Lenis from 'lenis';
@@ -49,14 +50,21 @@ const nextFrame = () => new Promise((r) => { requestAnimationFrame(() => r()); s
 // The film plays across the spacer; the landing page then scrolls up over it.
 let target = 0;
 let prog = 0;
+let deskTarget = 0;
+let deskProg = 0;
 const spacer = document.getElementById('spacer');
 const filmUi = document.getElementById('filmUi');
 const header = document.getElementById('top');
 const filmEnd = () => spacer.offsetTop + spacer.offsetHeight - innerHeight;
+// the first stretch of scroll belongs to the desk; the film starts where it ends
+const deskLength = () => innerHeight * 1.4;
+const filmY = (p) => (p === 0 ? 0 : deskLength() + p * (filmEnd() - deskLength()));
 let covered = false;
 const readScroll = () => {
   const end = filmEnd();
-  target = end > 0 ? Math.min(1, Math.max(0, scrollY / end)) : 0;
+  const lead = deskLength();
+  deskTarget = Math.min(1, Math.max(0, scrollY / lead));
+  target = end > lead ? Math.min(1, Math.max(0, (scrollY - lead) / (end - lead))) : 0;
   const past = scrollY - end;
   covered = past > innerHeight * 1.02;
   filmUi.classList.toggle('is-hidden', past > innerHeight * 0.3);
@@ -106,6 +114,9 @@ async function boot() {
   // the interior can never be seen reflected in the sea; skip it in the mirror pass
   atmo.excludeFromReflection([interior.root]);
   const post = createPost(renderer, scene, camera, { mobile });
+  status('Laying out the plans', 0.8);
+  await nextFrame();
+  const desk = await createDesk(renderer, M, { mobile });
 
   // Smooth scrolling on GSAP's ticker, so ScrollTrigger and the film read the same scroll.
   const lenis = reducedMotion ? null : new Lenis({ duration: 1.15, easing: (t) => 1 - Math.pow(1 - t, 3.2), smoothWheel: true });
@@ -123,8 +134,8 @@ async function boot() {
   const ui = createUI({
     onJump: (p) => {
       // from deep in the page, cut straight to the film rather than scrolling back through it
-      const far = Math.abs(scrollY - p * filmEnd()) > innerHeight * 4 && scrollY > filmEnd();
-      scrollToY(p * filmEnd(), far);
+      const far = Math.abs(scrollY - filmY(p)) > innerHeight * 4 && scrollY > filmEnd();
+      scrollToY(filmY(p), far);
     },
     onAnchor: (el) => {
       const top = el.getBoundingClientRect().top + scrollY;
@@ -377,6 +388,7 @@ async function boot() {
   document.addEventListener('visibilitychange', () => { frameAcc = 0; frameCount = 0; lastFrameAt = 0; });
   readScroll();
   prog = target;
+  deskProg = deskTarget;
 
   function onResize() {
     renderer.setPixelRatio(dpr);
@@ -396,6 +408,7 @@ async function boot() {
     if (key !== sizeKey) { sizeKey = key; onResize(); }
     // Lenis already eases the scroll; this only removes the last bit of jitter
     prog += (target - prog) * (1 - Math.exp(-dt * (reducedMotion ? 4.2 : 9)));
+    deskProg += (deskTarget - deskProg) * (1 - Math.exp(-dt * (reducedMotion ? 4.2 : 9)));
     pointerEased.lerp(pointer, 1 - Math.exp(-dt * 2.5));
     // once the landing page covers the canvas there is nothing to draw,
     // except while the daylight section holds its window open onto the scene
@@ -408,6 +421,11 @@ async function boot() {
     else if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; if (sound.state.enabled) sound.mix({}); return; }
     else apply(prog, time, dt);
     post.grade.uniforms.uTime.value = time;
+    if (walk.active || day.active || covered || deskProg >= 0.995) post.setOverlay(desk.scene, desk.camera, false, false);
+    else {
+      const shot = desk.update(deskProg, time, pointerEased, reducedMotion);
+      post.setOverlay(desk.scene, desk.camera, shot.on, !shot.film);
+    }
     post.composer.render();
 
     // what you hear follows what you see
@@ -454,6 +472,7 @@ async function boot() {
         return Math.round(scrollY);
       },
       setProgress: (p) => { prog = target = p; },
+      setDesk: (k) => { deskProg = deskTarget = k; },
       post,
       renderAt: (p, t = 10) => { prog = target = p; apply(p, t, 0.016); post.composer.render(); },
       renderDay: (t, time = 10) => { applyDay(t, time); post.composer.render(); },
