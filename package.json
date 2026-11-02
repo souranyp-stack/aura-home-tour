@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --port 5288 --strictPort",
     "build": "vite build",
-    "preview": "vite preview --port 4173"
+    "preview": "vite preview --port 4173",
+    "build:aura": "vite build && node scripts/single-file.mjs"
   },
   "dependencies": {
     "gsap": "^3.13.0",
@@ -14,6 +15,7 @@
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "terser": "^5.51.2",
     "vite": "^5.4.10"
   }
 }

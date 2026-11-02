@@ -4,8 +4,23 @@
     {
       "name": "aura",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5288
+    },
+    {
+      "name": "aura-single",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4190",
+        "--directory",
+        "dist-aura"
+      ],
+      "port": 4190
     }
   ]
 }

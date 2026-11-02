@@ -11,6 +11,7 @@ import { createPost } from './core/post.js';
 import { createUI } from './ui/ui.js';
 import { initPage } from './ui/page.js';
 import { renderSamples } from './world/samples.js';
+import { snapshot } from './core/snapshot.js';
 import { createWalk } from './ui/walk.js';
 import { createSound } from './core/sound.js';
 import Lenis from 'lenis';
@@ -68,6 +69,11 @@ const pointerEased = new THREE.Vector2();
 addEventListener('pointermove', (e) => {
   pointer.set((e.clientX / innerWidth) * 2 - 1, (e.clientY / innerHeight) * 2 - 1);
 }, { passive: true });
+
+const icon = document.createElement('link');
+icon.rel = 'icon';
+icon.href = URL.createObjectURL(new Blob([`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#0b0a09"/><circle cx="16" cy="14" r="8" fill="none" stroke="#c9a36b" stroke-width="1.6"/><path d="M5 22h22" stroke="#efe9df" stroke-width="1.6"/></svg>`], { type: 'image/svg+xml' }));
+document.head.appendChild(icon);
 
 const mark = (label) => { if (import.meta.env.DEV) console.info(`[aura] ${label} ${performance.now().toFixed(0)}ms`); };
 
@@ -223,7 +229,7 @@ async function boot() {
     camera.position.set(...c.pos);
     camera.lookAt(...c.tgt);
     post.composer.render();
-    return canvas.toDataURL('image/jpeg', 0.9);
+    return snapshot(canvas);
   }
 
   // A day on the headland: the finished house from the sea at a scrolled hour.
@@ -332,7 +338,7 @@ async function boot() {
         const urls = renderSamples(renderer, M, scene.environment);
         document.querySelectorAll('[data-swatch]').forEach((li) => {
           const box = li.querySelector('.swatch__img');
-          setBg(box.querySelector('i'), urls[li.dataset.swatch]);
+          urls[li.dataset.swatch].then((url) => setBg(box.querySelector('i'), url));
           box.classList.add('is-ready');
         });
       };
@@ -346,8 +352,8 @@ async function boot() {
         // stills need the canvas hidden behind the page; wait until it is
         if (!covered || day.active || walk.active) { setTimeout(go, 250); return; }
         for (const kind of Object.keys(STILLS)) shots[kind] = still(kind);
-        document.querySelectorAll('[data-still]').forEach((el) => setBg(el, shots[el.dataset.still]));
-        document.querySelectorAll('[data-still-bg]').forEach((el) => setBg(el, shots[el.dataset.stillBg]));
+        document.querySelectorAll('[data-still]').forEach((el) => shots[el.dataset.still].then((url) => setBg(el, url)));
+        document.querySelectorAll('[data-still-bg]').forEach((el) => shots[el.dataset.stillBg].then((url) => setBg(el, url)));
       };
       go();
     },

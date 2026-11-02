@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { snapshot } from '../core/snapshot.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 // Material samples for the landing page: each is a bevelled slab of the real
@@ -64,7 +65,7 @@ export function renderSamples(renderer, M, envMap, { width = 640, height = 800 }
       img.data.set(pixels.subarray(src, src + width * 4), y * width * 4);
     }
     ctx.putImageData(img, 0, 0);
-    out[name] = canvas.toDataURL('image/jpeg', 0.9);
+    out[name] = snapshot(canvas);
 
     scene.remove(slab);
     geo.dispose();
