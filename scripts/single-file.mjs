@@ -66,7 +66,7 @@ const notice = readFileSync('THIRD_PARTY_NOTICES.md', 'utf8').replace(/--/g, '- 
 html = html
   .replace('</head>', () => `<style>${read('.css')}</style></head>`)
   .replace('</body>', () => `<script type="module">${squeeze(read('.js')).replace(/<\/script/g, '<\\/script')}</script></body>`)
-  .replace('</html>', () => `</html>\n<!--\n${notice}-->\n`);
+  .replace('<head>', () => `<head><!--\n${notice}-->`);
 
 mkdirSync('dist-aura', { recursive: true });
 writeFileSync('dist-aura/index.html', html);
