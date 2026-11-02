@@ -340,9 +340,8 @@ export function approachMap() {
 }
 
 // ---------------------------------------------------------------- the paper sheet
-// Sheet A-101 as it would be printed: a 1600 x 1000 sheet folded in four.
-// Panel one is the title block (and the cover when folded); panels two to
-// four carry the upper plan at a large scale, with pencil notes on top.
+// Sheet A-101 as it would be printed: a 1600 x 1000 sheet with the title block
+// down the left and the upper plan at a large scale, with pencil notes on top.
 const nest = (svgStr, x, y, w, h) =>
   svgStr.replace(/<svg class="drw"[^>]*viewBox="([^"]+)"[^>]*>/, `<svg class="drw" x="${x}" y="${y}" width="${w}" height="${h}" viewBox="$1">`)
     .replace(/id="hatch"/g, 'id="pHatch"').replace(/id="rock"/g, 'id="pRock"').replace(/url\(#rock\)/g, 'url(#pRock)');

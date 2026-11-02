@@ -456,30 +456,17 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
 .map text.sea-label { font-family: var(--serif); font-style: italic; font-size: 20px; letter-spacing: 0.04em; text-transform: none; fill: rgba(244, 239, 230, 0.35); }
 .map .grid { stroke: rgba(244, 239, 230, 0.04); stroke-width: 1; }
 
-/* the drawing: a folded sheet that opens into a big plan */
+/* the drawing: a roll of paper that opens into a big plan */
 .sheet { position: relative; }
-.sheet__pin { height: 100vh; position: relative; overflow: hidden; display: grid; place-items: center; background: radial-gradient(80% 70% at 50% 55%, #1a1714 0%, var(--ink) 70%); }
+.sheet__pin { height: 100vh; position: relative; overflow: hidden; background: var(--ink); }
+.sheet__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sheet__pin::before, .sheet__pin::after { content: ''; position: absolute; left: 0; right: 0; height: 9vh; pointer-events: none; z-index: 1; opacity: var(--seam, 1); }
+.sheet__pin::before { top: 0; background: linear-gradient(var(--ink), rgba(11, 10, 9, 0)); }
+.sheet__pin::after { bottom: 0; background: linear-gradient(rgba(11, 10, 9, 0), var(--ink)); }
 .sheet__copy { position: absolute; left: var(--gutter); top: calc(14px + 64px + 5vh); max-width: 30ch; z-index: 2; }
 .sheet__copy p { color: var(--mute); margin-top: 22px; max-width: 34ch; }
-.sheet__hint { position: absolute; left: 50%; bottom: calc(var(--gutter) * 1.2); transform: translateX(-50%); display: flex; align-items: center; gap: 12px; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--mute); }
+.sheet__hint { position: absolute; left: var(--gutter); bottom: calc(var(--gutter) * 1.2); z-index: 2; display: flex; align-items: center; gap: 12px; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--mute); }
 .sheet__hint i { width: 36px; height: 1px; background: linear-gradient(90deg, var(--bronze), transparent); animation: cue 2.4s var(--ease) infinite; transform-origin: left; }
-.sheet__stage { perspective: 2600px; perspective-origin: 50% 40%; }
-.sheet__paper { --pw: 295px; position: relative; width: var(--pw); height: calc(var(--pw) * 2.5); transform-style: preserve-3d; will-change: transform; }
-.fold { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: left center; }
-.fold--child { left: 100%; right: auto; width: 100%; }
-.fold__face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden;
-  background-color: #efe8d8;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.24 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(140% 90% at 50% 40%, rgba(255, 252, 244, 0.6), rgba(214, 202, 178, 0.35));
-}
-.fold__front::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(60, 48, 30, 0.1), rgba(60, 48, 30, 0) 5%, rgba(255, 255, 255, 0.05) 50%, rgba(60, 48, 30, 0) 95%, rgba(60, 48, 30, 0.07)), linear-gradient(180deg, rgba(255, 252, 244, 0.25), rgba(255, 252, 244, 0) 30%, rgba(80, 64, 40, 0.06)); }
-.fold__back { transform: rotateY(180deg); background-color: #e8e0cd; }
-.fold__back::after { content: ''; position: absolute; inset: 14% 18%; border: 1px solid rgba(60, 50, 38, 0.18); }
-.fold__shade { position: absolute; inset: 0; background: #1a120a; opacity: var(--shade, 0); pointer-events: none; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-.fold__front svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-/* the shadow on the table follows the open width of the sheet */
-.sheet__paper::after { content: ''; position: absolute; left: 2%; top: 3%; height: 94%; width: calc(var(--pw) * var(--span, 1) * 0.96); transform: translateZ(-2px); background: rgba(0, 0, 0, 0.35); filter: blur(18px); box-shadow: 0 50px 80px rgba(0, 0, 0, var(--drop, 0.55)); pointer-events: none; }
 /* ink on paper */
 .paper-svg { --ink-c: #2a2520; }
 .paper-svg .frame { fill: none; stroke: var(--ink-c); stroke-width: 1.6; }

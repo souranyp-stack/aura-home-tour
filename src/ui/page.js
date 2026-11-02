@@ -2,8 +2,9 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin';
-import { upperPlan, lowerPlan, sectionAA, approachMap, paperSheet, sunDial, dialAngle, DIAL } from './drawings.js';
+import { upperPlan, lowerPlan, sectionAA, approachMap, sunDial, dialAngle, DIAL } from './drawings.js';
 import { sunDirection } from '../world/atmosphere.js';
+import { createPlanRoll } from '../world/planRoll.js';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
 
@@ -129,86 +130,40 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
   ScrollTrigger.create({ trigger: '#daylight', start: 'top top', end: 'bottom bottom', scrub: true, onUpdate: (st) => { dayT = st.progress; showDay(); } });
   showDay();
 
-  // ---------------------------------------------------------------- the drawing: a folded sheet opens into a big plan
+  // ---------------------------------------------------------------- the drawing: a roll of paper opens into a big plan
+  // The sheet has its own small scene, built just before the section arrives
+  // and drawn only while it is on screen. Scroll sets where the roll should be;
+  // the roll eases towards it, so it keeps moving smoothly between scroll steps.
   {
-    const paper = $('#paper');
-    const svg = paperSheet();
-    const panels = [];
-    let parent = paper;
-    for (let i = 0; i < 4; i++) {
-      const f = document.createElement('div');
-      f.className = `fold${i ? ' fold--child' : ''}`;
-      f.innerHTML = `<div class="fold__face fold__front">${svg.replace('viewBox="0 0 1600 1000"', `viewBox="${i * 400} 0 400 1000"`)}</div><div class="fold__face fold__back"></div><i class="fold__shade"></i>`;
-      parent.appendChild(f);
-      panels.push(f);
-      parent = f;
-    }
-    // accordion: each panel folds back on its neighbour, alternating, a few
-    // degrees short of flat so the packet has the thickness of real paper
-    const FOLDED = [0, 179.4, -179.4, 179.4];
-    const WINDOWS = [null, [0.14, 0.36], [0.26, 0.48], [0.38, 0.6]];
-    const ease = gsap.parseEase('power2.inOut');
+    const canvas = $('#rollCanvas'), copy = $('.sheet__copy'), hint = $('.sheet__hint'), pin = $('.sheet__pin');
     const st = (p, a, b) => { const t = Math.min(1, Math.max(0, (p - a) / (b - a))); return t * t * (3 - 2 * t); };
-    let pw = 300, phone = false;
-    const size = () => {
-      phone = innerWidth <= 900;
-      pw = phone ? Math.min(innerHeight * 0.205, innerWidth * 0.36) : Math.min(innerWidth * 0.23, innerHeight * 0.32);
-      paper.style.setProperty('--pw', `${pw.toFixed(1)}px`);
+    let roll = null, on = false, goal = reduced ? 1 : 0, now = goal, drawn = -1;
+    const draw = () => {
+      if (!roll) return;
+      roll.render(now);
+      drawn = now;
+      copy.style.opacity = (1 - st(now, 0.26, 0.42)).toFixed(3);
+      hint.style.opacity = (1 - st(now, 0.05, 0.14)).toFixed(3);
+      pin.style.setProperty('--seam', (1 - st(now, 0.6, 0.86)).toFixed(3));
     };
-    size();
-    addEventListener('resize', size);
-
-    // ink: the title block is printed from the start (it is the cover when
-    // folded); the plan itself is drawn as the sheet opens; notes come last
-    const plan = '.fold__front .paper-svg > svg.drw:last-of-type';
-    const strokes = $$(`${plan} :is(line, rect, polyline, polygon, circle, path)`, paper).filter((n) => !n.closest('pattern'));
-    const fills = $$(`${plan} :is(.f-hatch, .l-solid, .f-water)`, paper);
-    const words = $$(`${plan} text`, paper);
-    const notes = $$('.fold__front .notes path', paper);
-    const noteText = $$('.fold__front .notes text', paper);
-    const ink = gsap.timeline({ paused: true })
-      .fromTo(strokes, { drawSVG: '0%' }, { drawSVG: '100%', ease: 'none', duration: 0.6, stagger: { amount: 0.4 } }, 0)
-      .fromTo(fills, { fillOpacity: 0 }, { fillOpacity: 1, ease: 'none', duration: 0.25 }, 0.6)
-      .fromTo(words, { opacity: 0 }, { opacity: 1, ease: 'none', duration: 0.2, stagger: { amount: 0.2 } }, 0.55);
-    const pen = gsap.timeline({ paused: true })
-      .fromTo(notes, { drawSVG: '0%' }, { drawSVG: '100%', ease: 'none', duration: 1, stagger: 0.12 }, 0)
-      .fromTo(noteText, { opacity: 0 }, { opacity: 1, ease: 'none', duration: 0.5, stagger: 0.2 }, 0.3);
-
-    const copy = $('.sheet__copy'), hint = $('.sheet__hint');
-    const setSheet = (p) => {
-      let U = 0;
-      for (let i = 1; i < 4; i++) {
-        const u = ease(st(p, ...WINDOWS[i]));
-        U += u / 3;
-        const ang = FOLDED[i] * (1 - u);
-        panels[i].style.transform = `rotateY(${ang.toFixed(2)}deg)`;
-        panels[i].style.setProperty('--shade', (0.24 * (1 - Math.cos((ang * Math.PI) / 180)) / 2).toFixed(3));
-      }
-      const arrive = st(p, 0, 0.16), flat = st(p, 0.55, 0.8), zoom = st(p, 0.86, 1);
-      const c = pw / 2 + 1.5 * pw * U;
-      gsap.set(paper, {
-        transformOrigin: `${c.toFixed(1)}px 50%`,
-        // folded, the packet sits to the right of the copy; it moves to centre as it opens
-        x: -1.5 * pw * U + (phone ? 0 : innerWidth * 0.14 * (1 - U)),
-        y: (1 - arrive) * innerHeight * 0.5 + (1 - flat) * innerHeight * 0.06 + (phone ? innerHeight * 0.08 * (1 - flat) : 0),
-        rotationX: 40 * (1 - flat),
-        rotation: -7 * (1 - flat) + (phone ? 90 * flat : 0),
-        scale: (0.62 + 0.38 * flat) * (1 + (phone ? 0 : 0.12) * zoom),
-        opacity: arrive,
-      });
-      paper.style.setProperty('--drop', (0.6 - 0.25 * flat).toFixed(2));
-      paper.style.setProperty('--span', (1 + 3 * U).toFixed(3));
-      ink.progress(st(p, 0.18, 0.84));
-      pen.progress(st(p, 0.8, 0.98));
-      copy.style.opacity = (1 - st(p, 0.42, 0.58)).toFixed(3);
-      hint.style.opacity = (1 - st(p, 0.06, 0.18)).toFixed(3);
+    const prepare = () => {
+      if (roll) return;
+      roll = createPlanRoll(canvas);
+      roll.ready.then(draw);
+      addEventListener('resize', () => { roll.resize(); draw(); });
+      new ResizeObserver(() => { roll.resize(); draw(); }).observe(canvas);
+      draw();
     };
-    // with reduced motion the sheet is simply shown open
-    if (reduced) setSheet(1);
-    else {
-      setSheet(0);
-      ScrollTrigger.create({ trigger: '#sheet', pin: '.sheet__pin', start: 'top top', end: '+=300%', scrub: 0.7, onUpdate: (t) => setSheet(t.progress), onRefresh: (t) => setSheet(t.progress) });
-    }
+    gsap.ticker.add((t, dms) => {
+      if (!on || !roll) return;
+      now += (goal - now) * (1 - Math.exp(-(dms / 1000) * 5));
+      if (Math.abs(goal - now) < 0.0002) now = goal;
+      if (now !== drawn) draw();
+    });
+    ScrollTrigger.create({ trigger: '#sheet', start: 'top 320%', once: true, onEnter: prepare });
+    if (reduced) { copy.style.display = 'none'; hint.style.display = 'none'; }
+    else ScrollTrigger.create({ trigger: '#sheet', pin: '.sheet__pin', start: 'top top', end: '+=320%', onUpdate: (t) => { goal = t.progress; } });
+    ScrollTrigger.create({ trigger: '#sheet', start: 'top bottom', end: 'bottom top', onToggle: (t) => { on = t.isActive; if (on) { prepare(); draw(); } } });
   }
 
   if (reduced) {
