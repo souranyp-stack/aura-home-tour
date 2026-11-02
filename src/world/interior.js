@@ -96,6 +96,19 @@ export function bar(mat, a, b, t = 0.016, opts) {
   return m;
 }
 
+// A curtain panel hanging from y = 0, its pivot at the end it gathers to. Pleats stay
+// the same depth as it compresses, so it looks fuller as it opens.
+export function drape(len, h, dir) {
+  const g = new THREE.PlaneGeometry(len, h, Math.ceil(len / 0.03), 1);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i) + len / 2;
+    pos.setXYZ(i, x * dir, pos.getY(i) - h / 2, Math.sin(x * 31) * 0.042 + Math.sin(x * 4.3 + 1) * 0.018);
+  }
+  g.computeVertexNormals();
+  return metricUV(g);
+}
+
 // A row of stitches along a straight seam.
 export function stitches(group, a, b, mat, pitch = 0.016) {
   const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
@@ -120,7 +133,10 @@ export function reeded(w, h, pitch = 0.03, depth = 0.008) {
     pos.setZ(i, depth * Math.sqrt(Math.max(0, 1 - (2 * t - 1) ** 2)));
   }
   g.computeVertexNormals();
-  return metricUV(g);
+  // the grain runs up the ribs, the same across each one
+  const uv = g.attributes.uv;
+  for (let i = 0; i < pos.count; i++) uv.setXY(i, pos.getY(i), pos.getX(i));
+  return g;
 }
 
 // A drum with flutes cut around it.
@@ -485,18 +501,15 @@ export function createInterior(M) {
   pot.position.set(9.5, FL, -2.7);
   root.add(pot);
 
-  // sheer curtains along the sea glazing; scale.y = how far they are drawn down
-  const cg = new THREE.PlaneGeometry(19.6, 3.36, 260, 1);
-  const p = cg.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i);
-    p.setZ(i, Math.sin(x * 7.3) * 0.05 + Math.sin(x * 2.1 + 1.0) * 0.025);
+  // sheer curtains along the sea glazing, on a bronze track: two panels that draw in
+  // from the ends and meet at the door, gathering into pleats as they open
+  const drapes = [];
+  root.add(mesh(rbox(19.8, 0.024, 0.04, 0.006), M.bronzeInterior, 1, CEIL - 0.03, -3.78, { cast: false }));
+  for (const [pivot, len, dir] of [[-8.85, 11.1, 1], [10.85, 8.6, -1]]) {
+    const panel = mesh(drape(len, 3.36, dir), M.linen, pivot, CEIL - 0.04, -3.78, { cast: false, receive: true });
+    drapes.push(panel);
+    root.add(panel);
   }
-  cg.computeVertexNormals();
-  cg.translate(0, -1.68, 0);
-  const curtain = mesh(cg, M.linen, 1, CEIL - 0.03, -3.78, { cast: false, receive: true });
-  curtain.scale.y = 0.001;
-  root.add(curtain);
 
   // terrace: a travertine drum between the loungers, with a ceramic bowl
   root.add(mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.42, 48), M.travertine, -5.1, FL + 0.21, -6.6));
@@ -516,7 +529,8 @@ export function createInterior(M) {
   const lower = buildLowerLevel(root, M);
 
   // furniture is static: collapse ~120 parts into one draw per material
-  mergeStatic(root, [...flames, curtain, lower.mirror]);
+  drapes.push(...lower.drapes);
+  mergeStatic(root, [...flames, ...drapes, lower.mirror]);
 
   const outdoorOlivePos = new THREE.Vector3(9.5, FL + 0.6, -2.7);
 
@@ -530,8 +544,8 @@ export function createInterior(M) {
     pendantLight.intensity = lux * 14;
     M.lightStrip.emissiveIntensity = lux * 3.2;
     M.pendantShade.emissiveIntensity = lux * 1.4;
-    curtain.scale.y = Math.max(0.001, env.veil);
-    curtain.visible = env.veil > 0.01;
+    // gathered at the ends when open, drawn across when closed
+    drapes.forEach((d) => { d.scale.x = 0.075 + 0.925 * env.veil; });
   }
 
   return { root, update, outdoorOlivePos, flames, lower };

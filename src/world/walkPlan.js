@@ -33,12 +33,12 @@ const inCircle = (x, z, c) => Math.hypot(x - c[0], z - c[1]) < c[2];
 // the floors of the upper level, which together make one connected walk
 const UPPER_FLOORS = [
   [-8.75, -7.6, 3.25, -4.25], // the terrace
-  [1.3, -4.3, 3.2, -3.75], // the sliding door
   [-8.75, -3.75, 10.75, 7.75], // living room, dining room and kitchen
   [3.25, -4.55, 11.3, -4.25], // the coping along the pool
   [11.25, -4.55, 15.75, 9.75], // the east deck
   [-8.75, 8.6, 15.75, 9.75], // the walk behind the back wall
 ];
+const SEA_DOOR = [1.3, -4.3, 3.2, -3.75]; // passable only while the door is open
 const UPPER_BLOCKS = [
   [-4.95, 3.3, -1.05, 4.9], // sofa
   [-4.1, 1.7, -1.9, 3.1], // coffee table
@@ -66,7 +66,10 @@ const LOWER_FLOORS = [
   [-0.4, 7.27, 14.15, 8.25],
   [LOWER.door[0] + 0.25, 9.1, LOWER.door[1] - 0.25, 10.2], // the front door
 ];
-const LOWER_BLOCKS = [[-2.95, 8.85, -0.85, 9.15]]; // the gallery bench
+const LOWER_BLOCKS = [
+  [-3.25, 8.62, -0.55, 9.15], // the gallery bench
+  [13.68, 7.3, 14.15, 9.1], // the console at the far end
+];
 const LOWER_ROUND = [];
 for (const r of LOWER_ROOMS) {
   const [a, b] = r.bath, inner = r.pass[0] + 0.45, outer = r.pass[0] + 1.05;
@@ -104,6 +107,7 @@ export function createFloorPlan(plantings = []) {
   // pines, cypresses and olives have trunks; shrubs are walked through
   const trunks = plantings.filter((p) => p.type !== 'shrub').map((p) => [p.x, p.z, 0.55]);
 
+  let seaDoorOpen = true;
   const onStair = (x, z) => x >= STAIR.x0 && x <= STAIR.x1 && z >= STAIR.top - 0.3 && z <= STAIR.bottom + 0.1;
   const onInside = (x, z) => x >= INSIDE_STAIR.x0 - 0.15 && x <= INSIDE_STAIR.x1 + 0.2 && z >= 7.22 && z <= 7.78;
   const inDoor = (x, z) => x >= LOWER.door[0] + 0.25 && x <= LOWER.door[1] - 0.25 && z >= 9.8 && z <= 10.25;
@@ -130,7 +134,7 @@ export function createFloorPlan(plantings = []) {
     if (level === 'upper') {
       if (onStair(x, z) && z < STAIR.top + 0.5) return true;
       if (onInside(x, z) && x > INSIDE_STAIR.x1 - 0.45) return true;
-      if (!UPPER_FLOORS.some((r) => inRect(x, z, r))) return false;
+      if (!UPPER_FLOORS.some((r) => inRect(x, z, r)) && !(seaDoorOpen && inRect(x, z, SEA_DOOR))) return false;
       if (UPPER_BLOCKS.some((r) => inRect(x, z, r))) return false;
       return !UPPER_ROUND.some((c) => inCircle(x, z, c));
     }
@@ -216,7 +220,13 @@ export function createFloorPlan(plantings = []) {
     return { name: 'The headland', note: 'Olive and pine' };
   }
 
-  return { canStand, floorY, move, whereIs };
+  return {
+    canStand, floorY, move, whereIs,
+    setSeaDoor: (open) => { seaDoorOpen = open; },
+    // the door cannot close on someone standing in it
+    inSeaDoorway: (x, z) => x > 0.9 && x < 3.6 && z > -4.65 && z < -3.45,
+    isIndoors: (x, z, level) => level === 'lower' || level === 'inside' || (level === 'upper' && x > -9 && x < 11 && z > -4 && z < 8),
+  };
 }
 
 // Named places to arrive at. Look is the point the visitor faces on arrival.

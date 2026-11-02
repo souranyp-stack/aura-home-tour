@@ -137,6 +137,7 @@ export function createMaterials(renderer) {
     oak: bakeSurface(renderer, S.OAK, { size: hi, depth: 0.005 }),
     walnut: bakeSurface(renderer, S.WALNUT, { size: hi, depth: 0.0035 }),
     slab: bakeSurface(renderer, S.SLAB, { size: hi, depth: 0.003 }),
+    limewash: bakeSurface(renderer, S.LIMEWASH, { size: 1024, depth: 0.002 }),
     linen: bakeSurface(renderer, S.LINEN, { size: 1024, depth: 0.0016 }),
     leather: bakeSurface(renderer, S.LEATHER, { size: hi, depth: 0.0022 }),
     bronze: bakeSurface(renderer, S.BRONZE, { size: 1024, depth: 0.002 }),
@@ -195,9 +196,11 @@ export function createMaterials(renderer) {
     terracotta: std({ color: 0x9c5a3c, roughness: 0.85, normalMap: t.render.normalMap }, { uvScale: 2, mode: 'reveal' }),
     art: std({ ...set(t.art), roughness: 1 }, { uvScale: 1, mode: 'reveal' }),
     linen: std({ color: 0xf4f0e8, roughness: 1, transparent: true, opacity: 0.78, side: THREE.DoubleSide, normalMap: t.wool.normalMap, emissive: 0x2a2620 }, { uvScale: 1, mode: 'reveal' }),
-    // polished plaster: the render's texture barely raised
-    plaster: std({ map: t.render.map, normalMap: t.render.normalMap, normalScale: new THREE.Vector2(0.14, 0.14), roughness: 0.82, color: 0xeee4d3, envMapIntensity: 0.45 }, { uvScale: 1 / 4, mode: 'reveal' }),
-    ceiling: std({ map: t.render.map, normalMap: t.render.normalMap, normalScale: new THREE.Vector2(0.1, 0.1), roughness: 0.9, color: 0xeee4d3, envMapIntensity: 0.45, emissive: 0xfff0dc, emissiveIntensity: 0.1 }, { uvScale: 1 / 4, mode: 'reveal' }),
+    // warm limewash. The rooms have no sky of their own, so they take little of the cold
+    // daylight environment and glow slightly warm while lit (see rooms.js)
+    plaster: std({ ...set(t.limewash), roughness: 1, envMapIntensity: 0.22, emissive: 0xffd9ae, emissiveMap: t.limewash.map, emissiveIntensity: 0 }, { uvScale: 1 / 3, mode: 'reveal' }),
+    ceiling: std({ ...set(t.limewash), roughness: 1, color: 0xfff6ea, envMapIntensity: 0.22, emissive: 0xffe2bd, emissiveMap: t.limewash.map, emissiveIntensity: 0 }, { uvScale: 1 / 3, mode: 'reveal' }),
+    woolWarm: std({ ...set(t.wool), roughness: 1, color: 0xe6c49c }, { uvScale: 1, mode: 'reveal' }),
     thread: std({ color: 0x9c8a72, roughness: 0.8 }, { mode: 'reveal' }),
     // fabrics and stone for the private rooms
     linenSheet: phys({ ...set(t.linen), roughness: 1, color: 0xf3efe6, sheen: 0.6, sheenRoughness: 0.85, sheenColor: 0xffffff }, { uvScale: 1 / 0.3, mode: 'reveal' }),

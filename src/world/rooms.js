@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { mesh, boxG, rbox, cushion, tube, leg, loungeChair, vase, rod, bar, stitches, reeded } from './interior.js';
+import { mesh, boxG, rbox, cushion, tube, leg, loungeChair, vase, rod, bar, stitches, reeded, drape } from './interior.js';
 import { FL } from './house.js';
 import { LOWER_ROOMS, LOWER, INSIDE_STAIR } from './walkPlan.js';
 
@@ -10,6 +10,14 @@ import { LOWER_ROOMS, LOWER, INSIDE_STAIR } from './walkPlan.js';
 // walkPlan.js, so the walls here and the walls you walk into cannot disagree.
 
 const quiet = { cast: false };
+
+// A box whose wood grain runs up it rather than across: door jambs stand on end.
+const uprightG = (w, h, d) => {
+  const g = boxG(w, h, d);
+  const uv = g.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getY(i), uv.getX(i));
+  return g;
+};
 
 function stool(M) {
   const g = new THREE.Group();
@@ -85,7 +93,7 @@ function wall(root, M, mat, x0, z0, x1, z1, y0 = 0, y1 = LOWER.ceiling) {
 
 // A modern bedroom: one wall of reeded walnut, a bed that floats on a line of light,
 // pendants instead of table lamps, and a linen window seat under the long view.
-function bedroom(root, M, r) {
+function bedroom(root, M, r, drapes) {
   const c = r.bedAt, z = 3.22, C = LOWER.ceiling, wallZ = LOWER.wallA[0];
   const x0 = r.pass[1], x1 = r.x1 - (r.n < 4 ? 0.08 : 0.02), wide = x1 - x0;
 
@@ -162,6 +170,15 @@ function bedroom(root, M, r) {
   if (b1 < r.x1) root.add(mesh(boxG(r.x1 - b1, head - sill0, 0.012), M.plaster, (b1 + r.x1) / 2, (head + sill0) / 2, zS, quiet));
   root.add(mesh(rbox(b1 - b0, 0.03, 0.2, 0.006), M.travertine, (b0 + b1) / 2, sill0 + 0.005, -1.62, quiet));
   root.add(mesh(boxG(r.x1 - r.x0 - 0.1, 0.012, 0.03), M.roomGlow, (r.x0 + r.x1) / 2, C - 0.028, -1.6, { cast: false, receive: false }));
+
+  // sheers on a slim track, falling from the ceiling to just below the sill
+  root.add(mesh(rbox(b1 - b0 + 0.2, 0.018, 0.03, 0.004), M.bronzeInterior, (b0 + b1) / 2, C - 0.02, -1.5, quiet));
+  const half = (b1 - b0) / 2;
+  for (const [pivot, dir] of [[b0, 1], [b1, -1]]) {
+    const panel = mesh(drape(half, C - 1.3, dir), M.linen, pivot, C - 0.03, -1.5, { cast: false, receive: true });
+    drapes.push(panel);
+    root.add(panel);
+  }
 
   const s0 = r.x0 + 1.85, s1 = r.x1 - 0.1, sc = (s0 + s1) / 2;
   root.add(mesh(rbox(s1 - s0, 0.36, 0.52, 0.008), M.walnut, sc, 0.22, -1.43, quiet));
@@ -280,6 +297,7 @@ function bathroom(root, M, r) {
 }
 
 export function buildLowerLevel(root, M) {
+  const drapes = [];
   const C = LOWER.ceiling, floorY = 0.02;
   const x0 = -9, x1 = 14.4, zS = -1.7, zN = 9.4;
   // floor and ceiling, each stopping at the stair opening
@@ -310,7 +328,9 @@ export function buildLowerLevel(root, M) {
       const [d0, d1] = doorGap(r);
       if (d0 > from) wall(root, M, M.plaster, from, zA, d0, zB);
       wall(root, M, M.plaster, d0, zA, d1, zB, LOWER.doorHead, C);
-      root.add(mesh(boxG(d1 - d0 + 0.08, 0.04, zB - zA + 0.04), M.bronzeInterior, (d0 + d1) / 2, LOWER.doorHead + 0.02, (zA + zB) / 2, quiet));
+      // every doorway is a walnut portal with a bronze head
+      root.add(mesh(boxG(d1 - d0 + 0.1, 0.03, zB - zA + 0.05), M.bronzeInterior, (d0 + d1) / 2, LOWER.doorHead - 0.012, (zA + zB) / 2, quiet));
+      for (const jx of [d0 + 0.012, d1 - 0.012]) root.add(mesh(uprightG(0.024, LOWER.doorHead, zB - zA + 0.05), M.walnut, jx, LOWER.doorHead / 2, (zA + zB) / 2, quiet));
       from = d1;
     }
     wall(root, M, M.plaster, from, zA, x1, zB);
@@ -326,32 +346,94 @@ export function buildLowerLevel(root, M) {
     wall(root, M, M.plaster, w0, LOWER.bathDoor[1], w1, bS);
     wall(root, M, M.plaster, w0, LOWER.bathDoor[0], w1, LOWER.bathDoor[1], LOWER.doorHead, C);
 
-    bedroom(root, M, r);
-    // the lobby's wardrobe: flush walnut doors along the bathroom wall
-    root.add(mesh(boxG(0.05, 2.14, 1.32), M.walnut, r.pass[1] - 0.03, 1.09, 5.32 - 0.02 - 0.34, quiet));
-    root.add(mesh(rbox(0.012, 0.5, 0.018, 0.003), M.bronzeInterior, r.pass[1] - 0.062, 1.15, 5.0, quiet));
+    bedroom(root, M, r, drapes);
+    // the lobby: a reeded walnut wardrobe, and a tall glowing sconce opposite
+    const robe = mesh(reeded(1.36, 2.2, 0.03, 0.008), M.walnut, r.pass[1] - 0.012, 1.12, 4.98, quiet);
+    robe.rotation.y = -Math.PI / 2;
+    root.add(robe);
+    root.add(mesh(rbox(0.012, 0.5, 0.018, 0.003), M.bronzeInterior, r.pass[1] - 0.04, 1.15, 5.04, quiet));
+    const sconceX = r.x0 + 0.075 + (i === 0 ? 0 : 0.03);
+    root.add(mesh(rbox(0.05, 0.62, 0.09, 0.012), M.roomShade, sconceX + 0.02, 1.62, 5.8, { cast: false, receive: false }));
+    root.add(mesh(rbox(0.018, 0.68, 0.12, 0.004), M.bronzeInterior, sconceX - 0.012, 1.62, 5.8, quiet));
     bathroom(root, M, r);
     // the lobby's own light
     root.add(mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.006, 24), M.roomGlow, r.x0 + 0.8, C - 0.026, 5.8, { cast: false, receive: false }));
   });
 
-  // ---- the gallery corridor, along the hill
-  root.add(mesh(boxG(22.8, 0.012, 0.05), M.roomGlow, 2.7, C - 0.026, 8.95, { cast: false, receive: false }));
-  const hang = (x, w, h) => {
-    root.add(mesh(boxG(w, h, 0.03), M.art, x, 1.55, 9.36, quiet));
-    root.add(mesh(boxG(w + 0.07, h + 0.07, 0.012), M.basalt, x, 1.55, 9.38, quiet));
-  };
-  hang(-5.6, 2.2, 1.3); hang(-1.2, 1.1, 1.5); hang(6.4, 2.4, 1.4); hang(11, 1.5, 1.5);
-  // a long walnut bench under the art
-  root.add(mesh(rbox(2.4, 0.04, 0.42, 0.008), M.walnut, -1.9, 0.44, 9.1, quiet));
-  for (const dx of [-1.05, 1.05]) root.add(mesh(rbox(0.05, 0.42, 0.36, 0.006), M.walnut, -1.9 + dx, 0.23, 9.1, quiet));
+  // ---- the gallery. Long and windowless, so it is made warm on purpose: reeded walnut
+  // down one side with light at its foot, an oak-slat ceiling, limewash washed from
+  // above, a wool runner, and a wall of backlit stone to walk towards.
+  const spans = [];
+  {
+    let from = x0;
+    for (const r of LOWER_ROOMS) { const [a, b] = doorGap(r); if (a > from) spans.push([from, a]); from = b; }
+    spans.push([from, x1]);
+  }
+  for (const [a, b] of spans) {
+    const w = b - a, cx = (a + b) / 2;
+    root.add(mesh(reeded(w, C - 0.09, 0.036, 0.01), M.walnut, cx, 0.09 + (C - 0.09) / 2, bN + 0.002, quiet));
+    root.add(mesh(boxG(w, 0.08, 0.012), M.soot, cx, 0.06, bN + 0.002, quiet));
+    root.add(mesh(boxG(w - 0.04, 0.008, 0.018), M.roomGlow, cx, 0.086, bN + 0.016, { cast: false, receive: false }));
+  }
+  // the north wall is washed with light from a slot along its head
+  root.add(mesh(boxG(22.8, 0.012, 0.03), M.roomGlow, 2.7, C - 0.06, zN - 0.07, { cast: false, receive: false }));
 
-  // ---- the front door: an opening in the north wall, its glass leaf slid aside
+  // oak slats overhead, dark behind them, with small warm lights between
+  const slatTop = C - 0.016;
+  root.add(mesh(boxG(x1 - x0, 0.008, zN - S.z1), M.soot, (x0 + x1) / 2, slatTop + 0.004, (S.z1 + zN) / 2, quiet));
+  for (let x = x0 + 0.08; x < x1; x += 0.11) {
+    const overStair = x > S.x0 - 0.05 && x < S.x1 + 0.05;
+    const z0 = overStair ? S.z1 : bN, z1 = zN - 0.02;
+    root.add(mesh(boxG(0.058, 0.05, z1 - z0), M.oak, x, slatTop - 0.025, (z0 + z1) / 2, quiet));
+  }
+  for (let x = -7.5; x < 14; x += 3) root.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.01, 20), M.roomGlow, x + 0.024, slatTop - 0.056, 8.35, { cast: false, receive: false }));
+
+  // the runner
+  root.add(mesh(rbox(20.2, 0.016, 1.04, 0.006), M.woolWarm, 3.75, 0.034, 8.5, quiet));
+
+  // relief artworks: raised stone and bronze on stretched linen, each under its own light
+  const relief = (x, w, h, draw) => {
+    const y = 1.56, z = zN - 0.035;
+    root.add(mesh(boxG(w + 0.06, h + 0.06, 0.03), M.bronzeInterior, x, y, zN - 0.02, quiet));
+    root.add(mesh(boxG(w, h, 0.03), M.linenClay, x, y, z, quiet));
+    draw((dx, dy, pw, ph, mat, depth = 0.02) => root.add(mesh(rbox(pw, ph, depth, 0.003), mat, x + dx, y + dy, z - 0.015 - depth / 2, quiet)));
+    root.add(rod(M.bronzeInterior, [x - w * 0.36, y + h / 2 + 0.16, z - 0.11], [x + w * 0.36, y + h / 2 + 0.16, z - 0.11], 0.009, 0.009, quiet));
+    root.add(mesh(boxG(w * 0.7, 0.005, 0.012), M.roomGlow, x, y + h / 2 + 0.148, z - 0.11, { cast: false, receive: false }));
+    root.add(rod(M.bronzeInterior, [x, y + h / 2 + 0.16, z - 0.11], [x, y + h / 2 + 0.06, zN - 0.02], 0.005, 0.005, quiet));
+  };
+  relief(-5.6, 2.2, 1.3, (add) => { add(-0.45, 0.05, 0.9, 0.8, M.travertine); add(0.42, -0.14, 0.78, 0.5, M.walnut); add(0.32, 0.32, 0.5, 0.05, M.bronzeInterior, 0.01); });
+  relief(-1.3, 1.1, 1.5, (add) => { add(0, 0.28, 0.72, 0.5, M.linenCharcoal); add(0, -0.3, 0.72, 0.46, M.travertine); add(0, -0.02, 0.8, 0.03, M.bronzeInterior, 0.01); });
+  relief(6.6, 2.4, 1.4, (add) => { add(-0.62, 0, 0.72, 1.06, M.walnut); add(0.2, 0.24, 0.72, 0.54, M.travertine); add(0.78, -0.2, 0.54, 0.62, M.linenCharcoal); add(0.14, -0.3, 0.6, 0.04, M.bronzeInterior, 0.01); });
+  relief(11, 1.5, 1.5, (add) => { add(-0.26, 0.26, 0.6, 0.6, M.travertine); add(0.26, -0.26, 0.6, 0.6, M.walnut); add(0.26, 0.28, 0.42, 0.03, M.bronzeInterior, 0.01); });
+
+  // a leather bench under the art
+  const benchX = -1.9, benchZ = 9.1;
+  for (let i = 0; i < 5; i++) root.add(mesh(cushion(0.44, 0.08, 0.42, 0.012, 0.028, { wrinkle: 0.001, puff: 0.001 }), M.cognac, benchX - 0.88 + i * 0.44, 0.45, benchZ, quiet));
+  stitches(root, [benchX - 1.08, 0.482, benchZ - 0.19], [benchX + 1.08, 0.482, benchZ - 0.19], M.thread);
+  for (const sx of [-1, 1]) for (const dz of [-0.17, 0.17]) root.add(bar(M.bronzeInterior, [benchX + sx * 1.04, 0.03, benchZ + dz], [benchX + sx * 1.04, 0.405, benchZ + dz], 0.014, quiet));
+  root.add(bar(M.bronzeInterior, [benchX - 1.05, 0.405, benchZ - 0.17], [benchX + 1.05, 0.405, benchZ - 0.17], 0.014, quiet));
+  root.add(bar(M.bronzeInterior, [benchX - 1.05, 0.405, benchZ + 0.17], [benchX + 1.05, 0.405, benchZ + 0.17], 0.014, quiet));
+
+  // the far end: a wall of backlit stone, with a console and one tall vessel before it
+  root.add(mesh(boxG(0.016, C - 0.24, zN - bN - 0.3), M.backlit, x1 - 0.03, 1.56, (bN + zN) / 2, { cast: false, receive: false }));
+  for (const [dy, h] of [[C - 0.1, 0.02], [0.08, 0.02]]) root.add(mesh(boxG(0.03, h, zN - bN - 0.24), M.bronzeInterior, x1 - 0.034, dy, (bN + zN) / 2, quiet));
+  root.add(mesh(rbox(0.4, 0.08, 1.3, 0.008), M.walnut, x1 - 0.26, 0.74, 8.2, quiet));
+  root.add(mesh(rbox(0.02, 0.7, 1.26, 0.003), M.bronzeInterior, x1 - 0.42, 0.37, 8.2, quiet));
+  const vessel = vase(M, M.ceramicDark, 0.72, 0.15); vessel.position.set(x1 - 0.26, 0.78, 8.35); root.add(vessel);
+
+  // the near end, where the corridor stops against the spine wall: walnut, not raw stone
+  const westEnd = mesh(reeded(zN - bN, C, 0.036, 0.01), M.walnut, x0 + 0.012, C / 2, (bN + zN) / 2, quiet);
+  westEnd.rotation.y = Math.PI / 2;
+  root.add(westEnd);
+
+  // ---- the front door: a walnut-lined opening in the north wall, its glass leaf aside
   const { door } = LOWER;
   root.add(mesh(boxG(door[1] - door[0], 0.04, 0.68), M.travertine, (door[0] + door[1]) / 2, 0.04, 9.7, quiet));
   for (const x of door) root.add(mesh(rbox(0.05, 2.42, 0.1, 0.006), M.bronzeInterior, x, 1.21, 9.96));
   root.add(mesh(rbox(door[1] - door[0] + 0.05, 0.05, 0.1, 0.006), M.bronzeInterior, (door[0] + door[1]) / 2, 2.42, 9.96));
-  root.add(mesh(boxG(door[1] - door[0], 2.34, 0.012), M.glass, door[1] + 0.82, 1.2, 9.36, quiet));
+  for (const jx of [door[0] + 0.015, door[1] - 0.015]) root.add(mesh(uprightG(0.03, 2.4, 0.56), M.walnut, jx, 1.2, 9.66, quiet));
+  root.add(mesh(boxG(door[1] - door[0], 0.03, 0.56), M.walnut, (door[0] + door[1]) / 2, 2.385, 9.66, quiet));
+  root.add(mesh(boxG(door[1] - door[0], 2.34, 0.012), M.glass, door[1] + 0.82, 1.2, zN - 0.05, quiet));
 
   // ---- the inside stair: 22 oak treads on a steel spine, up from the corridor to
   // the living room, with glass around the opening at the top
@@ -364,6 +446,22 @@ export function buildLowerLevel(root, M) {
   const spine = mesh(boxG(slope, 0.2, 0.12), M.steel, (S.x0 + S.x1) / 2, (floorY + FL) / 2 - 0.13, midZ);
   spine.rotation.z = Math.atan2(FL - floorY, S.x1 - S.x0);
   root.add(spine);
+  // a slim bronze balustrade down the open side, and a line of light along the wall
+  const stairY = (x) => floorY + ((x - S.x0) / (S.x1 - S.x0)) * (FL - floorY);
+  root.add(rod(M.bronzeInterior, [S.x0 - 0.1, stairY(S.x0) + 0.95, S.z1 - 0.02], [S.x1, stairY(S.x1) + 0.95, S.z1 - 0.02], 0.014, 0.014, quiet));
+  for (let i = 0; i <= 11; i++) {
+    const x = S.x0 + (i / 11) * (S.x1 - S.x0);
+    root.add(rod(M.bronzeInterior, [x, stairY(x), S.z1 - 0.02], [x, stairY(x) + 0.95, S.z1 - 0.02], 0.006, 0.006, quiet));
+  }
+  const stairLight = mesh(boxG(slope, 0.01, 0.014), M.roomGlow, (S.x0 + S.x1) / 2, (floorY + FL) / 2 + 0.12, S.z0 + 0.04, { cast: false, receive: false });
+  stairLight.rotation.z = Math.atan2(FL - floorY, S.x1 - S.x0);
+  root.add(stairLight);
+  // the opening through the floor is lined in walnut, so no raw stone shows
+  const liningH = FL - C + 0.02, liningY = (FL + C) / 2;
+  root.add(mesh(boxG(S.x1 - S.x0, liningH, 0.016), M.walnut, (S.x0 + S.x1) / 2, liningY, S.z0 + 0.008, quiet));
+  root.add(mesh(boxG(S.x1 - S.x0, liningH, 0.016), M.walnut, (S.x0 + S.x1) / 2, liningY, S.z1 - 0.008, quiet));
+  root.add(mesh(boxG(0.016, liningH, S.z1 - S.z0), M.walnut, S.x0 + 0.008, liningY, (S.z0 + S.z1) / 2, quiet));
+  root.add(mesh(boxG(0.016, liningH, S.z1 - S.z0), M.walnut, S.x1 - 0.008, liningY, (S.z0 + S.z1) / 2, quiet));
   const glassRail = (x0, z0, x1, z1) => {
     const horizontal = Math.abs(z1 - z0) < 0.01;
     const w = horizontal ? x1 - x0 : 0.014, d = horizontal ? 0.014 : z1 - z0;
@@ -408,13 +506,15 @@ export function buildLowerLevel(root, M) {
     mirror.visible = !!bath;
     if (bath) mirror.position.set(bath.bath[0] + 2, 1.68, LOWER.wallB[0] - 0.03);
     const k = 1 - Math.exp(-dt * 6);
-    const glow = inside ? 8 + 9 * env.interior : 0;
+    const glow = inside ? 15 + 8 * env.interior : 0;
     near.intensity += (glow - near.intensity) * k;
-    fill.intensity += ((inside ? 2.5 : 0) - fill.intensity) * k;
+    fill.intensity += ((inside ? 4 : 0) - fill.intensity) * k;
     const on = inside ? 1 : 0;
     M.roomGlow.emissiveIntensity += (on * 3.4 - M.roomGlow.emissiveIntensity) * k;
     M.roomShade.emissiveIntensity += (on * 1.5 - M.roomShade.emissiveIntensity) * k;
     M.backlit.emissiveIntensity += (on * 0.62 - M.backlit.emissiveIntensity) * k;
+    M.plaster.emissiveIntensity += (on * 0.13 - M.plaster.emissiveIntensity) * k;
+    M.ceiling.emissiveIntensity += (on * 0.2 - M.ceiling.emissiveIntensity) * k;
     if (!inside) return;
     // the middle of whichever room you are in
     let cx = state.x, cz = 8.4;
@@ -430,5 +530,5 @@ export function buildLowerLevel(root, M) {
     near.position.copy(roomLight);
     fill.position.set(state.x, 2.3, state.z);
   }
-  return { update, mirror, setOutside: (list) => { outside = list; } };
+  return { update, mirror, drapes, setOutside: (list) => { outside = list; } };
 }

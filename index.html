@@ -43,7 +43,12 @@
       <a href="#details">Details</a>
       <button type="button" data-walk>Walk</button>
     </nav>
-    <a class="pill" href="#enquire" data-metal>Private viewing</a>
+    <div class="top__actions">
+      <button class="top__sound" id="soundToggle" type="button" aria-pressed="false" aria-label="Unmute sound" title="Unmute sound">
+        <span aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      </button>
+      <a class="pill" href="#enquire" data-metal>Private viewing</a>
+    </div>
   </header>
 
   <!-- ─────────────── the film: fixed overlays driven by scroll ─────────────── -->
@@ -395,9 +400,12 @@
       <button class="walk__leave" type="button">Leave <kbd>Esc</kbd></button>
       <div class="walk__map" aria-hidden="true"></div>
       <div class="walk__dock">
-        <p class="walk__hint"><span class="walk__hint-mouse">Drag to look. Click the floor, or use W A S D, to walk. Hold Shift to go faster.</span><span class="walk__hint-touch">Drag to look. Use the stick, or tap the floor, to walk.</span></p>
+        <p class="walk__hint"><span class="walk__hint-mouse">Drag to look. Click the floor, or use W A S D, to walk. Hold Shift to go faster. M mutes.</span><span class="walk__hint-touch">Drag to look. Use the stick, or tap the floor, to walk.</span></p>
         <div class="walk__places" role="group" aria-label="Go to a place"></div>
-        <div class="walk__hours" role="group" aria-label="Time of day"></div>
+        <div class="walk__lower">
+          <div class="walk__hours" role="group" aria-label="Time of day"></div>
+          <div class="walk__switches" role="group" aria-label="Sound, door and curtains"></div>
+        </div>
       </div>
       <div class="walk__stick" aria-hidden="true"><i></i></div>
     </div>

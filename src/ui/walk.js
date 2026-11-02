@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import { createFloorPlan, PLACES, EYE } from '../world/walkPlan.js';
 import { upperPlan, lowerPlan, planXY } from './drawings.js';
+import { edgeZ } from '../world/landscape.js';
 
 // Walking the house freely, outside the film. Drag to look; keys, the wheel, a
 // click on the floor or the stick on a touch screen to move. It takes over the
@@ -17,7 +18,7 @@ const WALK = 2.5, RUN = 5.4;
 const FORWARD = new Set(['KeyW', 'ArrowUp']), BACK = new Set(['KeyS', 'ArrowDown']);
 const LEFT = new Set(['KeyA', 'ArrowLeft']), RIGHT = new Set(['KeyD', 'ArrowRight']);
 
-export function createWalk({ camera, scene, plantings, onOpen, onClose }) {
+export function createWalk({ camera, scene, plantings, sound, onOpen, onClose }) {
   const $ = (s, r = document) => r.querySelector(s);
   const root = $('#walk');
   const veil = $('.walk__veil', root), surface = $('.walk__surface', root);
@@ -88,8 +89,42 @@ export function createWalk({ camera, scene, plantings, onOpen, onClose }) {
     hourHost.appendChild(b);
     return { id, b };
   });
+  // ---------------------------------------------------------------- the switches
+  const switchHost = $('.walk__switches', root);
+  const makeSwitch = (onClick) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.addEventListener('click', onClick);
+    switchHost.appendChild(b);
+    return b;
+  };
+  let doorGoal = 1, doorNow = 1, curtainGoal = 0;
+  const outsideBtn = makeSwitch(() => sound.toggleChannel('outside'));
+  const fireBtn = makeSwitch(() => sound.toggleChannel('fire'));
+  const doorBtn = makeSwitch(() => { doorGoal = doorGoal ? 0 : 1; syncSwitches(); });
+  const curtainBtn = makeSwitch(() => { curtainGoal = curtainGoal ? 0 : 1; syncSwitches(); });
+  function syncSwitches() {
+    const s = sound.state;
+    const outsideOn = s.enabled && s.outside, fireOn = s.enabled && s.fire;
+    outsideBtn.textContent = outsideOn ? 'Mute outside' : 'Unmute outside';
+    outsideBtn.classList.toggle('is-on', outsideOn);
+    outsideBtn.setAttribute('aria-pressed', outsideOn);
+    fireBtn.textContent = fireOn ? 'Mute fire' : 'Unmute fire';
+    fireBtn.classList.toggle('is-on', fireOn);
+    fireBtn.setAttribute('aria-pressed', fireOn);
+    fireBtn.disabled = envGoal.fire === 0;
+    fireBtn.title = envGoal.fire === 0 ? 'The fire is out at this hour' : '';
+    doorBtn.textContent = doorGoal ? 'Close glass door' : 'Open glass door';
+    doorBtn.classList.toggle('is-on', !!doorGoal);
+    doorBtn.setAttribute('aria-pressed', !!doorGoal);
+    curtainBtn.textContent = curtainGoal ? 'Open curtains' : 'Close curtains';
+    curtainBtn.classList.toggle('is-on', !!curtainGoal);
+    curtainBtn.setAttribute('aria-pressed', !!curtainGoal);
+  }
+
   function setHour(id) {
     Object.assign(envGoal, HOURS[id]);
+    syncSwitches();
     hourButtons.forEach((h) => h.b.classList.toggle('is-on', h.id === id));
   }
   setHour('golden');
@@ -125,6 +160,8 @@ export function createWalk({ camera, scene, plantings, onOpen, onClose }) {
     hint.classList.remove('is-gone');
     root.hidden = false;
     onOpen();
+    sound.startIfWelcome();
+    syncSwitches();
     document.body.classList.add('is-walking');
     gsap.fromTo(veil, { opacity: 1 }, { opacity: 0, duration: 1.1, delay: 0.15, ease: 'power2.out' });
     gsap.fromTo($$('.walk__ui > *'), { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.9, delay: 0.5, stagger: 0.07, ease: 'expo.out', clearProps: 'transform,opacity' });
@@ -152,6 +189,7 @@ export function createWalk({ camera, scene, plantings, onOpen, onClose }) {
   addEventListener('keydown', (e) => {
     if (!active) return;
     if (e.code === 'Escape') { close(); return; }
+    if (e.code === 'KeyM') sound.toggle();
     if (e.target.closest?.('button') && (e.code === 'Space' || e.code === 'Enter')) return;
     if (FORWARD.has(e.code) || BACK.has(e.code) || LEFT.has(e.code) || RIGHT.has(e.code) || e.code === 'Space' || e.code === 'PageDown' || e.code === 'PageUp') e.preventDefault();
     keys.add(e.code);
@@ -276,6 +314,13 @@ export function createWalk({ camera, scene, plantings, onOpen, onClose }) {
     env.fire += (envGoal.fire - env.fire) * k;
     env.mist += (envGoal.mist - env.mist) * k;
 
+    env.veil += (curtainGoal - env.veil) * (1 - Math.exp(-dt * 1.9));
+    // the door slides unhurriedly, and waits if someone is standing in the way
+    const wantDoor = doorGoal === 0 && plan.inSeaDoorway(state.x, state.z) ? 1 : doorGoal;
+    const doorStep = dt / 1.25;
+    doorNow = wantDoor > doorNow ? Math.min(wantDoor, doorNow + doorStep) : Math.max(wantDoor, doorNow - doorStep);
+    plan.setSeaDoor(doorNow > 0.9);
+
     camera.rotation.set(pitch, yaw, 0, 'YXZ');
     camera.position.set(state.x, eyeY, state.z);
 
@@ -293,5 +338,36 @@ export function createWalk({ camera, scene, plantings, onOpen, onClose }) {
     (below ? youLower : youUpper).setAttribute('transform', `translate(${mx.toFixed(1)} ${my.toFixed(1)}) rotate(${(180 - (yaw * 180) / Math.PI).toFixed(1)})`);
   }
 
-  return { update, open, close, stand, env, state, get active() { return active; } };
+  // How everything sounds from where you are standing.
+  function hearing() {
+    const { x, z, level } = state;
+    const indoors = plan.isIndoors(x, z, level);
+    // the sea is loudest at the edge and fades as you walk inland
+    const seaward = Math.max(0.28, Math.min(1.1, 1.15 - Math.max(0, z - edgeZ(x)) / 80));
+    let outside = seaward, muffle = 0;
+    if (level === 'lower' || (level === 'inside' && x < -3.6)) {
+      const nearDoor = Math.exp(-Math.hypot(x - 3, z - 9.9) / 2.6);
+      outside = 0.1 + 0.3 * nearDoor;
+      muffle = 1 - 0.3 * nearDoor;
+    } else if (indoors) {
+      // through the glass, or through the open door if you are near it
+      const open = doorNow * Math.exp(-Math.hypot(x - 2.25, z + 4) / 7);
+      outside = 0.11 + 0.55 * open;
+      muffle = 1 - 0.75 * open;
+    }
+    let fire = 0, fireMuffle = 0, pan = 0;
+    if (level === 'upper' || (level === 'inside' && x > -3.6)) {
+      const dx = -6.9 - x, dz = 5.75 - z, d = Math.hypot(dx, dz);
+      fire = env.fire * Math.min(1, 3 / (1 + d * d * 0.2));
+      if (!indoors) { fire *= 0.35 + 0.65 * doorNow * Math.exp(-Math.hypot(x - 2.25, z + 4) / 3); fireMuffle = 0.8; }
+      if (d > 0.01) pan = Math.max(-0.8, Math.min(0.8, ((dx * Math.cos(yaw) - dz * Math.sin(yaw)) / d) * 0.8));
+    }
+    return { outside, muffle, fire, fireMuffle, pan };
+  }
+
+  return {
+    update, open, close, stand, env, state, hearing, syncSwitches,
+    get doorAmount() { return doorNow; },
+    get active() { return active; },
+  };
 }

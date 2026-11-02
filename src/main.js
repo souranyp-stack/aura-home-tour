@@ -12,6 +12,7 @@ import { createUI } from './ui/ui.js';
 import { initPage } from './ui/page.js';
 import { renderSamples } from './world/samples.js';
 import { createWalk } from './ui/walk.js';
+import { createSound } from './core/sound.js';
 import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -133,6 +134,7 @@ async function boot() {
   const side = new THREE.Vector3();
   const warmGlow = new THREE.Color(1.0, 0.72, 0.45);
 
+  let lastEnv = null;
   function apply(p, time, dt) {
     const s = storyAt(p);
     house.update(s.assemble, reducedMotion ? 0 : time);
@@ -145,6 +147,7 @@ async function boot() {
     house.door.position.z = doorZ - Math.min(1, s.door * 6) * 0.07;
 
     const env = ui.update(p, dt, s.env, s.controls);
+    lastEnv = env;
     const sky = atmo.update({
       studio: s.studio, time: env.time, mist: env.mist,
       worldR: s.worldR, voidOpacity: s.voidOpacity, now: time,
@@ -263,8 +266,20 @@ async function boot() {
 
   // Walking the house: the finished model, with the sea door slid open.
   interior.lower.setOutside([land.group, veg, atmo.water]);
-  const walk = createWalk({
-    camera, scene, plantings: land.plantings,
+  const soundBtn = document.getElementById('soundToggle');
+  let walk = null;
+  const sound = createSound({
+    onChange: (st) => {
+      soundBtn.classList.toggle('is-on', st.enabled);
+      soundBtn.setAttribute('aria-pressed', st.enabled);
+      soundBtn.setAttribute('aria-label', st.enabled ? 'Mute sound' : 'Unmute sound');
+      soundBtn.title = st.enabled ? 'Mute sound' : 'Unmute sound';
+      walk?.syncSwitches();
+    },
+  });
+  soundBtn.addEventListener('click', () => sound.toggle());
+  walk = createWalk({
+    camera, scene, plantings: land.plantings, sound,
     onOpen: () => lenis?.stop(),
     onClose: () => { lenis?.start(); readScroll(); interior.lower.update(null, walk.env, 10); },
   });
@@ -275,8 +290,8 @@ async function boot() {
     aura.uSweep.value = 18;
     aura.uTime.value = time;
     interior.root.visible = true;
-    house.door.position.x = doorX + 2.46;
-    house.door.position.z = doorZ - 0.07;
+    house.door.position.x = doorX + walk.doorAmount * 2.46;
+    house.door.position.z = doorZ - Math.min(1, walk.doorAmount * 6) * 0.07;
     land.group.visible = veg.visible = true;
     const sky = atmo.update({ studio: 0, time: env.time, mist: env.mist, worldR: 2800, voidOpacity: 0, now: time, dust: 0 });
     interior.update(env, time);
@@ -384,10 +399,21 @@ async function boot() {
     if (showCanvas !== canvasShown) { canvasShown = showCanvas; canvas.style.visibility = showCanvas ? 'visible' : 'hidden'; }
     if (walk.active) applyWalk(time, dt);
     else if (day.active) applyDay(day.t, time);
-    else if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; return; }
+    else if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; if (sound.state.enabled) sound.mix({}); return; }
     else apply(prog, time, dt);
     post.grade.uniforms.uTime.value = time;
     post.composer.render();
+
+    // what you hear follows what you see
+    if (sound.state.enabled) {
+      if (walk.active) sound.mix(walk.hearing());
+      else if (day.active) sound.mix({ outside: 0.75 });
+      else {
+        const S = THREE.MathUtils.smoothstep;
+        const indoors = S(prog, 0.72, 0.76);
+        sound.mix({ outside: (0.28 + 0.6 * S(prog, 0.34, 0.46)) * (1 - 0.72 * indoors), muffle: indoors, fire: 0.55 * indoors * (lastEnv?.fire ?? 0) });
+      }
+    }
 
     // adaptive resolution: drop detail when frames run long, recover after a
     // hitch, and stop climbing once a level has proven too slow
@@ -426,6 +452,7 @@ async function boot() {
       renderAt: (p, t = 10) => { prog = target = p; apply(p, t, 0.016); post.composer.render(); },
       renderDay: (t, time = 10) => { applyDay(t, time); post.composer.render(); },
       walk,
+      sound,
     };
     // contact sheets of exact scroll positions, posted to a local capture server
     const send = (name, c) => fetch(`http://127.0.0.1:5299/save?name=${name}`, { method: 'POST', body: c.toDataURL('image/jpeg', 0.88) });

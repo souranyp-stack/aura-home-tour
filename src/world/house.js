@@ -163,7 +163,11 @@ export function createHouse(M) {
     for (let k = 0; k < 8; k++) {
       const pane = box(2.46, H - 0.12, 0.03, M.glass, x0 + 1.25 + k * 2.5, 0, zF);
       pane.castShadow = false;
-      if (k === 4) door = pane;
+      if (k === 4) {
+        door = pane;
+        // a bronze pull, so it reads as a door you can slide
+        door.add(box(0.022, 0.95, 0.022, M.bronze, -1.08, -0.32, -0.05, 0.004));
+      }
       pav.add(pane);
     }
     for (let k = 0; k <= 8; k++) pav.add(box(0.06, H, 0.12, M.bronze, x0 + k * 2.5, 0, zF));

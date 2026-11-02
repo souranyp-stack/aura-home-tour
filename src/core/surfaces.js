@@ -424,3 +424,14 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
   h = 0.6 - vein * 0.018;
   r = 0.34 + 0.1 * cloud + vein * 0.1;
 }`;
+
+// Warm limewash, 3 m tile: soft brushed clouds, no surface texture to catch the light.
+export const LIMEWASH = /* glsl */ `
+void surface(vec2 uv, out vec3 col, out float h, out float r){
+  vec2 w = vec2(pfbm(uv, vec2(4.0, 4.0), 4), pfbm(uv + 0.3, vec2(4.0, 4.0), 4)) * 0.05;
+  float brush = pfbm((uv + w) * vec2(1.0, 1.0), vec2(5.0, 9.0), 5);
+  float cloud = pfbm(uv + 0.6, vec2(3.0, 3.0), 4);
+  col = mix(vec3(0.79, 0.71, 0.60), vec3(0.90, 0.84, 0.74), 0.5 + 0.55 * brush + 0.3 * cloud);
+  h = 0.5 + brush * 0.012;
+  r = 0.78 + 0.08 * brush;
+}`;
