@@ -3,8 +3,9 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { parseAst } from 'rollup/parseAst';
 
-// Aura's project import takes up to 1 MB per HTML file
-const LIMIT = 1024 * 1024;
+// Aura's code editor silently refuses to save a page over 1,000,000 characters (its
+// import dialog says 1 MB), and adds a little of its own on save, so leave room.
+const LIMIT = 995 * 1000;
 const files = readdirSync('dist/assets');
 const read = (ext) => readFileSync(`dist/assets/${files.find((f) => f.endsWith(ext))}`, 'utf8');
 // Shaders are by far the most compressible text left in the bundle: strip their comments and
@@ -30,6 +31,8 @@ function squeezeGLSL(text) {
   }
   return lead + out + tail;
 }
+const UNUSED_SHADER = /#define (?:TOON|PHONG|MATCAP)\b|\b(?:ToonMaterial|BlinnPhongMaterial)\b.*\n|RE_Direct_Toon|RE_Direct_BlinnPhong/;
+let dropped = 0;
 function squeeze(js) {
   const edits = [], searches = [];
   const visit = (node) => {
@@ -44,6 +47,12 @@ function squeeze(js) {
         edits.push([search.start, search.end, JSON.stringify(text)]);
       }
     }
+    // three.js ships shaders for every material type; these are the ones this site never uses
+    if (node.type === 'Literal' && typeof node.value === 'string' && UNUSED_SHADER.test(node.value)) {
+      dropped += node.value.length;
+      edits.push([node.start, node.end, '""']);
+      return;
+    }
     if (node.type === 'Literal' && typeof node.value === 'string' && looksLikeGLSL(node.value)) {
       edits.push([node.start, node.end, JSON.stringify(squeezeGLSL(node.value))]);
     } else if (node.type === 'TemplateElement' && looksLikeGLSL(node.value.cooked ?? '')) {
@@ -55,7 +64,7 @@ function squeeze(js) {
   for (const [a, b, text] of edits.sort((x, y) => y[0] - x[0])) js = js.slice(0, a) + text + js.slice(b);
   const lost = searches.filter((text) => js.split(JSON.stringify(text).slice(1, -1)).length < 3);
   if (lost.length) throw new Error(`shader patches no longer match: ${lost.join(' | ')}`);
-  console.log(`${edits.length} shader strings squeezed, ${searches.length} patches still match`);
+  console.log(`${edits.length} shader strings squeezed, ${searches.length} patches still match, ${dropped} chars of unused shaders dropped`);
   return js;
 }
 
@@ -72,6 +81,6 @@ html = html
 
 mkdirSync('dist-aura', { recursive: true });
 writeFileSync('dist-aura/index.html', html);
-const size = Buffer.byteLength(html);
-console.log(`dist-aura/index.html ${size} bytes of ${LIMIT}`);
+const size = html.length;
+console.log(`dist-aura/index.html ${size} characters of ${LIMIT}`);
 if (size > LIMIT) process.exit(1);
