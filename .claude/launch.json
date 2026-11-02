@@ -12,13 +12,9 @@
     },
     {
       "name": "aura-single",
-      "runtimeExecutable": "python3",
+      "runtimeExecutable": "node",
       "runtimeArgs": [
-        "-m",
-        "http.server",
-        "4190",
-        "--directory",
-        "dist-aura"
+        "scripts/serve-aura.mjs"
       ],
       "port": 4190
     }
