@@ -250,3 +250,78 @@ export function approachMap() {
     <g transform="translate(760,720)"><line x1="0" y1="0" x2="160" y2="0" stroke="rgba(244,239,230,0.6)"/><line x1="0" y1="-5" x2="0" y2="5" stroke="rgba(244,239,230,0.6)"/><line x1="160" y1="-5" x2="160" y2="5" stroke="rgba(244,239,230,0.6)"/><text x="80" y="-10" text-anchor="middle">1 km</text></g>
   </svg>`;
 }
+
+// ---------------------------------------------------------------- the paper sheet
+// Sheet A-101 as it would be printed: a 1600 x 1000 sheet folded in four.
+// Panel one is the title block (and the cover when folded); panels two to
+// four carry the upper plan at a large scale, with pencil notes on top.
+const nest = (svgStr, x, y, w, h) =>
+  svgStr.replace(/<svg class="drw"[^>]*viewBox="([^"]+)"[^>]*>/, `<svg class="drw" x="${x}" y="${y}" width="${w}" height="${h}" viewBox="$1">`)
+    .replace(/id="hatch"/g, 'id="pHatch"').replace(/id="rock"/g, 'id="pRock"').replace(/url\(#rock\)/g, 'url(#pRock)');
+
+// a pencil stroke: the points, nudged so the line wavers like a hand
+function pencil(points, seed = 1) {
+  let s = seed;
+  const r = () => ((s = (s * 9301 + 49297) % 233280) / 233280 - 0.5) * 0.9;
+  return 'M' + points.map(([x, y]) => `${(x + r()).toFixed(1)},${(y + r()).toFixed(1)}`).join(' L');
+}
+function pencilEllipse(cx, cy, rx, ry, seed) {
+  const pts = [];
+  // a little more than one turn, the way a pencil loop overshoots its start
+  for (let i = 0; i <= 118; i++) {
+    const a = (i / 108) * Math.PI * 2 - 0.3;
+    const w = 1 + 0.035 * Math.sin(a * 3 + 0.6) + 0.02 * Math.sin(a * 7);
+    pts.push([cx + Math.cos(a) * rx * w, cy + Math.sin(a) * ry * w]);
+  }
+  return pencil(pts, seed);
+}
+
+export function paperSheet() {
+  // the plan's own coordinates (see upperPlan) mapped onto the sheet
+  const S = 1.586, OX = 461, OY = 40;
+  const P = (x, z) => [OX + S * (x + 14.5) * 20, OY + S * (17.5 - z) * 20];
+  const [lx, ly] = P(-3, 2.3);
+  const [gx0, gy] = P(-9, -4);
+  const [gx1] = P(11, -4);
+  const [px, py] = P(10.25, -6.2);
+  const rust = (d, extra = '') => `<path class="pen" d="${d}" ${extra}/>`;
+  const notes = [
+    rust(pencilEllipse(lx, ly, 150, 96, 3)),
+    `<text class="hand" x="${lx + 120}" y="${ly - 120}">the long room, facing sunset</text>`,
+    rust(pencil([[lx + 118, ly - 112], [lx + 90, ly - 96], [lx + 70, ly - 86]], 5)),
+    rust(pencil([[gx0, gy - 14], [(gx0 + gx1) / 2, gy - 15], [gx1, gy - 14]], 7)),
+    rust(pencil([[gx0, gy - 24], [gx0, gy - 4]], 8)),
+    rust(pencil([[gx1, gy - 24], [gx1, gy - 4]], 9)),
+    `<text class="hand" x="${(gx0 + gx1) / 2 + 60}" y="${gy - 26}" text-anchor="middle">twenty metres of glass</text>`,
+    rust(pencil([[px - 40, py + 70], [px - 10, py + 30], [px, py + 14]], 11)),
+    rust(pencil([[px - 8, py + 26], [px, py + 14], [px + 10, py + 24]], 12)),
+    `<text class="hand" x="${px - 150}" y="${py + 96}">vanishing edge</text>`,
+    rust(pencil([[lx - 70, ly + 280], [lx - 90, ly + 330], [lx - 104, ly + 372]], 13)),
+    rust(pencil([[lx - 118, ly + 352], [lx - 104, ly + 372], [lx - 86, ly + 356]], 14)),
+    `<text class="hand" x="${lx - 84}" y="${ly + 402}">the sea, 38 m below</text>`,
+  ].join('');
+
+  const rows = [['Scale', '1 : 100'], ['Sheet', 'A-101'], ['Revision', 'C'], ['Date', 'Oct 2026'], ['Drawn for', 'AURA']];
+  const table = rows.map(([k, v], i) => `
+    <line class="rule" x1="48" y1="${712 + i * 44}" x2="376" y2="${712 + i * 44}"/>
+    <text class="tb-k" x="48" y="${740 + i * 44}">${k}</text>
+    <text class="tb-v" x="376" y="${740 + i * 44}" text-anchor="end">${v}</text>`).join('');
+
+  return `<svg class="paper-svg" xmlns="${NS}" viewBox="0 0 1600 1000" preserveAspectRatio="none">
+    <rect class="frame" x="22" y="22" width="1556" height="956"/>
+    <line class="rule" x1="400" y1="22" x2="400" y2="978"/>
+    <text class="tb-title" x="48" y="104">AURA</text>
+    <text class="tb-sub" x="50" y="146">The living sanctuary</text>
+    <line class="rule" x1="48" y1="182" x2="376" y2="182"/>
+    <text class="tb-k" x="48" y="214">Drawing</text>
+    <text class="tb-big" x="48" y="252">Upper level plan</text>
+    <text class="tb-k" x="48" y="282">Living pavilion · FL +4.05</text>
+    ${nest(lowerPlan(), 48, 320, 328, 280)}
+    <text class="tb-k" x="48" y="628">Key plan · lower level</text>
+    <g transform="translate(330,660)"><circle class="rule" r="18"/><path d="M0,-13 L5,6 L0,2 L-5,6 Z" class="ink"/><text class="tb-k" x="0" y="-26" text-anchor="middle">N</text></g>
+    ${table}
+    <text class="tb-k" x="48" y="958">Concept, not for construction</text>
+    ${nest(upperPlan(), 430, 40, 1140, 920)}
+    <g class="notes">${notes}</g>
+  </svg>`;
+}

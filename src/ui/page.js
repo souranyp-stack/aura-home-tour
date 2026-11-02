@@ -2,7 +2,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin';
-import { upperPlan, lowerPlan, sectionAA, approachMap } from './drawings.js';
+import { upperPlan, lowerPlan, sectionAA, approachMap, paperSheet } from './drawings.js';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
 
@@ -62,6 +62,84 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
   ScrollTrigger.create({ trigger: '#daylight', start: 'top bottom', end: 'bottom top', onToggle: (st) => { dayActive = st.isActive; onDay(dayActive, dayT); } });
   ScrollTrigger.create({ trigger: '#daylight', start: 'top top', end: 'bottom bottom', scrub: true, onUpdate: (st) => { dayT = st.progress; showDay(); } });
   showDay();
+
+  // ---------------------------------------------------------------- the drawing: a folded sheet opens into a big plan
+  {
+    const paper = $('#paper');
+    const svg = paperSheet();
+    const panels = [];
+    let parent = paper;
+    for (let i = 0; i < 4; i++) {
+      const f = document.createElement('div');
+      f.className = `fold${i ? ' fold--child' : ''}`;
+      f.innerHTML = `<div class="fold__face fold__front">${svg.replace('viewBox="0 0 1600 1000"', `viewBox="${i * 400} 0 400 1000"`)}</div><div class="fold__face fold__back"></div><i class="fold__shade"></i>`;
+      parent.appendChild(f);
+      panels.push(f);
+      parent = f;
+    }
+    // accordion: each panel folds back on its neighbour, alternating, a few
+    // degrees short of flat so the packet has the thickness of real paper
+    const FOLDED = [0, 176, -176, 176];
+    const WINDOWS = [null, [0.14, 0.36], [0.26, 0.48], [0.38, 0.6]];
+    const ease = gsap.parseEase('power2.inOut');
+    const st = (p, a, b) => { const t = Math.min(1, Math.max(0, (p - a) / (b - a))); return t * t * (3 - 2 * t); };
+    let pw = 300, phone = false;
+    const size = () => {
+      phone = innerWidth <= 900;
+      pw = phone ? Math.min(innerHeight * 0.205, innerWidth * 0.36) : Math.min(innerWidth * 0.23, innerHeight * 0.32);
+      paper.style.setProperty('--pw', `${pw.toFixed(1)}px`);
+    };
+    size();
+    addEventListener('resize', size);
+
+    // ink: every stroke on the sheet is drawn as it opens; notes come last
+    const strokes = $$('.fold__front svg :is(line, rect, polyline, polygon, circle, path)', paper).filter((n) => !n.closest('pattern') && !n.closest('.notes'));
+    const fills = $$('.fold__front svg :is(.f-hatch, .l-solid, .f-water)', paper);
+    const words = $$('.fold__front svg text', paper).filter((n) => !n.closest('.notes'));
+    const notes = $$('.fold__front .notes path', paper);
+    const noteText = $$('.fold__front .notes text', paper);
+    const ink = gsap.timeline({ paused: true })
+      .fromTo(strokes, { drawSVG: '0%' }, { drawSVG: '100%', ease: 'none', duration: 0.6, stagger: { amount: 0.4 } }, 0)
+      .fromTo(fills, { fillOpacity: 0 }, { fillOpacity: 1, ease: 'none', duration: 0.25 }, 0.6)
+      .fromTo(words, { opacity: 0 }, { opacity: 1, ease: 'none', duration: 0.2, stagger: { amount: 0.2 } }, 0.55);
+    const pen = gsap.timeline({ paused: true })
+      .fromTo(notes, { drawSVG: '0%' }, { drawSVG: '100%', ease: 'none', duration: 1, stagger: 0.12 }, 0)
+      .fromTo(noteText, { opacity: 0 }, { opacity: 1, ease: 'none', duration: 0.5, stagger: 0.2 }, 0.3);
+
+    const copy = $('.sheet__copy'), hint = $('.sheet__hint');
+    const setSheet = (p) => {
+      let U = 0;
+      for (let i = 1; i < 4; i++) {
+        const u = ease(st(p, ...WINDOWS[i]));
+        U += u / 3;
+        const ang = FOLDED[i] * (1 - u);
+        panels[i].style.transform = `rotateY(${ang.toFixed(2)}deg)`;
+        panels[i].style.setProperty('--shade', (0.24 * (1 - Math.cos((ang * Math.PI) / 180)) / 2).toFixed(3));
+      }
+      const arrive = st(p, 0, 0.16), flat = st(p, 0.55, 0.8), zoom = st(p, 0.86, 1);
+      const c = pw / 2 + 1.5 * pw * U;
+      gsap.set(paper, {
+        transformOrigin: `${c.toFixed(1)}px 50%`,
+        x: -1.5 * pw * U,
+        y: (1 - arrive) * innerHeight * 0.5 + (1 - flat) * innerHeight * 0.05,
+        rotationX: 52 * (1 - flat),
+        rotation: -10 * (1 - flat) + (phone ? 90 * flat : 0),
+        scale: (0.62 + 0.38 * flat) * (1 + (phone ? 0 : 0.12) * zoom),
+        opacity: arrive,
+      });
+      paper.style.setProperty('--drop', (0.6 - 0.25 * flat).toFixed(2));
+      ink.progress(st(p, 0.18, 0.84));
+      pen.progress(st(p, 0.8, 0.98));
+      copy.style.opacity = (1 - st(p, 0.42, 0.58)).toFixed(3);
+      hint.style.opacity = (1 - st(p, 0.06, 0.18)).toFixed(3);
+    };
+    // with reduced motion the sheet is simply shown open
+    if (reduced) setSheet(1);
+    else {
+      setSheet(0);
+      ScrollTrigger.create({ trigger: '#sheet', pin: '.sheet__pin', start: 'top top', end: '+=300%', scrub: 0.7, onUpdate: (t) => setSheet(t.progress), onRefresh: (t) => setSheet(t.progress) });
+    }
+  }
 
   if (reduced) {
     onReadySwatches();

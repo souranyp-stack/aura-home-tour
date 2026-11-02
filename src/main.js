@@ -309,6 +309,16 @@ async function boot() {
   });
   setTimeout(() => page.heroIn(), 250);
   ScrollTrigger.refresh();
+  // pinned sections measure their start from the content above them; re-measure
+  // whenever that content changes height (web fonts arriving, images settling)
+  let refreshTimer = 0;
+  const remeasure = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => ScrollTrigger.refresh(), 180); };
+  document.fonts?.ready.then(remeasure);
+  let lastH = 0;
+  new ResizeObserver(() => {
+    const h = document.getElementById('page').offsetHeight;
+    if (Math.abs(h - lastH) > 2) { lastH = h; remeasure(); }
+  }).observe(document.getElementById('page'));
 
   // ---- loop ----
   const clock = new THREE.Clock();
