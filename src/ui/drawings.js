@@ -1,4 +1,5 @@
 import { heightAt, SEA, edgeZ } from '../world/landscape.js';
+import { LOWER, LOWER_ROOMS, INSIDE_STAIR } from '../world/walkPlan.js';
 
 // Architectural drawings generated from the same coordinates as the model
 // (metres; x along the coast, z inland, y up). Plans put the sea at the
@@ -58,7 +59,13 @@ function furnitureUpper(sh) {
   sh.add(rect(4.9, 2.45, 8.1, 3.55, 'l-fur'));
   for (const x of [5.4, 6.5, 7.6]) { sh.add(rect(x - 0.24, 1.96, x + 0.24, 2.44, 'l-fur')); sh.add(rect(x - 0.24, 3.56, x + 0.24, 4.04, 'l-fur')); }
   sh.add(circle(6.5, 3.0, 0.8, 'l-fur'));
-  sh.add(rect(-3.7, 7.48, 0.9, 7.96, 'l-fur'));
+  sh.add(rect(1.2, 7.48, 5.8, 7.96, 'l-fur'));
+  // kitchen: wall of units, island, stools
+  sh.add(rect(6.6, 7.35, 11, 8, 'l-thin'));
+  sh.add(rect(7.2, 5.7, 10.2, 6.6, 'l-fur'));
+  for (const x of [7.9, 8.7, 9.5]) sh.add(circle(x, 5.42, 0.18, 'l-fur'));
+  // head chairs at the table
+  for (const x of [4.62, 8.38]) sh.add(rect(x - 0.24, 2.76, x + 0.24, 3.24, 'l-fur'));
   for (const x of [-6.2, -4.0]) sh.add(rect(x - 0.38, -7.1, x + 0.38, -5.1, 'l-fur'));
   sh.add(circle(9.5, -2.7, 0.36, 'l-fur'));
   sh.add(circle(9.5, -2.7, 0.9, 'l-fur'));
@@ -101,6 +108,11 @@ export function upperPlan() {
   sh.add(rect(12.2, 10, 13.8, 16.4, 'l-thin'));
   for (let i = 1; i < 22; i++) sh.add(line(12.2, 10 + i * 0.291, 13.8, 10 + i * 0.291, 'l-fur'));
   sh.add(text(13, 8.9, 'Down', 't-dim'));
+  // inside stair, down to the gallery
+  const S = INSIDE_STAIR;
+  sh.add(rect(S.x0, S.z0, S.x1, S.z1, 'l-thin'));
+  for (let i = 1; i < 22; i++) { const x = S.x0 + (i * (S.x1 - S.x0)) / 22; sh.add(line(x, S.z0, x, S.z1, 'l-fur')); }
+  sh.add(text(-3.6, 6.3, 'Stair down', 't-dim'));
   furnitureUpper(sh);
   // section mark A–A through the door
   sh.add(line(2.25, -10.8, 2.25, 15.5, 'l-dim', 'stroke-dasharray="10 4 2 4"'));
@@ -111,6 +123,7 @@ export function upperPlan() {
   // rooms
   sh.add(text(-3, 0.2, 'Living'));
   sh.add(text(6.5, 1.3, 'Dining'));
+  sh.add(text(8.7, 6.95, 'Kitchen'));
   sh.add(text(-6.7, 5.8, 'Hearth', 't-room', 'start'));
   sh.add(text(-3.3, -6.3, 'Terrace'));
   sh.add(text(10.25, -6.45, 'Pool'));
@@ -137,24 +150,30 @@ export function lowerPlan() {
   sh.add(line(-8.5, -2.0, 11.5, -2.0, 'l-glass'));
   sh.add(line(-8.5, -1.7, 11.5, -1.7, 'l-glass'));
   sh.add(rect(-10.2, -11, -9, 15, 'f-hatch'));
-  // bedrooms along the sea, baths behind, corridor against the hill
-  for (const x of [-3.5, 2, 7.5]) sh.add(rect(x - 0.08, -1.4, x + 0.08, 4.6, 'l-solid'));
-  sh.add(rect(-9, 4.5, 14.4, 4.65, 'l-solid'));
-  for (const x of [-6.2, -0.8, 4.7, 10.2]) sh.add(rect(x - 0.06, 4.65, x + 0.06, 7.2, 'l-solid'));
-  sh.add(rect(-9, 7.2, 14.4, 7.32, 'l-solid'));
-  for (const [x, n] of [[-6.25, 1], [-0.75, 2], [4.75, 3], [11.0, 4]]) {
-    sh.add(text(x, 1.9, `Bedroom ${n}`));
-    sh.add(rect(x - 1.0, 0.3, x + 1.0, 2.4 - 0.9, 'l-fur'));
+  // bedrooms along the sea; behind each, a lobby and its bathroom; a corridor against the hill
+  const [aS, aN] = LOWER.wallA, [bS, bN] = LOWER.wallB;
+  sh.add(rect(-9, aS, 14.4, aN, 'l-solid'));
+  sh.add(rect(-9, bS, 14.4, bN, 'l-solid'));
+  for (const r of LOWER_ROOMS) {
+    // door openings through both long walls
+    for (const [z0, z1] of [[aS, aN], [bS, bN]]) sh.add(rect(r.pass[0] + 0.25, z0, r.pass[0] + 1.25, z1, 'l-thin', 'style="fill:#121110"'));
+    if (r.n > 1) {
+      sh.add(rect(r.x0 - 0.08, -1.7, r.x0 + 0.08, aS, 'l-solid'));
+      sh.add(rect(r.x0 - 0.05, aN, r.x0 + 0.05, bS, 'l-solid'));
+    }
+    sh.add(rect(r.pass[1], aN, r.bath[0], LOWER.bathDoor[0], 'l-solid'));
+    sh.add(rect(r.pass[1], LOWER.bathDoor[1], r.bath[0], bS, 'l-solid'));
+    sh.add(text(r.bedAt, 0.6, `Bedroom ${r.n}`));
+    sh.add(rect(r.bedAt - 0.95, 2.15, r.bedAt + 0.95, 4.4, 'l-fur'));
+    sh.add(text((r.bath[0] + r.bath[1]) / 2, 5.6, 'Bath', 't-dim'));
   }
-  for (const x of [-3.5, 2, 7.5, 12.4]) sh.add(text(x - 0.1, 5.8, 'Bath', 't-dim'));
-  sh.add(text(2.5, 8.15, 'Gallery corridor', 't-dim'));
-  // west of the spine: stair and plant
-  sh.add(rect(-12.4, 3, -10.2, 9.4, 'l-thin'));
-  for (let i = 1; i < 16; i++) sh.add(line(-12.4, 3 + i * 0.4, -10.2, 3 + i * 0.4, 'l-fur'));
-  sh.add(text(-11.3, 2.2, 'Stair', 't-dim'));
-  sh.add(text(-11.3, 0.4, 'Plant', 't-dim'));
+  sh.add(text(5, 8.45, 'Gallery corridor', 't-dim'));
+  // the inside stair, up to the living room
+  sh.add(rect(INSIDE_STAIR.x0, INSIDE_STAIR.z0, INSIDE_STAIR.x1, INSIDE_STAIR.z1, 'l-thin'));
+  for (let i = 1; i < 22; i++) { const x = INSIDE_STAIR.x0 + (i * (INSIDE_STAIR.x1 - INSIDE_STAIR.x0)) / 22; sh.add(line(x, INSIDE_STAIR.z0, x, INSIDE_STAIR.z1, 'l-fur')); }
+  sh.add(text(-3.6, 8.5, 'Stair up', 't-dim'));
   // entrance
-  sh.add(line(2.2, 10, 3.8, 10, 'l-glass'));
+  sh.add(line(LOWER.door[0], 10, LOWER.door[1], 10, 'l-glass'));
   sh.add(text(3, 10.7, 'Entrance', 't-dim'));
   sh.add(line(2.25, -10.8, 2.25, 15.5, 'l-dim', 'stroke-dasharray="10 4 2 4"'));
   northAndScale(sh, 4.2, -10.9);
@@ -219,8 +238,9 @@ export function sectionAA() {
   add(r(-1.74, 1.375, -1.66, 2.725, 'l-glass2'), r(-1.78, 1.33, -1.62, 1.375, 'f-bronze'), r(-1.78, 2.725, -1.62, 2.77, 'f-bronze'));
   add(r(9.7, 2.4, 10, 3.6, 'f-hatch'));
   add(l(9.85, 0, 9.85, 2.4, 'l-glass'), r(9.7, 2.35, 10, 2.4, 'f-bronze'));
-  add(r(4.5, 0, 4.65, 3.6, 'f-wall'), r(7.2, 0, 7.32, 3.6, 'f-wall'));
-  add(r(5.2, 0, 6.5, 2.1, 'l-beyond'));
+  // the section passes through the lobby doorways, so only the wall heads are cut
+  add(r(4.5, 2.2, 4.65, 3.6, 'f-wall'), r(6.9, 2.2, 7.02, 3.6, 'f-wall'));
+  add(r(5.3, 0, 6.2, 2.2, 'l-beyond'));
   // bed and lamp seen beyond in the bedroom
   add(r(0.3, 0, 2.6, 0.42, 'l-fur'), r(0.35, 0.42, 2.55, 0.6, 'l-fur', 'rx="3"'), r(2.45, 0, 2.6, 1.15, 'l-fur'));
   add(r(2.05, 0.6, 2.4, 0.74, 'l-fur', 'rx="4"'));

@@ -262,10 +262,11 @@ async function boot() {
   }
 
   // Walking the house: the finished model, with the sea door slid open.
+  interior.lower.setOutside([land.group, veg, atmo.water]);
   const walk = createWalk({
     camera, scene, plantings: land.plantings,
     onOpen: () => lenis?.stop(),
-    onClose: () => { lenis?.start(); readScroll(); },
+    onClose: () => { lenis?.start(); readScroll(); interior.lower.update(null, walk.env, 10); },
   });
   function applyWalk(time, dt) {
     walk.update(dt);
@@ -279,6 +280,7 @@ async function boot() {
     land.group.visible = veg.visible = true;
     const sky = atmo.update({ studio: 0, time: env.time, mist: env.mist, worldR: 2800, voidOpacity: 0, now: time, dust: 0 });
     interior.update(env, time);
+    interior.lower.update(walk.state, env, dt);
     M.glassDark.emissive.copy(warmGlow).multiplyScalar(env.interior * (1 - sky.daylight) * 0.35);
     M.textures.waves.normalMap.offset.set(time * 0.012, time * 0.007);
     if (post.ao) post.ao.enabled = true;
@@ -423,6 +425,7 @@ async function boot() {
       post,
       renderAt: (p, t = 10) => { prog = target = p; apply(p, t, 0.016); post.composer.render(); },
       renderDay: (t, time = 10) => { applyDay(t, time); post.composer.render(); },
+      walk,
     };
     // contact sheets of exact scroll positions, posted to a local capture server
     const send = (name, c) => fetch(`http://127.0.0.1:5299/save?name=${name}`, { method: 'POST', body: c.toDataURL('image/jpeg', 0.88) });

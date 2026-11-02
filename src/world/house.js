@@ -52,7 +52,20 @@ export function createHouse(M) {
   {
     const g = new THREE.Group();
     const bx0 = -8.5, bx1 = 11.5, by0 = -0.425, by1 = 0.925; // band, local coords
-    g.add(box(28, 3.6, 11.7, M.limestone, 0, 0, 0.15));
+    // hollow since the rooms were built: in local coords the rooms run x -10…13.4,
+    // z -5.7…5.4, under a stone lid; only the block west of the spine stays solid
+    g.add(box(4, 3.6, 11.7, M.limestone, -12, 0, 0.15)); // west of the spine
+    g.add(box(0.6, 3.6, 11.7, M.limestone, 13.7, 0, 0.15)); // east wall
+    const northZ = 5.7; // the north wall, with the front door in it at x 1.2…2.8
+    g.add(box(11.2, 3.6, 0.6, M.limestone, -4.4, 0, northZ));
+    g.add(box(10.6, 3.6, 0.6, M.limestone, 8.1, 0, northZ));
+    g.add(box(1.6, 1.2, 0.6, M.limestone, 2, 1.2, northZ));
+    // the lid, 300 mm thick, with the opening for the inside stair at x -7.6…-1.66, z 3…4
+    const lidY = 1.65;
+    g.add(box(23.4, 0.3, 8.7, M.limestone, 1.7, lidY, -1.35));
+    g.add(box(23.4, 0.3, 1.4, M.limestone, 1.7, lidY, 4.7));
+    g.add(box(2.4, 0.3, 1, M.limestone, -8.8, lidY, 3.5));
+    g.add(box(15.06, 0.3, 1, M.limestone, 5.87, lidY, 3.5));
     g.add(box(28, by0 + 1.8, 0.3, M.limestone, 0, (-1.8 + by0) / 2, -5.85));
     g.add(box(28, 1.8 - by1, 0.3, M.limestone, 0, (by1 + 1.8) / 2, -5.85));
     g.add(box(bx0 + 14, by1 - by0, 0.3, M.limestone, (-14 + bx0) / 2, (by0 + by1) / 2, -5.85));
@@ -95,11 +108,18 @@ export function createHouse(M) {
     const g = new THREE.Group();
     const mats = [M.travertine, M.travertine, M.travertine, M.render, M.travertine, M.travertine];
     // Two parts leave the opening the pool hangs in (x 3.5…16, z -8…-4.4).
-    const a = new THREE.Mesh(bevelled(26, 0.45, 14.4, 0.03), mats);
-    a.position.set(0, 0, 1.8);
-    const b = new THREE.Mesh(bevelled(13.5, 0.45, 3.6, 0.03), mats);
-    b.position.set(-6.25, 0, -7.2);
-    for (const s of [a, b]) { s.castShadow = s.receiveShadow = true; g.add(s); }
+    // The main plate is cut around the inside stair (local x -9.6…-3.66, z 6…7).
+    const plate = (w, d, x, z) => {
+      const s = new THREE.Mesh(bevelled(w, 0.45, d, 0.03), mats);
+      s.position.set(x, 0, z);
+      s.castShadow = s.receiveShadow = true;
+      g.add(s);
+    };
+    plate(26, 11.4, 0, 0.3);
+    plate(26, 2, 0, 8);
+    plate(3.4, 1, -11.3, 6.5);
+    plate(16.66, 1, 4.67, 6.5);
+    plate(13.5, 3.6, -6.25, -7.2);
     // frameless low-iron balustrade along the terrace edge, bronze shoe and cap
     const rail = (len, x, z, alongX) => {
       const [w, d] = alongX ? [len, 0.016] : [0.016, len];

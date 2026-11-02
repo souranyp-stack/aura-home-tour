@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { createFloorPlan, PLACES, EYE } from '../world/walkPlan.js';
-import { upperPlan, planXY } from './drawings.js';
+import { upperPlan, lowerPlan, planXY } from './drawings.js';
 
 // Walking the house freely, outside the film. Drag to look; keys, the wheel, a
 // click on the floor or the stick on a touch screen to move. It takes over the
@@ -58,12 +58,17 @@ export function createWalk({ camera, scene, plantings, onOpen, onClose }) {
 
   // ---------------------------------------------------------------- map
   const mapHost = $('.walk__map', root);
-  mapHost.innerHTML = upperPlan();
-  const mapSvg = $('svg', mapHost);
+  // one plan for each level, showing whichever you are on
+  mapHost.innerHTML = upperPlan() + lowerPlan();
+  const [upperSvg, lowerSvg] = mapHost.querySelectorAll('svg');
   const NS = 'http://www.w3.org/2000/svg';
-  const you = document.createElementNS(NS, 'g');
-  you.innerHTML = '<path class="walk__cone" d="M0,0 L-34,-52 A62,62 0 0 1 34,-52 Z"/><circle class="walk__dot" r="9"/>';
-  mapSvg.appendChild(you);
+  const makeYou = (svg) => {
+    const g = document.createElementNS(NS, 'g');
+    g.innerHTML = '<path class="walk__cone" d="M0,0 L-34,-52 A62,62 0 0 1 34,-52 Z"/><circle class="walk__dot" r="9"/>';
+    svg.appendChild(g);
+    return g;
+  };
+  const youUpper = makeYou(upperSvg), youLower = makeYou(lowerSvg);
 
   // ---------------------------------------------------------------- places and hours
   const placeHost = $('.walk__places', root), hourHost = $('.walk__hours', root);
@@ -282,8 +287,11 @@ export function createWalk({ camera, scene, plantings, onOpen, onClose }) {
       gsap.fromTo([whereName, whereNote], { opacity: 0, y: 8 }, { opacity: 1, y: 0, duration: 0.7, stagger: 0.06, ease: 'expo.out' });
     }
     const [mx, my] = planXY(state.x, state.z);
-    you.setAttribute('transform', `translate(${mx.toFixed(1)} ${my.toFixed(1)}) rotate(${(180 - (yaw * 180) / Math.PI).toFixed(1)})`);
+    const below = state.level !== 'upper' && !(state.level === 'inside' && state.x > -3.6) && !(state.level === 'stair' && state.z < 13);
+    upperSvg.style.display = below ? 'none' : '';
+    lowerSvg.style.display = below ? '' : 'none';
+    (below ? youLower : youUpper).setAttribute('transform', `translate(${mx.toFixed(1)} ${my.toFixed(1)}) rotate(${(180 - (yaw * 180) / Math.PI).toFixed(1)})`);
   }
 
-  return { update, open, close, env, get active() { return active; } };
+  return { update, open, close, stand, env, state, get active() { return active; } };
 }

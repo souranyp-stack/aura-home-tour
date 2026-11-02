@@ -168,7 +168,7 @@ export function createMaterials(renderer) {
       }),
       { mode: 'glass' }
     ),
-    glassDark: std({ color: 0x101415, metalness: 0.2, roughness: 0.04, envMapIntensity: 1.5 }, {}),
+    glassDark: std({ color: 0x101415, metalness: 0.2, roughness: 0.04, envMapIntensity: 1.5, transparent: true, opacity: 0.34 }, {}),
     pv: std({ color: 0x0b1118, metalness: 0.35, roughness: 0.12, envMapIntensity: 1.3 }, {}),
     poolWater: std({
       color: 0x15646a, metalness: 0, roughness: 0.03, normalMap: t.waves.normalMap, normalScale: new THREE.Vector2(0.4, 0.4),
@@ -193,6 +193,10 @@ export function createMaterials(renderer) {
     terracotta: std({ color: 0x9c5a3c, roughness: 0.85, normalMap: t.render.normalMap }, { uvScale: 2, mode: 'reveal' }),
     art: std({ ...set(t.art), roughness: 1 }, { uvScale: 1, mode: 'reveal' }),
     linen: std({ color: 0xf4f0e8, roughness: 1, transparent: true, opacity: 0.78, side: THREE.DoubleSide, normalMap: t.wool.normalMap, emissive: 0x2a2620 }, { uvScale: 1, mode: 'reveal' }),
+    // polished plaster: the render's texture barely raised
+    plaster: std({ map: t.render.map, normalMap: t.render.normalMap, normalScale: new THREE.Vector2(0.14, 0.14), roughness: 0.82, color: 0xeee4d3, envMapIntensity: 0.45 }, { uvScale: 1 / 4, mode: 'reveal' }),
+    ceiling: std({ map: t.render.map, normalMap: t.render.normalMap, normalScale: new THREE.Vector2(0.1, 0.1), roughness: 0.9, color: 0xeee4d3, envMapIntensity: 0.45, emissive: 0xfff0dc, emissiveIntensity: 0.1 }, { uvScale: 1 / 4, mode: 'reveal' }),
+    mirror: std({ color: 0x8d8478, metalness: 1, roughness: 0.38, envMapIntensity: 0.4 }, { mode: 'reveal' }),
     lightStrip: std({ color: 0x111111, emissive: 0xffc890, emissiveIntensity: 0 }, { mode: 'reveal' }),
     pendantShade: std({ color: 0xefe6d6, roughness: 0.9, emissive: 0xffd4a0, emissiveIntensity: 0, side: THREE.DoubleSide }, { mode: 'reveal' }),
     books: std({ color: 0xffffff, roughness: 0.8, vertexColors: true }, { mode: 'reveal' }),
