@@ -54,31 +54,33 @@ class SurfaceAOPass extends GTAOPass {
   }
 }
 
-// Draws a second scene over the film, with its own alpha, so the film shows through
-// wherever that scene paints nothing. Sits before the bloom and the film finish.
+// Draws a second scene and dissolves from it to the film. The film needn't be drawn
+// at all while the second scene fills the frame.
 class OverlayPass extends Pass {
   constructor(samples) {
     super();
     this.scene = null;
     this.camera = null;
+    this.before = null;
+    this.after = null;
     this.rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples });
     this.quad = new FullScreenQuad(new THREE.ShaderMaterial({
-      uniforms: { tFilm: { value: null }, tOver: { value: null } },
+      uniforms: { tFilm: { value: null }, tOver: { value: null }, uMix: { value: 1 } },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-      fragmentShader: `uniform sampler2D tFilm; uniform sampler2D tOver; varying vec2 vUv;
-        void main(){ vec4 o = texture2D(tOver, vUv); gl_FragColor = vec4(o.rgb + texture2D(tFilm, vUv).rgb * (1.0 - o.a), 1.0); }`,
+      fragmentShader: `uniform sampler2D tFilm; uniform sampler2D tOver; uniform float uMix; varying vec2 vUv;
+        void main(){ gl_FragColor = vec4(mix(texture2D(tFilm, vUv).rgb, texture2D(tOver, vUv).rgb, uMix), 1.0); }`,
       depthTest: false, depthWrite: false,
     }));
   }
   setSize(w, h) { this.rt.setSize(w, h); }
   render(renderer, writeBuffer, readBuffer) {
-    const clear = renderer.getClearColor(new THREE.Color()), alpha = renderer.getClearAlpha(), auto = renderer.autoClear;
+    const auto = renderer.autoClear;
+    this.before?.();
     renderer.setRenderTarget(this.rt);
-    renderer.setClearColor(0x000000, 0);
     renderer.autoClear = true;
     renderer.render(this.scene, this.camera);
-    renderer.setClearColor(clear, alpha);
     renderer.autoClear = auto;
+    this.after?.();
     this.quad.material.uniforms.tFilm.value = readBuffer.texture;
     this.quad.material.uniforms.tOver.value = this.rt.texture;
     renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
@@ -124,12 +126,16 @@ export function createPost(renderer, scene, camera, { mobile }) {
   }
   setSize(innerWidth, innerHeight, renderer.getPixelRatio());
 
-  // show a scene over the film; with hideFilm the film isn't drawn at all, since nothing can see it
-  function setOverlay(sc, cam, on, hideFilm) {
+  // amount 1 shows only the overlay scene (the film isn't drawn), 0 only the film
+  function setOverlay(sc, cam, amount, before, after) {
     overlay.scene = sc;
     overlay.camera = cam;
-    overlay.enabled = on;
-    film.enabled = !(on && hideFilm);
+    overlay.before = before;
+    overlay.after = after;
+    overlay.enabled = amount > 0;
+    overlay.quad.material.uniforms.uMix.value = amount;
+    film.enabled = amount < 1;
+    if (ao && amount >= 1) ao.enabled = false;
   }
 
   return { composer, bloom, grade, ao, setSize, setOverlay };

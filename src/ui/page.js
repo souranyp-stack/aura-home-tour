@@ -453,15 +453,13 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
   const heroWord = $('.hero__word');
   const heroChars = SplitText.create(heroWord, { type: 'chars', charsClass: 'ch', mask: 'chars' }).chars;
   gsap.set(heroChars, { yPercent: 110 });
-  gsap.set(['.frame--hero .eyebrow span', '.hero__sub', '.hero__lede', '.hero__walk', '.hero__begin', '.index', '.top'], { opacity: 0 });
-  gsap.set('.hero__foot', { '--draw': 0 });
+  gsap.set(['.frame--hero .eyebrow span', '.hero__sub', '.hero__walk', '.hero__begin', '.index', '.top'], { opacity: 0 });
   const heroIn = () => {
     const tl = gsap.timeline({ defaults: { ease: EASE } });
     tl.to(heroChars, { yPercent: 0, duration: 1.8, stagger: 0.08 }, 0.1)
       .to('.frame--hero .eyebrow span', { opacity: 1, duration: 1.2, stagger: 0.12 }, 0.5)
-      .to('.hero__foot', { '--draw': 1, duration: 1.6, ease: 'power3.inOut' }, 0.6)
-      .fromTo(['.hero__sub', '.hero__lede', '.hero__walk'], { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 1.3, stagger: 0.12 }, 0.95)
-      .fromTo('.hero__begin', { opacity: 0, scale: 0.6, rotate: -40 }, { opacity: 1, scale: 1, rotate: 0, duration: 1.6 }, 1.15)
+      .fromTo(['.hero__sub', '.hero__walk'], { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 1.3, stagger: 0.12 }, 0.95)
+      .fromTo('.hero__begin', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 1.2 }, 1.15)
       .fromTo('.top', { y: -30 }, { y: 0, duration: 1.4, clearProps: 'transform' }, 1.1)
       .to(['.index', '.top'], { opacity: 1, duration: 1.2 }, 1.1);
   };

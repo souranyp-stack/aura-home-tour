@@ -33,7 +33,7 @@ em { font-style: italic; }
 ::selection { background: var(--bronze); color: var(--ink); }
 
 #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100lvh; display: block; z-index: 0; }
-.spacer { height: 1840vh; }
+.spacer { height: 1940vh; }
 
 /* ---------- mark ---------- */
 .mark { width: 26px; height: 26px; fill: none; stroke-width: 2.4; flex: none; }
@@ -126,17 +126,13 @@ em { font-style: italic; }
   margin-left: -0.05em; text-shadow: 0 0 60px rgba(0, 0, 0, 0.45);
 }
 .hero__word .ch { display: inline-block; }
-.hero__foot { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(20px, 3vw, 48px); align-items: end; padding-top: 26px; position: relative; }
-.hero__foot::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 1px; background: linear-gradient(90deg, rgba(244, 239, 230, 0.45), rgba(244, 239, 230, 0.06)); transform-origin: left; transform: scaleX(var(--draw, 1)); }
-.hero__sub { font-family: var(--serif); font-weight: 300; font-size: clamp(30px, 3.1vw, 50px); line-height: 1.0; letter-spacing: -0.01em; color: #f6f1e8 !important; max-width: none !important; }
-.hero__sub em { color: var(--bronze); display: block; }
-.hero__aside { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: end; }
-.frame--hero .hero__lede { color: rgba(244, 239, 230, 0.88) !important; font-size: 15px; font-weight: 400; max-width: 30ch !important; text-shadow: 0 1px 14px rgba(0, 0, 0, 0.7); }
-.hero__begin { position: relative; width: 104px; height: 104px; display: grid; place-items: center; pointer-events: auto; border-radius: 50%; }
-.hero__begin svg { position: absolute; inset: 0; width: 100%; height: 100%; animation: spin 18s linear infinite; }
-.hero__begin text { font-family: var(--sans); font-size: 9.6px; letter-spacing: 0.24em; text-transform: uppercase; fill: rgba(244, 239, 230, 0.86); }
-.hero__begin i { font-style: normal; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--bone); color: var(--ink); font-size: 18px; transition: background 0.4s, transform 0.6s var(--ease); }
-.hero__begin:hover i { background: var(--bronze); transform: translateY(3px); }
+.hero__main { display: grid; justify-items: start; }
+.hero__sub { font-family: var(--serif); font-weight: 300; font-size: clamp(28px, 3vw, 46px); line-height: 1.05; letter-spacing: -0.005em; color: #f6f1e8 !important; max-width: none !important; margin-top: clamp(18px, 2.2vw, 30px); }
+.hero__sub em { color: #d8b27c; }
+.hero__cta { display: flex; align-items: center; gap: 14px; margin-top: clamp(22px, 2.6vw, 36px); pointer-events: auto; }
+.hero__begin { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; border: 1px solid rgba(244, 239, 230, 0.4); background: rgba(14, 12, 10, 0.3); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); color: #f6f1e8; pointer-events: auto; transition: border-color 0.3s, transform 0.3s; }
+.hero__begin i { font-style: normal; font-size: 17px; }
+.hero__begin:hover { border-color: #edc98f; transform: translateY(3px); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -536,10 +532,8 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
   .frame--hero .eyebrow { margin-bottom: 14px; font-size: 10px; }
   .frame--hero .eyebrow span + span::before { margin: 0 10px; }
   .hero__word { font-size: clamp(84px, 27vw, 150px); margin-bottom: 18px; }
-  .hero__foot { grid-template-columns: 1fr; gap: 14px; }
-  .hero__sub { font-size: 32px; }
+  .frame--hero .hero__sub { font-size: 28px; margin-top: 4px; }
   .hero__sub em { display: inline; }
-  .hero__begin { width: 84px; height: 84px; }
   .top { top: 10px; left: 10px; right: 10px; padding-left: 16px; }
   .index .cue span { display: none; }
   .index__now { letter-spacing: 0.16em; }
@@ -620,9 +614,6 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
 .btn.metal { --metal-h: 56px; gap: 18px; }
 
 /* walking the house */
-.hero__aside .hero__lede { grid-column: 1; }
-.hero__aside .hero__begin { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
-.hero__walk { grid-column: 1; justify-self: start; padding: 0 0 3px; background: none; border-width: 0 0 1px; border-style: solid; border-color: var(--bronze); color: inherit; cursor: pointer; font-family: inherit; }
 .spaces__intro p { margin: 0; }
 .spaces__walk { margin-top: 26px; }
 body.is-walking > *:not(#gl):not(#walk):not(script), body.is-walking > *:not(#gl):not(#walk):not(script) * { visibility: hidden !important; }

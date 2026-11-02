@@ -183,6 +183,36 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
   r = 0.44 + fine * 0.06 + pore * 0.28;
 }`
 
+// A solid walnut desk top, 2.2 x 1.2 m tile: two wide boards, straight grain along
+// the length with thin dark growth lines, a few slow cathedrals, long fine pores.
+export const DESK_WALNUT = /* glsl */ `
+void surface(vec2 uv, out vec3 col, out float h, out float r){
+  float rows = 2.0;
+  float row = floor(uv.y * rows);
+  float v = fract(uv.y * rows);
+  vec2 bu = vec2(uv.x + row * 0.37, v);
+  float slow = pfbm(vec2(uv.x + row * 0.37, uv.y), vec2(3.0, 4.0), 4);
+  float figure = pfbm(vec2(uv.x + row * 0.61, uv.y), vec2(2.0, 8.0), 3);
+  float ring = (v + slow * 0.05 + figure * 0.09) * 46.0;
+  float cell = fract(ring);
+  float grow = smoothstep(0.0, 0.8, cell) * (1.0 - smoothstep(0.9, 1.0, cell));
+  float line = pow(grow, 5.0);
+  float streak = pfbm(vec2(uv.x + row * 0.37, uv.y), vec2(10.0, 420.0), 4);
+  float hair = pfbm(vec2(uv.x + row * 0.13, uv.y), vec2(30.0, 1100.0), 2);
+  vec3 pv = pvoronoi(vec2(uv.x + row * 0.21, uv.y), vec2(150.0, 620.0));
+  float pore = (1.0 - smoothstep(0.03, 0.2, pv.x)) * step(0.42, pv.z);
+  float cloud = smoothstep(-0.35, 0.4, pfbm(vec2(uv.x + row * 0.77, uv.y), vec2(4.0, 12.0), 4));
+  vec3 lite = vec3(0.47, 0.315, 0.205), mid = vec3(0.365, 0.235, 0.15), dark = vec3(0.19, 0.115, 0.07);
+  col = mix(mid, lite, cloud * 0.55 + streak * 0.35);
+  col = mix(col, dark, line * 0.62);
+  col *= 0.94 + hair * 0.16;
+  col = mix(col, dark * 0.9, pore * 0.5);
+  float seam = 1.0 - smoothstep(0.0, 0.00085, min(v, 1.0 - v));
+  col = mix(col, dark * 0.65, seam * 0.8);
+  h = 0.62 + streak * 0.03 + hair * 0.03 - line * 0.03 - pore * 0.2 - seam * 0.3;
+  r = 0.36 + streak * 0.05 + hair * 0.05 + pore * 0.32 + line * 0.04;
+}`
+
 // Vegetable-tanned saddle leather, 0.3 m tile: pebble grain and creases.
 export const LEATHER = /* glsl */ `
 void surface(vec2 uv, out vec3 col, out float h, out float r){

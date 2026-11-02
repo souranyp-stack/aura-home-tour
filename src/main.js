@@ -57,7 +57,7 @@ const filmUi = document.getElementById('filmUi');
 const header = document.getElementById('top');
 const filmEnd = () => spacer.offsetTop + spacer.offsetHeight - innerHeight;
 // the first stretch of scroll belongs to the desk; the film starts where it ends
-const deskLength = () => innerHeight * 1.4;
+const deskLength = () => innerHeight * 2.4;
 const filmY = (p) => (p === 0 ? 0 : deskLength() + p * (filmEnd() - deskLength()));
 let covered = false;
 const readScroll = () => {
@@ -116,7 +116,11 @@ async function boot() {
   const post = createPost(renderer, scene, camera, { mobile });
   status('Laying out the plans', 0.8);
   await nextFrame();
-  const desk = await createDesk(renderer, M, { mobile });
+  const desk = await createDesk(renderer, M, house, { mobile });
+  // the masses are lent to the desk's scene while it draws, lit by its lights
+  const lendHouse = () => desk.scene.add(house.root);
+  const returnHouse = () => scene.add(house.root);
+  lendHouse(); renderer.compile(desk.scene, camera); returnHouse();
 
   // Smooth scrolling on GSAP's ticker, so ScrollTrigger and the film read the same scroll.
   const lenis = reducedMotion ? null : new Lenis({ duration: 1.15, easing: (t) => 1 - Math.pow(1 - t, 3.2), smoothWheel: true });
@@ -154,7 +158,13 @@ async function boot() {
   let lastEnv = null;
   function apply(p, time, dt) {
     const s = storyAt(p);
-    house.update(s.assemble, reducedMotion ? 0 : time);
+    if (deskProg < 0.999) {
+      house.update(desk.assembleAt(deskProg), reducedMotion ? 0 : time);
+      house.rise(desk.plane, (i) => desk.riseAt(deskProg, i));
+    } else {
+      house.stand();
+      house.update(s.assemble, reducedMotion ? 0 : time);
+    }
     aura.uSweep.value = s.sweep;
     aura.uTime.value = time;
     interior.root.visible = s.sweep > 2.5;
@@ -196,12 +206,13 @@ async function boot() {
       const h = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(fov) / 2) * 1.6 / aspect);
       fov = Math.min(68, THREE.MathUtils.lerp(fov, THREE.MathUtils.radToDeg(h), 0.75));
     }
+    // compose the subject opposite the copy: sideways on wide screens, upward on tall ones
+    let ox = aspect >= 1 ? -shift : 0, oy = aspect >= 1 ? 0 : 0.09;
+    if (deskProg < 0.999) ({ fov, ox, oy } = desk.pose(deskProg, aspect, fov, ox, oy, camPos, camTgt));
     camera.fov = fov;
     camera.aspect = aspect;
-    // compose the subject opposite the copy: sideways on wide screens, upward on tall ones
     const W = innerWidth, H = innerHeight;
-    if (aspect >= 1) camera.setViewOffset(W, H, -shift * W, 0, W, H);
-    else camera.setViewOffset(W, H, 0, H * 0.09, W, H);
+    camera.setViewOffset(W, H, ox * W, oy * H, W, H);
     camera.updateProjectionMatrix();
     camera.position.copy(camPos);
     camera.lookAt(camTgt);
@@ -223,6 +234,7 @@ async function boot() {
   let stillN = 0;
   function still(kind) {
     const c = STILLS[kind];
+    house.stand();
     const t = 40 + stillN++;
     house.update(1, 0, 0);
     aura.uSweep.value = 18;
@@ -249,6 +261,7 @@ async function boot() {
   const dayTgt = new THREE.Vector3(3, 2.8, 0);
   function applyDay(t, time) {
     const hours = 5.4 + t * 18.0;
+    house.stand();
     house.update(1, 0);
     aura.uSweep.value = 18;
     aura.uTime.value = time;
@@ -303,6 +316,7 @@ async function boot() {
   function applyWalk(time, dt) {
     walk.update(dt);
     const env = walk.env;
+    house.stand();
     house.update(1, 0);
     aura.uSweep.value = 18;
     aura.uTime.value = time;
@@ -421,11 +435,8 @@ async function boot() {
     else if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; if (sound.state.enabled) sound.mix({}); return; }
     else apply(prog, time, dt);
     post.grade.uniforms.uTime.value = time;
-    if (walk.active || day.active || covered || deskProg >= 0.995) post.setOverlay(desk.scene, desk.camera, false, false);
-    else {
-      const shot = desk.update(deskProg, time, pointerEased, reducedMotion);
-      post.setOverlay(desk.scene, desk.camera, shot.on, !shot.film);
-    }
+    if (walk.active || day.active || covered || deskProg >= 0.999) post.setOverlay(desk.scene, camera, 0);
+    else post.setOverlay(desk.scene, camera, desk.update(deskProg, time), lendHouse, returnHouse);
     post.composer.render();
 
     // what you hear follows what you see

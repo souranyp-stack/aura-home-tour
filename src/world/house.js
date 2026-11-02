@@ -322,5 +322,23 @@ export function createHouse(M) {
     lines.visible = lineMat.opacity > 0.01;
   }
 
-  return { root, pieces, update, door, poolWater, pavilion: pav };
+  // The masses rising out of the drawing: each is squashed onto a plane and grows
+  // back to full height. Call after update; level(i) is 0 flat, 1 standing.
+  let risen = true;
+  function rise(plane, level) {
+    risen = false;
+    pieces.forEach((p, i) => {
+      const k = level(i);
+      p.group.visible = k > 0.004;
+      p.group.position.y = plane + (p.group.position.y - plane) * k;
+      p.group.scale.y = Math.max(0.004, k);
+    });
+  }
+  function stand() {
+    if (risen) return;
+    risen = true;
+    for (const p of pieces) { p.group.scale.y = 1; p.group.visible = true; }
+  }
+
+  return { root, pieces, update, rise, stand, door, poolWater, pavilion: pav };
 }
