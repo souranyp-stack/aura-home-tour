@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { metricUV } from './materials.js';
 import { FL } from './house.js';
 import { mergeStatic } from '../core/merge.js';
@@ -39,16 +40,100 @@ export function bentSlab(w, t, profile, r = 0.03) {
   return metricUV(g);
 }
 
-// A loose cushion: rounded block with a soft crown on top.
-export function cushion(w, h, d, crown = 0.03, r = 0.06) {
-  const g = new RoundedBoxGeometry(w, h, d, 5, r);
+// Anything soft. Unlike a rounded box this has vertices across its faces, so it
+// can crown like something filled, ease out at the sides, and carry the very slight
+// unevenness that stops upholstery looking machined.
+export function cushion(w, h, d, crown = 0.03, r = 0.06, { puff = crown * 0.35, wrinkle = 0.0016 } = {}) {
+  const seg = (a) => Math.max(4, Math.min(30, Math.ceil(a / 0.05)));
+  const g = new THREE.BoxGeometry(w, h, d, seg(w), seg(h), seg(d));
+  const pos = g.attributes.position;
+  const rr = Math.min(r, w / 2 - 1e-3, h / 2 - 1e-3, d / 2 - 1e-3);
+  const ix = w / 2 - rr, iy = h / 2 - rr, iz = d / 2 - rr;
+  const P = new THREE.Vector3(), C = new THREE.Vector3();
+  const seed = w * 13.7 + d * 7.1 + h * 3.3;
+  for (let i = 0; i < pos.count; i++) {
+    P.fromBufferAttribute(pos, i);
+    C.set(THREE.MathUtils.clamp(P.x, -ix, ix), THREE.MathUtils.clamp(P.y, -iy, iy), THREE.MathUtils.clamp(P.z, -iz, iz));
+    const n = P.clone().sub(C);
+    if (n.lengthSq() > 1e-10) P.copy(C).addScaledVector(n.normalize(), rr);
+    const u = (2 * P.x) / w, v = (2 * P.z) / d, t = (2 * P.y) / h;
+    const fill = Math.max(0, 1 - u * u) * Math.max(0, 1 - v * v);
+    if (P.y > 0) P.y += crown * fill;
+    else P.y -= crown * 0.25 * fill;
+    const side = Math.max(0, 1 - t * t);
+    P.x += Math.sign(P.x) * puff * side * Math.abs(u) ** 3;
+    P.z += Math.sign(P.z) * puff * side * Math.abs(v) ** 3;
+    if (wrinkle > 0) {
+      const a = Math.sin(P.x * 23 + seed) * Math.cos(P.z * 19 - seed * 0.7) + 0.6 * Math.sin((P.x + P.z) * 41 + seed * 1.3);
+      P.y += wrinkle * a * (P.y > 0 ? 1 : 0.3);
+      P.x += wrinkle * 0.5 * Math.sin(P.y * 37 + seed) * Math.sign(P.x) * Math.abs(u);
+    }
+    pos.setXYZ(i, P.x, P.y, P.z);
+  }
+  g.deleteAttribute('normal');
+  g.deleteAttribute('uv');
+  const welded = mergeVertices(g, 1e-4);
+  welded.computeVertexNormals();
+  welded.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(welded.attributes.position.count * 2), 2));
+  return metricUV(welded);
+}
+
+// A tapered round member between two points, for joints that must actually meet.
+export function rod(mat, a, b, ra, rb = ra, opts) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const len = A.distanceTo(B);
+  const m = mesh(new THREE.CylinderGeometry(rb, ra, len, 14), mat, (A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2, opts);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize());
+  return m;
+}
+
+// A square-section member between two points: slim metal frames.
+export function bar(mat, a, b, t = 0.016, opts) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const len = A.distanceTo(B);
+  const m = mesh(new THREE.BoxGeometry(t, len, t), mat, (A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2, opts);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize());
+  return m;
+}
+
+// A row of stitches along a straight seam.
+export function stitches(group, a, b, mat, pitch = 0.016) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const n = Math.floor(A.distanceTo(B) / pitch);
+  const dir = B.clone().sub(A).normalize();
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), dir);
+  for (let i = 0; i <= n; i++) {
+    const m = mesh(new THREE.BoxGeometry(pitch * 0.62, 0.0022, 0.0022), mat, 0, 0, 0, { cast: false, receive: false });
+    m.position.copy(A).addScaledVector(dir, i * pitch);
+    m.quaternion.copy(q);
+    group.add(m);
+  }
+}
+
+// A reeded surface: half-round ribs side by side, facing +z, ribs running up y.
+export function reeded(w, h, pitch = 0.03, depth = 0.008) {
+  const ribs = Math.round(w / pitch);
+  const g = new THREE.PlaneGeometry(w, h, ribs * 6, 1);
   const pos = g.attributes.position;
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    if (y > 0) {
-      const fx = 1 - Math.pow((2 * x) / w, 2), fz = 1 - Math.pow((2 * z) / d, 2);
-      pos.setY(i, y + crown * Math.max(0, fx) * Math.max(0, fz));
-    }
+    const t = ((pos.getX(i) + w / 2) / pitch) % 1;
+    pos.setZ(i, depth * Math.sqrt(Math.max(0, 1 - (2 * t - 1) ** 2)));
+  }
+  g.computeVertexNormals();
+  return metricUV(g);
+}
+
+// A drum with flutes cut around it.
+export function fluted(rTop, rBottom, h, flutes = 44, depth = 0.05) {
+  const g = new THREE.CylinderGeometry(rTop, rBottom, h, flutes * 6, 1);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), z = pos.getZ(i), rad = Math.hypot(x, z);
+    if (rad < 1e-4) continue;
+    const a = Math.atan2(z, x);
+    const k = 1 - depth * Math.abs(Math.cos((a * flutes) / 2));
+    pos.setX(i, x * k);
+    pos.setZ(i, z * k);
   }
   g.computeVertexNormals();
   return metricUV(g);
@@ -60,25 +145,31 @@ export function tube(points, radius) {
 }
 
 function sofa(M) {
+  // Low and square, as modern sofas are: it floats on a recessed bronze base, with
+  // deep loose cushions, slim arms and soft pillows. Faces -z.
   const g = new THREE.Group();
-  // recessed walnut plinth so the upholstery appears to float
-  g.add(mesh(rbox(3.16, 0.1, 0.86, 0.015), M.walnut, 0, 0.05, 0.02));
-  g.add(mesh(cushion(3.36, 0.2, 1.04, 0.0, 0.07), M.boucle, 0, 0.2, 0));
-  g.add(mesh(cushion(1.6, 0.17, 0.78, 0.035, 0.08), M.boucle, -0.81, 0.385, -0.08));
-  g.add(mesh(cushion(1.6, 0.17, 0.78, 0.035, 0.08), M.boucle, 0.81, 0.385, -0.08));
-  g.add(mesh(cushion(3.36, 0.44, 0.2, 0.0, 0.09), M.boucle, 0, 0.5, 0.42));
-  const backL = mesh(cushion(1.55, 0.44, 0.2, 0.03, 0.09), M.boucle, -0.82, 0.62, 0.27);
-  backL.rotation.x = -0.12;
-  const backR = mesh(cushion(1.55, 0.44, 0.2, 0.03, 0.09), M.boucle, 0.82, 0.62, 0.27);
-  backR.rotation.x = -0.12;
-  g.add(backL, backR);
-  g.add(mesh(cushion(0.2, 0.3, 1.04, 0.0, 0.09), M.boucle, -1.68, 0.45, 0));
-  g.add(mesh(cushion(0.2, 0.3, 1.04, 0.0, 0.09), M.boucle, 1.68, 0.45, 0));
-  for (const x0 of [-1.61, 0.01]) g.add(piping([[x0, 0.45, -0.475], [x0 + 0.8, 0.458, -0.477], [x0 + 1.6, 0.45, -0.475]], M.boucleDark, 0.008));
-  for (const sx of [-1, 1]) g.add(piping([[sx * 1.68, 0.6, -0.5], [sx * 1.68, 0.605, 0], [sx * 1.68, 0.6, 0.5]], M.boucleDark, 0.008));
-  const throwPillow = mesh(cushion(0.5, 0.42, 0.13, 0.04, 0.06), M.wool, -1.15, 0.64, 0.16);
-  throwPillow.rotation.set(-0.2, 0.15, 0.05);
-  g.add(throwPillow);
+  g.add(mesh(rbox(3.14, 0.06, 0.84, 0.008), M.bronzeInterior, 0, 0.03, 0.02));
+  g.add(mesh(cushion(3.4, 0.16, 1.06, 0.004, 0.035, { wrinkle: 0.0008 }), M.boucle, 0, 0.16, 0));
+  for (const sx of [-1, 1]) {
+    g.add(mesh(cushion(1.5, 0.17, 0.82, 0.03, 0.05), M.boucle, sx * 0.76, 0.325, -0.1));
+    const back = mesh(cushion(1.5, 0.5, 0.2, 0.012, 0.075), M.boucle, sx * 0.76, 0.56, 0.3);
+    back.rotation.x = 0.13;
+    g.add(back);
+    g.add(mesh(cushion(0.17, 0.36, 1.06, 0.006, 0.07), M.boucle, sx * 1.615, 0.36, 0));
+  }
+  // the full-height back behind the loose cushions
+  g.add(mesh(cushion(3.4, 0.42, 0.14, 0.004, 0.06), M.boucle, 0, 0.42, 0.46));
+  // pillows, in linen and leather against the boucle
+  const pillow = (w, h, mat, x, y, z, rx, ry, rz = 0) => {
+    const p = mesh(cushion(w, 0.13, h, 0.05, 0.05), mat, x, y, z);
+    p.rotation.set(rx + Math.PI / 2, ry, rz);
+    g.add(p);
+  };
+  pillow(0.52, 0.52, M.linenClay, -1.14, 0.63, 0.1, 0.22, 0.18);
+  pillow(0.46, 0.46, M.linenCharcoal, -0.72, 0.6, 0.07, 0.3, -0.1);
+  pillow(0.56, 0.32, M.cognac, 1.12, 0.56, 0.04, 0.34, -0.14);
+  // a throw folded over the arm
+  g.add(mesh(cushion(0.2, 0.012, 0.86, 0.003, 0.006, { wrinkle: 0.002 }), M.linenClay, 1.615, 0.548, 0.02));
   return g;
 }
 
@@ -95,27 +186,51 @@ export function leg(mat, x, z, h, rTop, rBot, splay = 0.06) {
   return m;
 }
 
-// Club lounge chair: a tight saddle-leather shell on tapered walnut legs,
-// piped arms, crowned loose seat and back cushions. 820 x 840, seat at 450.
+// Modern lounge chair: a slim bronze frame carrying channel-tufted leather. Faces -z.
+// 780 x 820, seat at 400. The channels are separate soft strips, so they catch light
+// the way stuffed leather does, and every seam is stitched.
 export function loungeChair(M) {
   const g = new THREE.Group();
-  for (const [x, z] of [[-0.33, -0.33], [0.33, -0.33], [-0.33, 0.33], [0.33, 0.33]]) g.add(leg(M.walnut, x, z, 0.11, 0.022, 0.015));
-  g.add(mesh(rbox(0.82, 0.3, 0.84, 0.06), M.cognac, 0, 0.25, 0));
+  const quiet = { cast: false };
+  // two sled frames, tied across under the seat
   for (const sx of [-1, 1]) {
-    g.add(mesh(cushion(0.13, 0.25, 0.8, 0.01, 0.055), M.cognac, sx * 0.345, 0.515, 0.0));
+    const x = sx * 0.375;
+    g.add(bar(M.bronzeInterior, [x, 0.012, -0.4], [x, 0.012, 0.4], 0.018));
+    g.add(bar(M.bronzeInterior, [x, 0.012, -0.36], [x, 0.47, -0.36], 0.018));
+    g.add(bar(M.bronzeInterior, [x, 0.012, 0.37], [x, 0.47, 0.37], 0.018));
+    g.add(bar(M.bronzeInterior, [x, 0.47, -0.37], [x, 0.47, 0.38], 0.018));
+    // the arm: a leather pad wrapped over the top rail, its seams stitched
+    g.add(mesh(cushion(0.086, 0.032, 0.8, 0.005, 0.014, { wrinkle: 0.0005 }), M.cognac, x, 0.492, 0));
+    for (const ox of [-0.03, 0.03]) stitches(g, [x + ox, 0.5135, -0.385], [x + ox, 0.5135, 0.385], M.thread);
   }
-  const back = mesh(cushion(0.82, 0.48, 0.14, 0.0, 0.06), M.cognac, 0, 0.62, 0.35);
-  back.rotation.x = -0.12;
+  g.add(bar(M.bronzeInterior, [-0.375, 0.17, -0.34], [0.375, 0.17, -0.34], 0.018));
+  g.add(bar(M.bronzeInterior, [-0.375, 0.17, 0.34], [0.375, 0.17, 0.34], 0.018));
+  g.add(bar(M.bronzeInterior, [-0.375, 0.17, 0], [0.375, 0.17, 0], 0.018));
+  // seat: a base roll with five channels running front to back
+  g.add(mesh(cushion(0.72, 0.07, 0.72, 0.002, 0.024, { wrinkle: 0 }), M.cognacDark, 0, 0.215, -0.02));
+  const CH = 5, cw = 0.138;
+  for (let i = 0; i < CH; i++) {
+    const x = (i - (CH - 1) / 2) * cw;
+    g.add(mesh(cushion(cw + 0.004, 0.135, 0.7, 0.022, 0.042, { puff: 0.002, wrinkle: 0.0012 }), M.cognac, x, 0.3, -0.03));
+  }
+  // back: the same channels, raked, on a leather-covered shell
+  const back = new THREE.Group();
+  back.position.set(0, 0.56, 0.31);
+  back.rotation.x = 0.26;
+  back.add(mesh(cushion(0.72, 0.56, 0.05, 0.002, 0.02, { wrinkle: 0 }), M.cognacDark, 0, 0.0, 0.05));
+  for (let i = 0; i < CH; i++) {
+    const x = (i - (CH - 1) / 2) * cw;
+    const strip = mesh(cushion(cw + 0.004, 0.11, 0.54, 0.018, 0.04, { puff: 0.002, wrinkle: 0.0012 }), M.cognac, x, 0.0, -0.015);
+    strip.rotation.x = -Math.PI / 2; // crowned toward the sitter
+    back.add(strip);
+  }
   g.add(back);
-  const seat = mesh(cushion(0.56, 0.11, 0.66, 0.026, 0.045), M.cognac, 0, 0.455, -0.045);
-  const backC = mesh(cushion(0.56, 0.36, 0.12, 0.022, 0.045), M.cognac, 0, 0.7, 0.235);
-  backC.rotation.x = -0.24;
-  g.add(seat, backC);
-  // welts: arm tops, seat front, back top
-  for (const sx of [-1, 1]) for (const ox of [-0.058, 0.058])
-    g.add(piping([[sx * 0.345 + ox, 0.633, -0.385], [sx * 0.345 + ox, 0.637, 0], [sx * 0.345 + ox, 0.633, 0.385]], M.cognacDark));
-  g.add(piping([[-0.27, 0.515, -0.38], [0, 0.522, -0.381], [0.27, 0.515, -0.38]], M.cognacDark));
-  g.add(piping([[-0.4, 0.86, 0.39], [0, 0.865, 0.385], [0.4, 0.86, 0.39]], M.cognacDark));
+  // the frame's back posts, rising to hold the shell
+  for (const sx of [-1, 1]) g.add(bar(M.bronzeInterior, [sx * 0.3, 0.17, 0.34], [sx * 0.3, 0.72, 0.42], 0.016));
+  // a small linen kidney pillow
+  const p = mesh(cushion(0.44, 0.1, 0.22, 0.04, 0.045), M.linenClay, 0.02, 0.46, 0.2);
+  p.rotation.set(Math.PI / 2 + 0.3, 0, 0.03);
+  g.add(p);
   return g;
 }
 
@@ -131,31 +246,39 @@ function bowedPanel(w, h, t, bow) {
   return metricUV(g);
 }
 
-// Dining chair. Its back is at +z, so the sitter faces -z. Tapered walnut front
-// legs; rear legs that sweep up into the back; a walnut shell lined in leather;
-// a crowned seat with a welted front edge; stretchers low down. 500 x 520, seat at 460.
+// Dining chair: modern, light and properly joined. Its back is at +z, so the sitter
+// faces -z. Each rear leg is one straight line from floor to shoulder with the back
+// bowed between them, front legs taper to the floor, and the seat is a stitched pad.
+// 500 x 520, seat at 460.
 function diningChair(M) {
   const g = new THREE.Group();
-  for (const x of [-0.205, 0.205]) {
-    g.add(leg(M.walnut, x, -0.2, 0.425, 0.0175, 0.011, 0.035));
-    g.add(mesh(tube([[x, 0, 0.245], [x, 0.22, 0.205], [x, 0.44, 0.2], [x * 0.98, 0.64, 0.232], [x * 0.96, 0.82, 0.272]], 0.0145), M.walnut, 0, 0, 0));
-    // side stretcher, low enough to clear the feet
-    g.add(mesh(rbox(0.014, 0.018, 0.4, 0.004), M.walnut, x * 0.98, 0.2, 0));
+  const rearFoot = 0.255, shoulderY = 0.8, shoulderZ = 0.285, seatY = 0.42;
+  const rake = Math.atan2(shoulderZ - 0.222, shoulderY - seatY);
+  for (const sx of [-1, 1]) {
+    const x = sx * 0.2;
+    g.add(rod(M.walnut, [x, 0, -0.225], [x, seatY, -0.2], 0.0105, 0.0175)); // front leg
+    g.add(rod(M.walnut, [x, 0, rearFoot], [x, seatY, 0.222], 0.0105, 0.0165)); // rear leg below the seat
+    g.add(rod(M.walnut, [x, seatY, 0.222], [x, shoulderY, shoulderZ], 0.0165, 0.012)); // and above it
+    g.add(rod(M.walnut, [x, 0.215, -0.212], [x, 0.215, 0.238], 0.0075)); // side stretcher
   }
-  g.add(mesh(rbox(0.38, 0.018, 0.014, 0.004), M.walnut, 0, 0.26, 0.2));
-  // seat rails, with a shallow front apron
-  for (const [w, d, x, z] of [[0.42, 0.022, 0, -0.205], [0.42, 0.022, 0, 0.2], [0.022, 0.42, -0.205, 0], [0.022, 0.42, 0.205, 0]])
-    g.add(mesh(rbox(w, 0.042, d, 0.007), M.walnut, x, 0.405, z));
-  g.add(mesh(rbox(0.47, 0.018, 0.46, 0.008), M.walnut, 0, 0.434, 0));
-  g.add(mesh(cushion(0.455, 0.05, 0.45, 0.013, 0.022), M.cognac, 0, 0.466, -0.005));
-  g.add(piping([[-0.215, 0.463, -0.232], [0, 0.468, -0.235], [0.215, 0.463, -0.232]], M.cognacDark, 0.0045));
-  // the back: a bowed walnut shell, its inner face lined in the same leather
-  const tilt = -0.17;
-  const shell = mesh(bowedPanel(0.45, 0.24, 0.016, 0.03), M.walnut, 0, 0.74, 0.238);
-  shell.rotation.x = tilt;
-  const lining = mesh(bowedPanel(0.415, 0.205, 0.016, 0.03), M.cognac, 0, 0.74, 0.224);
-  lining.rotation.x = tilt;
-  g.add(shell, lining);
+  g.add(rod(M.walnut, [-0.2, 0.255, 0.234], [0.2, 0.255, 0.234], 0.0075)); // back stretcher
+  // seat frame, flush with the legs
+  for (const [a, b] of [[[-0.2, seatY, -0.2], [0.2, seatY, -0.2]], [[-0.2, seatY, 0.222], [0.2, seatY, 0.222]], [[-0.2, seatY, -0.2], [-0.2, seatY, 0.222]], [[0.2, seatY, -0.2], [0.2, seatY, 0.222]]])
+    g.add(bar(M.walnut, a, b, 0.024));
+  g.add(mesh(rbox(0.43, 0.012, 0.44, 0.004), M.walnut, 0, seatY + 0.015, 0.01));
+  // the pad: crowned, with its front edge stitched
+  g.add(mesh(cushion(0.45, 0.046, 0.455, 0.014, 0.02, { wrinkle: 0.0008 }), M.cognac, 0, seatY + 0.042, 0.008));
+  stitches(g, [-0.19, seatY + 0.074, -0.203], [0.19, seatY + 0.074, -0.203], M.thread);
+  // the back: a bowed walnut shell between the posts, lined in leather. It leans with
+  // the posts and its tips land on them, so nothing floats and nothing pokes through.
+  const backY = 0.715, backZ = 0.222 + Math.tan(rake) * (backY - seatY);
+  const back = new THREE.Group();
+  back.position.set(0, backY, backZ);
+  back.rotation.x = rake;
+  back.add(mesh(bowedPanel(0.43, 0.2, 0.012, 0.028), M.walnut, 0, 0, 0.0));
+  back.add(mesh(bowedPanel(0.4, 0.17, 0.012, 0.028), M.cognac, 0, 0, -0.011));
+  stitches(back, [-0.17, 0.07, 0.009], [0.17, 0.07, 0.009], M.thread);
+  g.add(back);
   return g;
 }
 
@@ -271,7 +394,7 @@ export function createInterior(M) {
   root.add(fireLight);
 
   // living group
-  const rug = mesh(boxG(5.2, 0.015, 4.0), M.wool, -3, FL + 0.03, 2.3, { cast: false });
+  const rug = mesh(rbox(5.2, 0.02, 4.0, 0.008), M.wool, -3, FL + 0.03, 2.3, { cast: false });
   root.add(rug);
   const s = sofa(M);
   s.position.set(-3, FL, 4.1);
@@ -285,12 +408,13 @@ export function createInterior(M) {
   c2.position.set(-1.05, FL, 1.4);
   c2.rotation.y = Math.PI * 0.68;
   root.add(c2);
-  // coffee table: two honed travertine slabs on a recessed plinth, offset like a step
-  root.add(mesh(rbox(1.2, 0.2, 0.62, 0.01), M.travertine, -3.15, FL + 0.1, 2.42));
-  root.add(mesh(rbox(1.7, 0.07, 0.9, 0.012), M.travertine, -3.0, FL + 0.27, 2.4));
-  root.add(mesh(new THREE.CylinderGeometry(0.32, 0.3, 0.42, 64), M.basalt, -1.75, FL + 0.21, 2.95));
+  // coffee table: a honed slab floating on a smaller one, with a fluted drum beside it
+  root.add(mesh(rbox(1.2, 0.2, 0.62, 0.01), M.walnut, -3.15, FL + 0.1, 2.42));
+  root.add(mesh(rbox(1.7, 0.05, 0.9, 0.008), M.travertine, -3.0, FL + 0.255, 2.4));
+  root.add(mesh(fluted(0.32, 0.3, 0.42, 48, 0.035), M.basalt, -1.75, FL + 0.21, 2.95));
+  root.add(mesh(new THREE.CylinderGeometry(0.325, 0.325, 0.016, 64), M.bronzeInterior, -1.75, FL + 0.428, 2.95, { cast: false }));
   const books = [[0.36, 0.05, 0.26, M.cognac], [0.32, 0.04, 0.24, M.ceramic], [0.3, 0.035, 0.22, M.basalt]];
-  let by = FL + 0.305;
+  let by = FL + 0.28;
   for (const [w, h, d, mt] of books) {
     const b = mesh(boxG(w, h, d), mt, -3.4, by + h / 2, 2.25);
     b.rotation.y = (Math.random() - 0.5) * 0.3;
@@ -304,8 +428,12 @@ export function createInterior(M) {
   // credenza and artwork on the travertine back wall
   root.add(mesh(rbox(4.6, 0.5, 0.48, 0.01), M.walnut, 3.5, FL + 0.31, 7.72));
   root.add(mesh(boxG(4.4, 0.06, 0.4), M.basalt, 3.5, FL + 0.03, 7.74));
-  for (let i = 1; i < 4; i++) root.add(mesh(boxG(0.006, 0.44, 0.01), M.basalt, 3.5 - 2.3 + i * 1.15, FL + 0.31, 7.475, { cast: false }));
-  for (let i = 0; i < 4; i++) root.add(mesh(boxG(0.12, 0.012, 0.012), M.bronzeInterior, 3.5 - 2.3 + 0.575 + i * 1.15, FL + 0.5, 7.47, { cast: false }));
+  // reeded walnut doors, with one bronze pull each
+  const doors = mesh(reeded(4.5, 0.42, 0.026, 0.007), M.walnut, 3.5, FL + 0.31, 7.474);
+  doors.rotation.y = Math.PI;
+  root.add(doors);
+  for (let i = 1; i < 4; i++) root.add(mesh(boxG(0.004, 0.44, 0.012), M.basalt, 3.5 - 2.3 + i * 1.15, FL + 0.31, 7.468, { cast: false }));
+  for (let i = 0; i < 4; i++) root.add(mesh(rbox(0.014, 0.14, 0.014, 0.003), M.bronzeInterior, 3.5 - 2.3 + 0.575 + i * 1.15 + 0.48, FL + 0.31, 7.456, { cast: false }));
   root.add(mesh(boxG(2.4, 1.6, 0.04), M.art, 3.5, FL + 1.92, 7.93));
   root.add(mesh(boxG(2.5, 1.7, 0.015), M.basalt, 3.5, FL + 1.92, 7.985, { cast: false }));
   for (const [w, h, x, y] of [[2.5, 0.012, 0, 0.85], [2.5, 0.012, 0, -0.85], [0.012, 1.7, 1.25, 0], [0.012, 1.7, -1.25, 0]])

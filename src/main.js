@@ -194,7 +194,7 @@ async function boot() {
     fog: { pos: [-46, -4, -72], tgt: [4, 1, 0], fov: 30, env: { time: 7.1, mist: 0.55, interior: 0.3, fire: 0, veil: 0 } },
     // Details at 1:1
     roofEdge: { pos: [20.6, 6.3, -12.9], tgt: [16.6, 7.75, -8.9], fov: 30, env: { time: 19.3, mist: 0.04, interior: 0.5, fire: 0, veil: 0 } },
-    leather: { pos: [0.35, 4.78, 0.15], tgt: [-0.5, 4.58, 0.8], fov: 30, env: { time: 19.6, mist: 0.04, interior: 0.75, fire: 1, veil: 0 } },
+    leather: { pos: [-1.72, 5.02, 1.72], tgt: [-1.02, 4.42, 1.44], fov: 40, env: { time: 19.6, mist: 0.04, interior: 0.75, fire: 1, veil: 0 } },
     pool: { pos: [12.8, 4.3, -9.7], tgt: [10.2, 3.95, -7.6], fov: 34, env: { time: 19.4, mist: 0.04, interior: 0.4, fire: 0, veil: 0 } },
     stone: { pos: [-7.6, 3.8, -15.2], tgt: [-9.6, 3.0, -11.0], fov: 30, env: { time: 19.2, mist: 0.04, interior: 0.3, fire: 0, veil: 0 } },
     teak: { pos: [-3.05, 4.85, -7.05], tgt: [-3.95, 4.33, -6.25], fov: 34, env: { time: 19.4, mist: 0.04, interior: 0.4, fire: 0, veil: 0 } },

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Reflector } from 'three/addons/objects/Reflector.js';
-import { mesh, boxG, rbox, cushion, tube, piping, leg, loungeChair, vase } from './interior.js';
+import { mesh, boxG, rbox, cushion, tube, leg, loungeChair, vase, rod, bar, stitches, reeded } from './interior.js';
 import { FL } from './house.js';
 import { LOWER_ROOMS, LOWER, INSIDE_STAIR } from './walkPlan.js';
 
@@ -83,84 +83,200 @@ function wall(root, M, mat, x0, z0, x1, z1, y0 = 0, y1 = LOWER.ceiling) {
   root.add(mesh(boxG(Math.abs(x1 - x0), y1 - y0, Math.abs(z1 - z0)), mat, (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2));
 }
 
-function bed(root, M, c) {
-  const z = 3.2; // the head is against the wall, the foot toward the sea
-  // a full-width walnut wall behind the bed, with an upholstered head
-  root.add(mesh(boxG(4.1, 2.4, 0.06), M.walnut, c, 1.2, 4.46));
-  root.add(mesh(cushion(2.3, 0.72, 0.09, 0.012, 0.03), M.boucleDark, c, 0.98, 4.39));
-  root.add(mesh(rbox(1.84, 0.2, 2.02, 0.012), M.walnut, c, 0.12, z, quiet));
-  root.add(mesh(cushion(1.9, 0.26, 2.08, 0.015, 0.05), M.outdoorFabric, c, 0.35, z, quiet));
-  root.add(mesh(cushion(1.98, 0.11, 1.5, 0.02, 0.045), M.boucle, c, 0.5, z - 0.32, quiet));
-  root.add(mesh(cushion(1.98, 0.035, 0.62, 0.006, 0.014), M.wool, c, 0.575, z - 0.68, quiet));
-  for (const sx of [-1, 1]) {
-    const back = mesh(cushion(0.78, 0.46, 0.14, 0.03, 0.06), M.outdoorFabric, c + sx * 0.46, 0.73, 4.17, quiet);
-    back.rotation.x = -0.28;
-    const front = mesh(cushion(0.56, 0.32, 0.12, 0.03, 0.05), M.boucle, c + sx * 0.46, 0.66, 3.99, quiet);
-    front.rotation.x = -0.34;
-    root.add(back, front);
-    // bedside table and a lamp
-    const n = c + sx * 1.32;
-    root.add(mesh(rbox(0.52, 0.04, 0.42, 0.006), M.walnut, n, 0.5, 4.18, quiet));
-    root.add(mesh(rbox(0.5, 0.2, 0.4, 0.006), M.walnut, n, 0.37, 4.18, quiet));
-    root.add(mesh(new THREE.CylinderGeometry(0.018, 0.024, 0.36, 16), M.bronzeInterior, n, 0.7, 4.18, quiet));
-    root.add(mesh(new THREE.CylinderGeometry(0.1, 0.13, 0.17, 32, 1, true), M.pendantShade, n, 0.94, 4.18, quiet));
+// A modern bedroom: one wall of reeded walnut, a bed that floats on a line of light,
+// pendants instead of table lamps, and a linen window seat under the long view.
+function bedroom(root, M, r) {
+  const c = r.bedAt, z = 3.22, C = LOWER.ceiling, wallZ = LOWER.wallA[0];
+  const x0 = r.pass[1], x1 = r.x1 - (r.n < 4 ? 0.08 : 0.02), wide = x1 - x0;
+
+  // the wall behind the bed, floor to ceiling
+  const reeds = mesh(reeded(wide, C, 0.042, 0.011), M.walnut, (x0 + x1) / 2, C / 2, wallZ - 0.012, quiet);
+  reeds.rotation.y = Math.PI;
+  root.add(reeds);
+  root.add(mesh(boxG(wide, C, 0.01), M.basalt, (x0 + x1) / 2, C / 2, wallZ - 0.006, quiet));
+  // light washing down the reeds from a slot in the ceiling
+  root.add(mesh(boxG(wide - 0.1, 0.012, 0.03), M.roomGlow, (x0 + x1) / 2, C - 0.028, wallZ - 0.09, { cast: false, receive: false }));
+
+  // headboard: three horizontal channels of boucle, wider than the bed
+  for (let i = 0; i < 3; i++) {
+    const strip = mesh(cushion(3.5, 0.095, 0.3, 0.018, 0.042, { wrinkle: 0.0012 }), M.boucleDark, c, 0.56 + i * 0.3, 4.37, quiet);
+    strip.rotation.x = -Math.PI / 2;
+    root.add(strip);
   }
-  // rug, and a leather bench at the foot
-  root.add(mesh(boxG(3.5, 0.015, 3), M.wool, c, 0.03, 2.3, quiet));
-  root.add(mesh(cushion(1.46, 0.09, 0.44, 0.012, 0.03), M.cognac, c, 0.42, 1.74, quiet));
-  for (const [dx, dz] of [[-0.64, -0.16], [0.64, -0.16], [-0.64, 0.16], [0.64, 0.16]]) {
-    const l = leg(M.walnut, dx, dz, 0.37, 0.016, 0.011, 0.03);
-    l.position.x += c; l.position.z += 1.74;
-    root.add(l);
+
+  // the bed floats: a walnut platform on a dark recess, with light under its edge
+  root.add(mesh(rbox(1.7, 0.1, 1.86, 0.006), M.soot, c, 0.075, z - 0.02, quiet));
+  root.add(mesh(rbox(2.16, 0.13, 2.28, 0.012), M.walnut, c, 0.19, z, quiet));
+  for (const [w, d, dx, dz] of [[1.8, 0.02, 0, -0.96], [0.02, 1.9, -0.88, -0.02], [0.02, 1.9, 0.88, -0.02]])
+    root.add(mesh(boxG(w, 0.012, d), M.roomGlow, c + dx, 0.042, z + dz, { cast: false, receive: false }));
+  root.add(mesh(cushion(1.96, 0.24, 2.1, 0.012, 0.05, { wrinkle: 0.001 }), M.linenSheet, c, 0.38, z, quiet));
+  // duvet in washed linen, turned back at the top, softly uneven
+  root.add(mesh(cushion(2.06, 0.11, 1.62, 0.03, 0.05, { wrinkle: 0.0065, puff: 0.012 }), M.linenSheet, c, 0.54, z - 0.26, quiet));
+  root.add(mesh(cushion(2.08, 0.05, 0.34, 0.012, 0.024, { wrinkle: 0.004 }), M.linenSheet, c, 0.615, z + 0.42, quiet));
+  // a charcoal throw across the foot, falling over the sides
+  root.add(mesh(cushion(2.12, 0.028, 0.62, 0.004, 0.012, { wrinkle: 0.0035 }), M.linenCharcoal, c, 0.615, z - 0.64, quiet));
+  for (const sx of [-1, 1]) root.add(mesh(cushion(0.028, 0.3, 0.62, 0.002, 0.012, { wrinkle: 0.002, puff: 0.003 }), M.linenCharcoal, c + sx * 1.06, 0.47, z - 0.64, quiet));
+  // pillows: sleeping pillows, then square linen, then one long leather bolster
+  const pillow = (w, d, mat, x, y, zz, rx, ry = 0, rz = 0, t = 0.15) => {
+    const p = mesh(cushion(w, t, d, 0.055, 0.06, { wrinkle: 0.003 }), mat, x, y, zz, quiet);
+    p.rotation.set(rx, ry, rz);
+    root.add(p);
+  };
+  for (const sx of [-1, 1]) {
+    pillow(0.76, 0.5, M.linenSheet, c + sx * 0.47, 0.76, 4.1, 1.28, 0, sx * 0.02);
+    pillow(0.52, 0.52, M.linenClay, c + sx * 0.5, 0.74, 3.94, 1.12, 0, sx * -0.04);
+  }
+  pillow(0.72, 0.26, M.cognac, c, 0.68, 3.74, 1.05, 0, 0, 0.13);
+
+  for (const sx of [-1, 1]) {
+    const n = c + sx * 1.36;
+    // a walnut shelf hung off the wall, with a drawer and a bronze edge
+    root.add(mesh(rbox(0.56, 0.11, 0.38, 0.006), M.walnut, n, 0.46, 4.27, quiet));
+    root.add(mesh(rbox(0.58, 0.016, 0.4, 0.004), M.bronzeInterior, n, 0.523, 4.27, quiet));
+    root.add(mesh(rbox(0.2, 0.024, 0.14, 0.004), M.linenClay, n - 0.06, 0.543, 4.25, quiet));
+    root.add(mesh(rbox(0.18, 0.018, 0.13, 0.004), M.linenCharcoal, n - 0.06, 0.564, 4.25, quiet));
+    // a glass globe on a bronze stem, dropped from the ceiling
+    root.add(rod(M.bronzeInterior, [n, C, 4.25], [n, 1.44, 4.25], 0.004, 0.004, quiet));
+    root.add(mesh(new THREE.SphereGeometry(0.095, 32, 24), M.roomShade, n, 1.35, 4.25, { cast: false, receive: false }));
+    root.add(mesh(new THREE.CylinderGeometry(0.02, 0.026, 0.03, 16), M.bronzeInterior, n, 1.45, 4.25, quiet));
+  }
+
+  // rug, and a long bench with a stitched channelled top on a bronze frame
+  root.add(mesh(rbox(3.8, 0.02, 3.2, 0.008), M.wool, c, 0.03, 2.05, quiet));
+  const bx = c, bz = 1.62;
+  for (let i = 0; i < 6; i++) root.add(mesh(cushion(0.262, 0.085, 0.44, 0.014, 0.03, { wrinkle: 0.001, puff: 0.001 }), M.cognac, bx - 0.655 + i * 0.262, 0.43, bz, quiet));
+  stitches(root, [bx - 0.75, 0.466, bz - 0.2], [bx + 0.75, 0.466, bz - 0.2], M.thread);
+  for (const sx of [-1, 1]) {
+    root.add(bar(M.bronzeInterior, [bx + sx * 0.72, 0.03, bz - 0.19], [bx + sx * 0.72, 0.385, bz - 0.19], 0.014, quiet));
+    root.add(bar(M.bronzeInterior, [bx + sx * 0.72, 0.03, bz + 0.19], [bx + sx * 0.72, 0.385, bz + 0.19], 0.014, quiet));
+    root.add(bar(M.bronzeInterior, [bx + sx * 0.72, 0.385, bz - 0.2], [bx + sx * 0.72, 0.385, bz + 0.2], 0.014, quiet));
+  }
+  root.add(bar(M.bronzeInterior, [bx - 0.73, 0.385, bz], [bx + 0.73, 0.385, bz], 0.014, quiet));
+
+  // ---- the sea wall: plaster around the window, a stone sill, a linen window seat
+  const sill0 = 1.375, head = 2.725, zS = -1.69;
+  root.add(mesh(boxG(r.x1 - r.x0 - 0.02, sill0, 0.012), M.plaster, (r.x0 + r.x1) / 2, sill0 / 2, zS, quiet));
+  root.add(mesh(boxG(r.x1 - r.x0 - 0.02, C - head, 0.012), M.plaster, (r.x0 + r.x1) / 2, (C + head) / 2, zS, quiet));
+  const b0 = Math.max(r.x0, -7.5), b1 = Math.min(r.x1, 12.5);
+  if (b0 > r.x0) root.add(mesh(boxG(b0 - r.x0, head - sill0, 0.012), M.plaster, (r.x0 + b0) / 2, (head + sill0) / 2, zS, quiet));
+  if (b1 < r.x1) root.add(mesh(boxG(r.x1 - b1, head - sill0, 0.012), M.plaster, (b1 + r.x1) / 2, (head + sill0) / 2, zS, quiet));
+  root.add(mesh(rbox(b1 - b0, 0.03, 0.2, 0.006), M.travertine, (b0 + b1) / 2, sill0 + 0.005, -1.62, quiet));
+  root.add(mesh(boxG(r.x1 - r.x0 - 0.1, 0.012, 0.03), M.roomGlow, (r.x0 + r.x1) / 2, C - 0.028, -1.6, { cast: false, receive: false }));
+
+  const s0 = r.x0 + 1.85, s1 = r.x1 - 0.1, sc = (s0 + s1) / 2;
+  root.add(mesh(rbox(s1 - s0, 0.36, 0.52, 0.008), M.walnut, sc, 0.22, -1.43, quiet));
+  root.add(mesh(boxG(s1 - s0 - 0.04, 0.012, 0.015), M.roomGlow, sc, 0.044, -1.165, { cast: false, receive: false }));
+  root.add(mesh(cushion(s1 - s0, 0.1, 0.54, 0.018, 0.035, { wrinkle: 0.0018 }), M.linenClay, sc, 0.45, -1.42, quiet));
+  const seatPillow = (x, mat) => {
+    const p = mesh(cushion(0.46, 0.12, 0.46, 0.05, 0.05, { wrinkle: 0.003 }), mat, x, 0.72, -1.55, quiet);
+    p.rotation.x = Math.PI / 2 - 0.22;
+    root.add(p);
+  };
+  seatPillow(s1 - 0.4, M.linenSheet);
+  seatPillow(s1 - 0.82, M.linenCharcoal);
+
+  // ---- the reading corner: lounge chair, a round table, a slim standing lamp
+  const chair = loungeChair(M);
+  chair.position.set(r.chairAt, 0.02, -0.45);
+  chair.rotation.y = -0.72;
+  chair.traverse((o) => { o.castShadow = false; });
+  root.add(chair);
+  const tx = r.chairAt + 0.02, tz = 0.5;
+  root.add(mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.018, 48), M.travertine, tx, 0.47, tz, quiet));
+  root.add(rod(M.bronzeInterior, [tx, 0.03, tz], [tx, 0.46, tz], 0.008, 0.008, quiet));
+  root.add(mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.012, 32), M.bronzeInterior, tx, 0.034, tz, quiet));
+  const lx = r.x0 + 0.34, lz = -1.3;
+  root.add(rod(M.bronzeInterior, [lx, 0.03, lz], [lx, 1.56, lz], 0.006, 0.006, quiet));
+  root.add(mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.012, 32), M.bronzeInterior, lx, 0.034, lz, quiet));
+  root.add(mesh(new THREE.CylinderGeometry(0.11, 0.14, 0.2, 40, 1, true), M.roomShade, lx, 1.62, lz, { cast: false, receive: false }));
+
+  // ---- a large canvas on the side wall, slim-framed
+  const cz = 1.3, side = r.x1 - (r.n < 4 ? 0.085 : 0.03);
+  root.add(mesh(boxG(0.03, 1.2, 1.9), M.art, side - 0.02, 1.62, cz, quiet));
+  root.add(mesh(boxG(0.022, 1.24, 1.94), M.bronzeInterior, side - 0.012, 1.62, cz, quiet));
+
+  // recessed downlights
+  for (const [ldx, ldz] of [[-1.2, 0.8], [1.2, 0.8]]) {
+    root.add(mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.006, 24), M.roomGlow, c + ldx, C - 0.026, ldz, { cast: false, receive: false }));
+    root.add(mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.004, 32), M.bronzeInterior, c + ldx, C - 0.024, ldz, quiet));
   }
 }
 
+// A modern bathroom: quiet honed slabs on the walls and a dark stone floor, a glowing
+// panel of backlit stone behind the tub, a floating reeded vanity and a round mirror.
 function bathroom(root, M, r) {
   const [a, b] = r.bath;
-  const z0 = LOWER.wallA[1], z1 = LOWER.wallB[0];
+  const z0 = LOWER.wallA[1], z1 = LOWER.wallB[0], C = LOWER.ceiling;
   const cx = (a + b) / 2, cz = (z0 + z1) / 2;
-  // honed stone on the floor and every wall
-  root.add(mesh(boxG(b - a, 0.012, z1 - z0), M.wallTravertine, cx, 0.036, cz, quiet));
-  root.add(mesh(boxG(b - a, LOWER.ceiling, 0.012), M.wallTravertine, cx, LOWER.ceiling / 2, z0 + 0.007, quiet));
-  root.add(mesh(boxG(b - a, LOWER.ceiling, 0.012), M.wallTravertine, cx, LOWER.ceiling / 2, z1 - 0.007, quiet));
-  root.add(mesh(boxG(0.012, LOWER.ceiling, z1 - z0), M.wallTravertine, b - 0.06, LOWER.ceiling / 2, cz, quiet));
+  const [d0, d1] = LOWER.bathDoor;
+  root.add(mesh(boxG(b - a, 0.012, z1 - z0), M.slabDark, cx, 0.036, cz, quiet));
+  root.add(mesh(boxG(b - a, C, 0.012), M.slab, cx, C / 2, z0 + 0.007, quiet));
+  root.add(mesh(boxG(b - a, C, 0.012), M.slab, cx, C / 2, z1 - 0.007, quiet));
+  root.add(mesh(boxG(0.012, C, z1 - z0), M.slab, b - 0.06, C / 2, cz, quiet));
+  root.add(mesh(boxG(0.012, C, d0 - z0), M.slab, a + 0.007, C / 2, (z0 + d0) / 2, quiet));
+  root.add(mesh(boxG(0.012, C, z1 - d1), M.slab, a + 0.007, C / 2, (d1 + z1) / 2, quiet));
+  root.add(mesh(boxG(0.012, C - LOWER.doorHead, d1 - d0), M.slab, a + 0.007, (C + LOWER.doorHead) / 2, (d0 + d1) / 2, quiet));
+  // ceiling slot of light around the room
+  root.add(mesh(boxG(b - a - 0.2, 0.01, 0.024), M.roomGlow, cx, C - 0.028, z0 + 0.07, { cast: false, receive: false }));
+  root.add(mesh(boxG(b - a - 0.2, 0.01, 0.024), M.roomGlow, cx, C - 0.028, z1 - 0.07, { cast: false, receive: false }));
 
-  // a hollow oval tub, turned on a lathe and stretched
-  const profile = [[0, 0.04], [0.33, 0.04], [0.38, 0.14], [0.4, 0.58], [0.385, 0.6], [0.35, 0.58], [0.33, 0.2], [0.28, 0.12], [0, 0.1]].map(([x, y]) => new THREE.Vector2(x, y));
-  const tub = mesh(new THREE.LatheGeometry(profile, 48), M.ceramic, a + 2, 0, 5.15, quiet);
-  tub.scale.set(2.25, 1, 1);
+  // the backlit stone: one panel, bronze-edged, glowing behind the tub
+  const px = a + 2;
+  root.add(mesh(boxG(2.3, 1.72, 0.016), M.backlit, px, 1.3, z0 + 0.02, { cast: false, receive: false }));
+  for (const [w, h, dx, dy] of [[2.34, 0.018, 0, 0.87], [2.34, 0.018, 0, -0.87], [0.018, 1.76, 1.16, 0], [0.018, 1.76, -1.16, 0]])
+    root.add(mesh(boxG(w, h, 0.03), M.bronzeInterior, px + dx, 1.3 + dy, z0 + 0.024, quiet));
+
+  // a slim oval tub with a thin rim, and a bronze filler rising from the floor
+  const profile = [[0, 0.045], [0.3, 0.045], [0.355, 0.1], [0.395, 0.34], [0.408, 0.585], [0.4, 0.598], [0.385, 0.59], [0.365, 0.34], [0.31, 0.15], [0.24, 0.11], [0, 0.1]].map(([x, y]) => new THREE.Vector2(x, y));
+  const tub = mesh(new THREE.LatheGeometry(profile, 64), M.solid, a + 2, 0, 5.2, quiet);
+  tub.scale.set(2.2, 1, 1);
   root.add(tub);
-  root.add(mesh(tube([[0, 0, 0], [0, 0.72, 0], [0.06, 0.86, 0], [0.2, 0.86, 0], [0.26, 0.8, 0]], 0.011), M.bronzeInterior, a + 2.95, 0.03, 5.15, quiet));
+  const fx = a + 3.02;
+  root.add(mesh(tube([[0, 0, 0], [0, 0.82, 0], [-0.02, 0.92, 0], [-0.1, 0.97, 0], [-0.22, 0.95, 0], [-0.26, 0.88, 0]], 0.0105), M.bronzeInterior, fx, 0.036, 5.2, quiet));
+  root.add(mesh(new THREE.CylinderGeometry(0.05, 0.055, 0.012, 24), M.bronzeInterior, fx, 0.048, 5.2, quiet));
+  // folded towels on a small walnut stool
+  const sx0 = a + 0.5, sz0 = 5;
+  root.add(mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.38, 40), M.walnut, sx0, 0.23, sz0, quiet));
+  for (let i = 0; i < 3; i++) root.add(mesh(cushion(0.34 - i * 0.012, 0.045, 0.26 - i * 0.008, 0.01, 0.02, { wrinkle: 0.0012 }), M.towel, sx0, 0.445 + i * 0.05, sz0, quiet));
 
-  // a floating walnut vanity with a stone top and a backlit mirror
-  const vx = a + 2, vz = z1 - 0.25;
-  root.add(mesh(rbox(1.5, 0.3, 0.46, 0.008), M.walnut, vx, 0.66, vz, quiet));
-  root.add(mesh(rbox(1.56, 0.04, 0.5, 0.006), M.travertine, vx, 0.83, vz, quiet));
-  root.add(mesh(new THREE.CylinderGeometry(0.19, 0.15, 0.1, 40), M.ceramic, vx, 0.9, vz, quiet));
-  root.add(mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.004, 32), M.ceramicDark, vx, 0.952, vz, quiet));
-  root.add(mesh(tube([[0, 0, 0], [0, 0.2, 0], [0, 0.26, -0.04], [0, 0.24, -0.12]], 0.008), M.bronzeInterior, vx, 0.85, vz + 0.19, quiet));
-  root.add(mesh(boxG(1.34, 1.04, 0.012), M.mirror, vx, 1.62, z1 - 0.024, { cast: false, receive: false }));
-  for (const [w, h, dx, dy] of [[1.4, 0.012, 0, 0.525], [1.4, 0.012, 0, -0.525], [0.012, 1.06, 0.675, 0], [0.012, 1.06, -0.675, 0]])
-    root.add(mesh(boxG(w, h, 0.012), M.lightStrip, vx + dx, 1.62 + dy, z1 - 0.028, { cast: false, receive: false }));
+  // floating vanity: reeded walnut, a stone top, a thin basin, a wall-set tap
+  const vx = a + 2, vz = z1 - 0.26;
+  root.add(mesh(rbox(1.7, 0.3, 0.48, 0.006), M.walnut, vx, 0.64, vz, quiet));
+  const fr = mesh(reeded(1.68, 0.29, 0.026, 0.007), M.walnut, vx, 0.64, vz - 0.242, quiet);
+  fr.rotation.y = Math.PI;
+  root.add(fr);
+  root.add(mesh(rbox(1.76, 0.035, 0.52, 0.006), M.slab, vx, 0.81, vz, quiet));
+  root.add(mesh(boxG(1.6, 0.01, 0.015), M.roomGlow, vx, 0.48, vz - 0.14, { cast: false, receive: false }));
+  const basinProfile = [[0, 0.82], [0.13, 0.82], [0.18, 0.86], [0.21, 0.925], [0.205, 0.93], [0.19, 0.925], [0.16, 0.87], [0.1, 0.845], [0, 0.84]].map(([x, y]) => new THREE.Vector2(x, y));
+  root.add(mesh(new THREE.LatheGeometry(basinProfile, 48), M.solid, vx, 0, vz + 0.02, quiet));
+  root.add(rod(M.bronzeInterior, [vx, 1.03, z1 - 0.01], [vx, 1.03, vz + 0.1], 0.0085, 0.0085, quiet));
+  for (const sx of [-1, 1]) root.add(rod(M.bronzeInterior, [vx + sx * 0.18, 1.03, z1 - 0.01], [vx + sx * 0.18, 1.03, z1 - 0.06], 0.012, 0.012, quiet));
+  // round mirror with a halo of light behind it (the true reflection is in buildLowerLevel)
+  const disc = mesh(new THREE.CircleGeometry(0.5, 64), M.mirror, vx, 1.68, z1 - 0.024, { cast: false, receive: false });
+  disc.rotation.y = Math.PI;
+  root.add(disc);
+  root.add(mesh(new THREE.TorusGeometry(0.512, 0.009, 10, 80), M.roomGlow, vx, 1.68, z1 - 0.022, { cast: false, receive: false }));
 
-  // wall-hung WC beside the door
-  const tx = a + 0.5;
-  root.add(mesh(rbox(0.4, 1.05, 0.14, 0.01), M.wallTravertine, tx, 0.525, z1 - 0.08, quiet));
-  root.add(mesh(rbox(0.36, 0.3, 0.54, 0.09), M.ceramic, tx, 0.4, z1 - 0.38, quiet));
-  root.add(mesh(rbox(0.38, 0.03, 0.52, 0.015), M.ceramic, tx, 0.565, z1 - 0.38, quiet));
+  // wall-hung WC against a stone panel, with a bronze flush plate
+  const tx = a + 0.46;
+  root.add(mesh(rbox(0.46, 1.1, 0.14, 0.006), M.slab, tx, 0.55, z1 - 0.085, quiet));
+  root.add(mesh(rbox(0.18, 0.1, 0.008, 0.002), M.bronzeInterior, tx, 0.98, z1 - 0.158, quiet));
+  root.add(mesh(cushion(0.35, 0.26, 0.5, 0.008, 0.11, { wrinkle: 0, puff: 0.012 }), M.solid, tx, 0.36, z1 - 0.39, quiet));
+  root.add(mesh(cushion(0.355, 0.024, 0.46, 0.003, 0.011, { wrinkle: 0 }), M.solid, tx, 0.505, z1 - 0.37, quiet));
 
-  // walk-in shower at the far end, a single pane of glass and a rain head
+  // walk-in shower: a bronze-framed pane, a stone bench, a square rain head, a line of light
   const sx = a + 3;
-  if (b - sx > 0.7) {
-    const pane = mesh(boxG(0.012, 2.2, 1.3), M.glass, sx + 0.05, 1.13, z0 + 0.67, quiet);
-    root.add(pane);
-    root.add(mesh(rbox(0.024, 0.024, 1.3, 0.004), M.bronzeInterior, sx + 0.05, 2.24, z0 + 0.67, quiet));
-    root.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.012, 32), M.bronzeInterior, (sx + b) / 2 + 0.05, 2.32, cz, quiet));
-    root.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, LOWER.ceiling - 2.32, 8), M.bronzeInterior, (sx + b) / 2 + 0.05, (LOWER.ceiling + 2.32) / 2, cz, quiet));
+  if (b - sx > 0.6) {
+    root.add(mesh(boxG(0.01, 2.2, 1.34), M.glass, sx + 0.05, 1.14, z0 + 0.69, quiet));
+    root.add(mesh(boxG(0.022, 0.022, 1.36), M.bronzeInterior, sx + 0.05, 2.25, z0 + 0.69, quiet));
+    root.add(mesh(boxG(0.022, 2.24, 0.022), M.bronzeInterior, sx + 0.05, 1.13, z0 + 1.37, quiet));
+    const bench = b - sx - 0.1;
+    root.add(mesh(rbox(bench, 0.44, 0.42, 0.008), M.slab, sx + 0.04 + bench / 2, 0.25, z1 - 0.23, quiet));
+    root.add(mesh(rbox(0.3, 0.008, 0.3, 0.002), M.bronzeInterior, (sx + b) / 2 + 0.03, 2.42, cz - 0.2, quiet));
+    root.add(rod(M.bronzeInterior, [(sx + b) / 2 + 0.03, 2.42, cz - 0.2], [(sx + b) / 2 + 0.03, C, cz - 0.2], 0.008, 0.008, quiet));
+    root.add(mesh(boxG(0.012, 2.1, 0.022), M.roomGlow, b - 0.07, 1.2, z0 + 0.04, { cast: false, receive: false }));
+    root.add(mesh(boxG(b - sx - 0.16, 0.006, 0.05), M.bronzeInterior, (sx + b) / 2 + 0.03, 0.044, z0 + 0.1, quiet));
   }
-  // towels on a bronze rail
-  root.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.8, 8), M.bronzeInterior, a + 2, 1.3, z0 + 0.05, quiet).rotateZ(Math.PI / 2));
-  root.add(mesh(rbox(0.5, 0.62, 0.035, 0.012), M.towel, a + 2, 1.02, z0 + 0.055, quiet));
 }
 
 export function buildLowerLevel(root, M) {
@@ -210,25 +326,17 @@ export function buildLowerLevel(root, M) {
     wall(root, M, M.plaster, w0, LOWER.bathDoor[1], w1, bS);
     wall(root, M, M.plaster, w0, LOWER.bathDoor[0], w1, LOWER.bathDoor[1], LOWER.doorHead, C);
 
-    const c = r.bedAt;
-    bed(root, M, c);
-    // a chair by the window, turned to the view
-    const chair = loungeChair(M);
-    chair.position.set(r.chairAt, floorY, -0.45);
-    chair.rotation.y = -0.6;
-    chair.traverse((o) => { o.castShadow = false; });
-    root.add(chair);
+    bedroom(root, M, r);
     // the lobby's wardrobe: flush walnut doors along the bathroom wall
     root.add(mesh(boxG(0.05, 2.14, 1.32), M.walnut, r.pass[1] - 0.03, 1.09, 5.32 - 0.02 - 0.34, quiet));
     root.add(mesh(rbox(0.012, 0.5, 0.018, 0.003), M.bronzeInterior, r.pass[1] - 0.062, 1.15, 5.0, quiet));
     bathroom(root, M, r);
-    // recessed lights
-    for (const [lx, lz] of [[c - 1.2, 1], [c + 1.2, 1], [r.x0 + 0.8, 5.8], [(r.bath[0] + r.bath[1]) / 2, 5.8]])
-      root.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.008, 24), M.lightStrip, lx, C - 0.026, lz, { cast: false, receive: false }));
+    // the lobby's own light
+    root.add(mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.006, 24), M.roomGlow, r.x0 + 0.8, C - 0.026, 5.8, { cast: false, receive: false }));
   });
 
   // ---- the gallery corridor, along the hill
-  root.add(mesh(boxG(22.8, 0.012, 0.05), M.lightStrip, 2.7, C - 0.026, 8.95, { cast: false, receive: false }));
+  root.add(mesh(boxG(22.8, 0.012, 0.05), M.roomGlow, 2.7, C - 0.026, 8.95, { cast: false, receive: false }));
   const hang = (x, w, h) => {
     root.add(mesh(boxG(w, h, 0.03), M.art, x, 1.55, 9.36, quiet));
     root.add(mesh(boxG(w + 0.07, h + 0.07, 0.012), M.basalt, x, 1.55, 9.38, quiet));
@@ -276,8 +384,8 @@ export function buildLowerLevel(root, M) {
 
   // One true mirror, carried to whichever bathroom you are in, so it costs nothing
   // anywhere else. The other rooms are smoked bronze glass until you walk in.
-  const mirror = new Reflector(new THREE.PlaneGeometry(1.34, 1.04), {
-    textureWidth: 768, textureHeight: 600, clipBias: 0.003, color: 0xc9c6bf, multisample: 2,
+  const mirror = new Reflector(new THREE.CircleGeometry(0.5, 64), {
+    textureWidth: 720, textureHeight: 720, clipBias: 0.003, color: 0xc9c6bf, multisample: 2,
   });
   mirror.rotation.y = Math.PI;
   mirror.visible = false;
@@ -298,11 +406,15 @@ export function buildLowerLevel(root, M) {
     const bath = inside && state.level === 'lower' && state.z > LOWER.wallA[1] && state.z < LOWER.wallB[0]
       ? LOWER_ROOMS.find((q) => state.x >= q.bath[0] && state.x <= q.bath[1]) : null;
     mirror.visible = !!bath;
-    if (bath) mirror.position.set(bath.bath[0] + 2, 1.62, LOWER.wallB[0] - 0.034);
+    if (bath) mirror.position.set(bath.bath[0] + 2, 1.68, LOWER.wallB[0] - 0.03);
     const k = 1 - Math.exp(-dt * 6);
-    const glow = inside ? 9 + 14 * env.interior : 0;
+    const glow = inside ? 8 + 9 * env.interior : 0;
     near.intensity += (glow - near.intensity) * k;
     fill.intensity += ((inside ? 2.5 : 0) - fill.intensity) * k;
+    const on = inside ? 1 : 0;
+    M.roomGlow.emissiveIntensity += (on * 3.4 - M.roomGlow.emissiveIntensity) * k;
+    M.roomShade.emissiveIntensity += (on * 1.5 - M.roomShade.emissiveIntensity) * k;
+    M.backlit.emissiveIntensity += (on * 0.62 - M.backlit.emissiveIntensity) * k;
     if (!inside) return;
     // the middle of whichever room you are in
     let cx = state.x, cz = 8.4;

@@ -29,16 +29,16 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
   col *= 0.985 + 0.035 * id;
 
   // pores: elongated along the bedding, soft-edged and shallow, never black
-  vec3 vo = pvoronoi(vec2(uv.x, y), vec2(22.0, 170.0));
-  float pore = (1.0 - smoothstep(0.08, 0.34, vo.x)) * step(0.8, vo.z);
-  col = mix(col, col * vec3(0.84, 0.8, 0.74), pore * 0.7);
+  vec3 vo = pvoronoi(vec2(uv.x, y), vec2(58.0, 390.0));
+  float pore = (1.0 - smoothstep(0.04, 0.24, vo.x)) * step(0.84, vo.z);
+  col = mix(col, col * vec3(0.9, 0.87, 0.82), pore * 0.55);
 
   float jx = min(f.x, 1.0 - f.x) * 1.2;
   float jy = min(f.y, 1.0 - f.y) * 0.6;
   float joint = 1.0 - smoothstep(0.0008, 0.0022, min(jx, jy));
   col = mix(col, vec3(0.72, 0.69, 0.64), joint * 0.85);
 
-  h = 0.7 + 0.025 * fine - pore * 0.12 - joint * 0.4;
+  h = 0.7 + 0.025 * fine - pore * 0.07 - joint * 0.4;
   r = 0.48 + 0.08 * fine + pore * 0.3 + joint * 0.2;
 }`;
 
@@ -161,38 +161,52 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
 // Black walnut, 1.2 m tile, 150 mm straight-grained boards, oiled.
 export const WALNUT = /* glsl */ `
 void surface(vec2 uv, out vec3 col, out float h, out float r){
-  float rows = 8.0;
+  // quarter-cut veneer: wide book-matched leaves, cathedral figure, open pores
+  float rows = 3.0;
   float row = floor(uv.y * rows);
   float v = fract(uv.y * rows);
-  float pid = hash12(vec2(row, 2.2));
-  float drift = pfbm(uv, vec2(2.0, 16.0), 3);
-  float grain = pfbm(vec2(uv.x, uv.y + drift * 0.02), vec2(3.0, 240.0), 4);
-  float ring = fract((v + drift * 0.3) * (5.0 + pid * 4.0) + uv.x * 0.5);
-  float late = smoothstep(0.6, 0.95, ring);
-  col = mix(vec3(0.38, 0.26, 0.18), vec3(0.27, 0.18, 0.12), 0.4 * pid + 0.4 * late + 0.25 * grain);
-  col = mix(col, vec3(0.46, 0.33, 0.22), smoothstep(0.55, 0.9, pfbm(uv, vec2(3.0, 6.0), 3)) * 0.35);
-  float seam = 1.0 - smoothstep(0.0, 0.004, min(v, 1.0 - v));
-  col = mix(col, col * 0.55, seam);
-  h = 0.6 + grain * 0.05 + late * 0.02 - seam * 0.4;
-  r = 0.5 + grain * 0.08;
-}`;
+  float m = mod(row, 2.0) < 0.5 ? v : 1.0 - v; // the next leaf mirrors this one
+  float drift = pfbm(vec2(uv.x, row * 0.37), vec2(3.0, 1.0), 4);
+  float ring = (m + drift * 0.26 + uv.x * 0.06) * 26.0;
+  float line = 0.5 + 0.5 * sin(ring * 6.28318 + 2.6 * pfbm(uv, vec2(5.0, 24.0), 3));
+  float late = smoothstep(0.55, 0.98, line);
+  float fine = pfbm(vec2(uv.x, uv.y), vec2(8.0, 220.0), 3);
+  vec3 pv = pvoronoi(uv, vec2(18.0, 300.0));
+  float pore = (1.0 - smoothstep(0.05, 0.3, pv.x)) * step(0.55, pv.z);
+  float cloud = smoothstep(-0.25, 0.45, pfbm(uv, vec2(3.0, 9.0), 4));
+  col = mix(vec3(0.33, 0.215, 0.14), vec3(0.20, 0.125, 0.08), late * 0.75 + fine * 0.2);
+  col = mix(col, vec3(0.44, 0.30, 0.19), cloud * 0.28);
+  col = mix(col, col * 0.7, pore * 0.55);
+  float seam = 1.0 - smoothstep(0.0, 0.0016, min(v, 1.0 - v));
+  col = mix(col, col * 0.7, seam);
+  h = 0.6 + fine * 0.05 + late * 0.03 - pore * 0.22 - seam * 0.2;
+  r = 0.44 + fine * 0.06 + pore * 0.28;
+}`
 
 // Vegetable-tanned saddle leather, 0.3 m tile: pebble grain and creases.
 export const LEATHER = /* glsl */ `
 void surface(vec2 uv, out vec3 col, out float h, out float r){
-  vec3 a = pvoronoi(uv, vec2(90.0, 90.0));
-  vec3 b = pvoronoi(uv + 0.31, vec2(170.0, 170.0));
-  float pebble = smoothstep(0.0, 0.55, a.x) * 0.65 + smoothstep(0.0, 0.5, b.x) * 0.35;
-  float crease = 1.0 - smoothstep(0.0, 0.05, a.y - a.x);
-  float tone = pfbm(uv, vec2(4.0, 4.0), 4);
-  float wear = smoothstep(0.35, 0.7, pfbm(uv, vec2(2.0, 2.0), 3));
-  col = mix(vec3(0.56, 0.31, 0.17), vec3(0.45, 0.23, 0.12), 0.5 + 0.5 * tone);
-  col = mix(col, vec3(0.64, 0.38, 0.22), wear * 0.25);
-  col *= 0.94 + 0.08 * (1.0 - pebble);
-  col = mix(col, col * 0.78, crease * 0.6);
-  h = 1.0 - pebble * 0.7 - crease * 0.3;
-  r = 0.5 + 0.12 * pebble - wear * 0.12;
-}`;
+  // natural hide: grain cells that drift in size, valleys between them, pores in
+  // the valleys, and long soft creases where the hide was stretched
+  vec2 warp = vec2(pfbm(uv, vec2(6.0, 6.0), 3), pfbm(uv + 0.37, vec2(6.0, 6.0), 3)) * 0.012;
+  vec3 a = pvoronoi(uv + warp, vec2(120.0, 120.0));
+  vec3 b = pvoronoi(uv + warp + 0.31, vec2(260.0, 260.0));
+  vec3 c = pvoronoi(uv + 0.71, vec2(620.0, 620.0));
+  float cellA = smoothstep(0.0, 0.3, a.y - a.x);
+  float cellB = smoothstep(0.0, 0.28, b.y - b.x);
+  float grain = cellA * 0.68 + cellB * 0.32;
+  float pore = (1.0 - smoothstep(0.03, 0.14, c.x)) * step(0.72, c.z);
+  float crease = pow(1.0 - abs(pfbm(uv * vec2(1.0, 1.0), vec2(5.0, 9.0), 4)) * 2.2, 8.0);
+  float tone = 0.5 + 0.5 * pfbm(uv, vec2(3.0, 3.0), 5);
+  float cloud = 0.5 + 0.5 * pfbm(uv + 0.5, vec2(11.0, 11.0), 4);
+  // aniline dye pools in the valleys and rubs thin on the high points
+  col = mix(vec3(0.40, 0.20, 0.10), vec3(0.55, 0.31, 0.16), tone * 0.65 + cloud * 0.35);
+  col = mix(col * 0.66, col * 1.1, grain);
+  col = mix(col, col * 0.6, pore * 0.8);
+  col = mix(col, col * 0.78, clamp(crease, 0.0, 1.0) * 0.4);
+  h = grain * 0.8 - pore * 0.45 - clamp(crease, 0.0, 1.0) * 0.28;
+  r = 0.62 - 0.17 * grain + 0.2 * pore;
+}`
 
 // Patinated bronze, 1 m tile: fine directional brushing, slow patina drift.
 export const BRONZE = /* glsl */ `
@@ -211,26 +225,40 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
 // Boucle upholstery, 0.4 m tile.
 export const BOUCLE = /* glsl */ `
 void surface(vec2 uv, out vec3 col, out float h, out float r){
-  vec3 v = pvoronoi(uv, vec2(72.0, 72.0));
-  vec3 v2 = pvoronoi(uv + 0.5, vec2(130.0, 130.0));
-  float loops = smoothstep(0.0, 0.55, v.x) * 0.6 + smoothstep(0.0, 0.5, v2.x) * 0.4;
-  h = 1.0 - loops;
-  float n = pfbm(uv, vec2(8.0, 8.0), 3);
-  col = vec3(0.93, 0.91, 0.87) * (0.8 + 0.2 * h) * (0.96 + 0.06 * n);
-  r = 0.92;
-}`;
+  // looped yarn: each loop is a small dome with a twist in it, packed unevenly,
+  // with a few flecks of a darker fibre through the weave
+  vec2 warp = vec2(pfbm(uv, vec2(14.0, 14.0), 3), pfbm(uv + 0.5, vec2(14.0, 14.0), 3)) * 0.016;
+  vec3 v = pvoronoi(uv + warp, vec2(64.0, 64.0));
+  vec3 v2 = pvoronoi(uv + warp + 0.5, vec2(118.0, 118.0));
+  float dome = smoothstep(0.0, 0.34, v.y - v.x);
+  float dome2 = smoothstep(0.0, 0.3, v2.y - v2.x);
+  float twist = 0.5 + 0.5 * sin(v.x * 44.0 + v.z * 31.0);
+  float twist2 = 0.5 + 0.5 * sin(v2.x * 52.0 + v2.z * 17.0);
+  h = dome * (0.72 + 0.18 * twist) * 0.68 + dome2 * (0.74 + 0.16 * twist2) * 0.42;
+  float fleck = step(0.93, v.z) * dome;
+  col = mix(vec3(0.91, 0.885, 0.84), vec3(0.965, 0.95, 0.915), v2.z);
+  col = mix(col, vec3(0.70, 0.64, 0.55), fleck * 0.75);
+  col *= 0.5 + 0.55 * h;
+  r = 0.94;
+}`
 
 // Hand-loomed wool for rugs, 1 m tile.
 export const WOOL = /* glsl */ `
 void surface(vec2 uv, out vec3 col, out float h, out float r){
-  float wx = sin(uv.x * 6.28318 * 220.0) * 0.5 + 0.5;
-  float wy = sin(uv.y * 6.28318 * 110.0) * 0.5 + 0.5;
-  float n = pfbm(uv, vec2(24.0, 24.0), 4);
-  float big = pfbm(uv, vec2(3.0, 3.0), 3);
-  h = mix(wx, wy, step(0.5, fract(uv.y * 110.0))) * 0.6 + n * 0.3;
-  col = vec3(0.80, 0.75, 0.67) * (0.88 + 0.12 * h) * (0.95 + 0.08 * big);
-  r = 0.97;
-}`;
+  // a flat hand-loomed weave: wavering weft ribs, heathered yarn, slow bands
+  float wander = pfbm(uv, vec2(8.0, 3.0), 3) * 0.006;
+  float row = (uv.y + wander) * 150.0;
+  float rib = 0.5 + 0.5 * cos(fract(row) * 6.28318);
+  float warpT = 0.5 + 0.5 * cos(uv.x * 6.28318 * 300.0 + floor(row) * 3.14159);
+  float yarn = hash12(vec2(floor(row), 3.1));
+  float heather = 0.5 + 0.5 * pfbm(vec2(uv.x, uv.y), vec2(180.0, 300.0), 3);
+  float band = 0.5 + 0.5 * pfbm(vec2(0.0, uv.y), vec2(1.0, 11.0), 3);
+  h = rib * 0.7 + warpT * 0.2 + heather * 0.12;
+  col = mix(vec3(0.74, 0.69, 0.60), vec3(0.87, 0.83, 0.75), band * 0.5 + heather * 0.3 + yarn * 0.2);
+  col = mix(col, vec3(0.45, 0.40, 0.34), step(0.965, yarn) * 0.45);
+  col *= 0.74 + 0.3 * h;
+  r = 0.96;
+}`
 
 // Fine light concrete / lime render, 4 m tile.
 export const RENDER = /* glsl */ `
@@ -359,4 +387,40 @@ void main(){
     }
   }
   gl_FragColor = vec4(pow(c, vec3(2.2)), a);
+}`;
+
+// Stonewashed linen, 0.3 m tile: warp and weft threads, slubs where the yarn thickens.
+export const LINEN = /* glsl */ `
+void surface(vec2 uv, out vec3 col, out float h, out float r){
+  float n = 170.0;
+  float wob = pfbm(uv, vec2(9.0, 9.0), 3) * 0.004;
+  vec2 q = (uv + wob) * n;
+  float warp = 0.5 + 0.5 * cos(q.x * 6.28318);
+  float weft = 0.5 + 0.5 * cos(q.y * 6.28318);
+  float over = step(0.5, fract((floor(q.x) + floor(q.y)) * 0.5));
+  float slubX = smoothstep(0.1, 0.55, pfbm(vec2(uv.x, uv.y), vec2(170.0, 7.0), 3));
+  float slubY = smoothstep(0.1, 0.55, pfbm(vec2(uv.x, uv.y), vec2(7.0, 170.0), 3));
+  h = mix(warp * (0.72 + 0.28 * slubX), weft * (0.72 + 0.28 * slubY), over);
+  float wash = 0.5 + 0.5 * pfbm(uv, vec2(5.0, 5.0), 4);
+  col = vec3(0.88, 0.85, 0.79) * (0.78 + 0.26 * h) * (0.95 + 0.07 * wash);
+  r = 0.93;
+}`;
+
+// Honed stone in large slabs, 3 m tile: a clouded warm ground with fine veins that
+// wander, split and fade. Used wherever a room should read as one quiet surface.
+export const SLAB = /* glsl */ `
+void surface(vec2 uv, out vec3 col, out float h, out float r){
+  vec2 w = vec2(pfbm(uv, vec2(3.0, 3.0), 5), pfbm(uv + 0.43, vec2(3.0, 3.0), 5)) * 0.1;
+  vec2 q = uv + w;
+  float cloud = 0.5 + 0.5 * pfbm(q, vec2(4.0, 4.0), 5);
+  float vein = pow(1.0 - abs(pfbm(q, vec2(3.0, 5.0), 5)) * 3.2, 14.0);
+  float hair = pow(1.0 - abs(pfbm(q + 0.21, vec2(7.0, 9.0), 4)) * 3.0, 22.0);
+  float fade = smoothstep(-0.1, 0.45, pfbm(uv + 0.77, vec2(3.0, 3.0), 3));
+  vein = clamp(vein, 0.0, 1.0) * fade;
+  hair = clamp(hair, 0.0, 1.0) * (0.35 + 0.65 * fade);
+  col = mix(vec3(0.83, 0.80, 0.74), vec3(0.93, 0.915, 0.875), cloud);
+  col = mix(col, vec3(0.56, 0.49, 0.40), vein * 0.72);
+  col = mix(col, vec3(0.66, 0.60, 0.52), hair * 0.42);
+  h = 0.6 - vein * 0.018;
+  r = 0.34 + 0.1 * cloud + vein * 0.1;
 }`;

@@ -71,7 +71,8 @@ const LOWER_ROUND = [];
 for (const r of LOWER_ROOMS) {
   const [a, b] = r.bath, inner = r.pass[0] + 0.45, outer = r.pass[0] + 1.05;
   LOWER_FLOORS.push(
-    [r.x0 + 0.33, -1.45, r.x1 - 0.33, 4.25], // bedroom
+    [r.x0 + 0.33, -1.45, r.x0 + 1.72, 4.25], // bedroom: the reading corner
+    [r.x0 + 0.33, -0.92, r.x1 - 0.33, 4.25], // bedroom, clear of the window seat
     [inner, 4.2, outer, 4.95], // door from the bedroom to the lobby
     [r.pass[0] + 0.3, 4.9, r.pass[1] - 0.2, 6.7], // lobby
     [inner, 6.65, outer, 7.3], // door from the lobby to the corridor
@@ -86,7 +87,7 @@ for (const r of LOWER_ROOMS) {
     [a + 1, 6.2, a + 3, 6.9], // vanity
     [a, 6.05, a + 0.8, 6.9], // WC
   );
-  LOWER_ROUND.push([r.chairAt, -0.45, 0.7]);
+  LOWER_ROUND.push([r.chairAt, -0.45, 0.68], [r.chairAt + 0.02, 0.5, 0.4], [a + 0.5, 5, 0.36]);
 }
 LOWER_BLOCKS.push([INSIDE_STAIR.x0, 7, INSIDE_STAIR.x1 + 0.2, 8.15]); // under the stair
 
@@ -197,7 +198,7 @@ export function createFloorPlan(plantings = []) {
       if (z > LOWER.wallB[0]) return { name: 'The gallery', note: 'Lower level, ±0.00' };
       const r = LOWER_ROOMS.find((q) => x <= q.x1) || LOWER_ROOMS[3];
       if (z < LOWER.wallA[1]) return { name: `Bedroom ${r.n}`, note: 'Lower level, facing the sea' };
-      if (x > r.pass[1]) return { name: `Bathroom ${r.n}`, note: 'Honed travertine' };
+      if (x > r.pass[1]) return { name: `Bathroom ${r.n}`, note: 'Honed stone, lit from behind' };
       return { name: `The lobby to bedroom ${r.n}`, note: 'Lower level, ±0.00' };
     }
     if (level === 'upper') {
@@ -226,7 +227,7 @@ export const PLACES = [
   { id: 'fire', label: 'Fire', level: 'upper', at: [-5.6, 2.6], look: [-7.2, 4.9, 5.75] },
   { id: 'dining', label: 'Dining', level: 'upper', at: [9.6, 1.0], look: [5, 4.9, 3.4] },
   { id: 'kitchen', label: 'Kitchen', level: 'upper', at: [6.3, 4.85], look: [11, 4.9, 7.3] },
-  { id: 'bedroom', label: 'Bedroom', level: 'lower', at: [6.9, -1.1], look: [4.2, 0.75, 3.6] },
+  { id: 'bedroom', label: 'Bedroom', level: 'lower', at: [7.05, -0.6], look: [4.4, 0.72, 3.8] },
   { id: 'bathroom', label: 'Bathroom', level: 'lower', at: [4.15, 5.85], look: [6.2, 0.75, 5.2] },
   { id: 'gallery', label: 'Gallery', level: 'lower', at: [-4, 8.75], look: [9, 1.5, 8.4] },
   { id: 'deck', label: 'East deck', level: 'upper', at: [14.2, 3.0], look: [7, 3.6, -9] },
