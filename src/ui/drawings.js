@@ -413,3 +413,126 @@ export function paperSheet() {
     <g class="notes">${notes}</g>
   </svg>`;
 }
+
+// ---------------------------------------------------------------- the sun dial
+// A 24-hour dial with solar noon at the top: the sun walks the ring at 15° an
+// hour and crosses the horizon at the same sunrise and sunset as the scene.
+export const DIAL = { C: 160, ORBIT: 104, NOON: 13.25 };
+export const dialAngle = (h) => (h - DIAL.NOON) * 15;
+
+export function sunDial({ sunrise, sunset, from, to }) {
+  const { C, ORBIT } = DIAL;
+  const polar = (h, r) => {
+    const a = (dialAngle(h) * Math.PI) / 180;
+    return [C + r * Math.sin(a), C - r * Math.cos(a)];
+  };
+  const arc = (h0, h1, r, cls, id = '') => {
+    const [x0, y0] = polar(h0, r), [x1, y1] = polar(h1, r);
+    return `<path ${id && `id="${id}"`} class="${cls}" d="M${f(x0)},${f(y0)} A${r},${r} 0 ${h1 - h0 > 12 ? 1 : 0} 1 ${f(x1)},${f(y1)}"/>`;
+  };
+
+  const hhmm = (h) => `${String(Math.floor(h)).padStart(2, '0')}:${String(Math.round((h % 1) * 60)).padStart(2, '0')}`;
+
+  // the horizon is where the sun's centre crosses it, not where the ring does
+  const R = 126;
+  const HY = C - ORBIT * Math.cos((dialAngle(sunrise) * Math.PI) / 180);
+  const HW = Math.sqrt(R * R - (HY - C) ** 2);
+  const xL = C - HW, xR = C + HW;
+
+  let ticks = '';
+  for (let i = 0; i < 96; i++) {
+    const h = i / 4;
+    const len = i % 12 === 0 ? 9 : i % 4 === 0 ? 7 : 4;
+    const [x0, y0] = polar(h, 150 - len), [x1, y1] = polar(h, 150);
+    const kind = i % 4 === 0 ? ' dial__tick--hour' : '';
+    ticks += `<line class="dial__tick${kind}" data-h="${h}" x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1)}" y2="${f(y1)}"/>`;
+  }
+  let nums = '';
+  for (let h = 0; h < 24; h += 3) {
+    const [x, y] = polar(h, 133.5);
+    const minor = h % 6 ? ' dial__num--minor' : '';
+    nums += `<text class="dial__num${minor}" x="${f(x)}" y="${f(y + 2.9)}" text-anchor="middle">${String(h).padStart(2, '0')}</text>`;
+  }
+  const marker = (h) => {
+    const a = dialAngle(h);
+    return `<path class="dial__mark" transform="rotate(${f(a)} ${C} ${C})" d="M${C},${C - 127} l-2.6,-4.6 h5.2 Z"/>`;
+  };
+  // stars sit on the disc that carries the sun and moon, scattered by the golden angle
+  let stars = '';
+  for (let i = 0; i < 34; i++) {
+    const a = i * 2.39996, r = 30 + ((i * 37) % 90);
+    stars += `<circle cx="${f(C + r * Math.cos(a))}" cy="${f(C + r * Math.sin(a))}" r="${(0.45 + (i % 4) * 0.2).toFixed(2)}"/>`;
+  }
+  let rays = '';
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6, s = Math.sin(a), c = Math.cos(a), o = i % 2 ? 12 : 14.5;
+    rays += `<line x1="${f(8.6 * s)}" y1="${f(8.6 * c)}" x2="${f(o * s)}" y2="${f(o * c)}"/>`;
+  }
+  let sea = '';
+  [3.5, 7, 11.5, 17].forEach((d, i) => { sea += `<line class="dial__swell" x1="${f(xL)}" y1="${f(HY + d)}" x2="${f(xR)}" y2="${f(HY + d)}" style="opacity:${(0.3 - i * 0.06).toFixed(2)}"/>`; });
+
+  return `<svg class="dial" viewBox="0 0 320 320">
+    <defs>
+      <linearGradient id="dialSky" x1="0" y1="${f(C - R)}" x2="0" y2="${f(HY)}" gradientUnits="userSpaceOnUse">
+        <stop id="dialSkyTop" offset="0"/><stop id="dialSkyMid" offset="0.62"/><stop id="dialSkyLow" offset="1"/>
+      </linearGradient>
+      <linearGradient id="dialSea" x1="0" y1="${f(HY)}" x2="0" y2="${f(C + R)}" gradientUnits="userSpaceOnUse">
+        <stop id="dialSeaTop" offset="0"/><stop offset="0.5" stop-color="#0c0d10"/><stop offset="1" stop-color="#090908"/>
+      </linearGradient>
+      <radialGradient id="dialGlow"><stop class="dial__halo" offset="0" stop-opacity="0.7"/><stop class="dial__halo" offset="0.3" stop-opacity="0.22"/><stop class="dial__halo" offset="0.62" stop-opacity="0.05"/><stop class="dial__halo" offset="1" stop-opacity="0"/></radialGradient>
+      <clipPath id="dialAperture"><path d="M${f(xL)},${f(HY)} A${R},${R} 0 1 1 ${f(xR)},${f(HY)} Z"/></clipPath>
+      <clipPath id="dialPlate"><path d="M${f(xL)},${f(HY)} A${R},${R} 0 0 0 ${f(xR)},${f(HY)} Z"/></clipPath>
+    </defs>
+
+    <g clip-path="url(#dialAperture)">
+      <rect x="0" y="0" width="320" height="${f(HY + 1)}" fill="url(#dialSky)"/>
+      <g class="dial__stars" id="dialStars">${stars}</g>
+      <g class="dial__moon" id="dialMoon">
+        <circle class="dial__moon-disc" r="8"/>
+        <path class="dial__moon-lit" d="M3,-7.4 A8,8 0 1 0 3,7.4 A9,9 0 0 1 3,-7.4 Z"/>
+      </g>
+      <line class="dial__ray" id="dialRay" x1="${C}" y1="${C}" x2="${C}" y2="${C - ORBIT}"/>
+      <g id="dialSun">
+        <circle r="40" fill="url(#dialGlow)"/>
+        <g class="dial__rays">${rays}</g>
+        <circle class="dial__sun" r="6.4"/>
+      </g>
+      <!-- the headland and the house, engraved on the horizon -->
+      <path class="dial__land" d="M${f(xL - 2)},${f(HY + 1)} L${f(xL - 2)},${f(HY - 6)} C62,${f(HY - 8)} 88,${f(HY - 12)} 112,${f(HY - 18)} C130,${f(HY - 22)} 150,${f(HY - 22)} 212,${f(HY - 22)} L220,${f(HY - 15)} C224,${f(HY - 9)} 226,${f(HY - 4)} 232,${f(HY + 1)} Z"/>
+      <g class="dial__house">
+        <rect x="160" y="${f(HY - 28)}" width="46" height="6"/>
+        <rect x="154" y="${f(HY - 31.5)}" width="58" height="1.8"/>
+        <rect class="dial__glass" id="dialGlass" x="162" y="${f(HY - 37)}" width="42" height="5.5"/>
+        <rect x="152" y="${f(HY - 38.4)}" width="62" height="1.6"/>
+        <rect x="157" y="${f(HY - 42)}" width="3.2" height="20"/>
+      </g>
+    </g>
+
+    <g clip-path="url(#dialPlate)">
+      <rect x="0" y="${f(HY)}" width="320" height="${f(320 - HY)}" fill="url(#dialSea)"/>
+      ${sea}
+      <g class="dial__glint" id="dialGlint">
+        <line x1="-11" y1="3" x2="11" y2="3"/><line x1="-8" y1="7" x2="8" y2="7"/><line x1="-5.5" y1="11.5" x2="5.5" y2="11.5"/><line x1="-3" y1="17" x2="3" y2="17"/>
+      </g>
+    </g>
+    <line class="dial__horizon" x1="${f(xL)}" y1="${f(HY)}" x2="${f(xR)}" y2="${f(HY)}"/>
+
+    <text class="dial__edge" x="${f(xL + 15)}" y="${f(HY + 30)}">${hhmm(sunrise)}</text>
+    <text class="dial__edge" x="${f(xR - 15)}" y="${f(HY + 30)}" text-anchor="end">${hhmm(sunset)}</text>
+    <text class="dial__value" id="dialValue" x="${C}" y="${f(HY + 44)}" text-anchor="middle"></text>
+    <text class="dial__caption" id="dialCaption" x="${C}" y="${f(HY + 58)}" text-anchor="middle"></text>
+    <text class="dial__caption dial__caption--alt" id="dialAlt" x="${C}" y="${f(HY + 74)}" text-anchor="middle"></text>
+
+    <circle class="dial__ring" cx="${C}" cy="${C}" r="${R}"/>
+    <circle class="dial__ring" cx="${C}" cy="${C}" r="150.5"/>
+    ${arc(sunrise, sunset, 127.5, 'dial__sector dial__sector--day')}
+    ${ticks}${nums}
+    ${marker(sunrise)}${marker(sunset)}
+    ${arc(from, to, 154.5, 'dial__track')}
+    ${arc(from, to, 154.5, 'dial__done', 'dialDone')}
+    <g id="dialPointer">
+      <line class="dial__needle" x1="${C}" y1="${C - 140}" x2="${C}" y2="${C - 154.5}"/>
+      <circle class="dial__head" cx="${C}" cy="${C - 154.5}" r="3"/>
+    </g>
+  </svg>`;
+}

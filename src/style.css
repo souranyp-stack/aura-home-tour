@@ -382,14 +382,38 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
 .daylight__top { grid-column: 1; }
 .daylight__top .display--s { text-shadow: 0 2px 40px rgba(0, 0, 0, 0.5); }
 .daylight__clock { grid-column: 1; grid-row: 3; align-self: end; font-family: var(--serif); font-weight: 300; font-size: clamp(96px, 15vw, 260px); line-height: 0.8; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: #f6f1e8; text-shadow: 0 4px 60px rgba(0, 0, 0, 0.5); }
-.daylight__instrument { grid-column: 2; grid-row: 3; align-self: end; width: clamp(200px, 22vw, 320px); }
-.daylight__instrument svg { width: 100%; display: block; overflow: visible; }
-.daylight__instrument .arc-track { fill: none; stroke: rgba(244, 239, 230, 0.22); stroke-width: 1; stroke-dasharray: 2 4; }
-.daylight__instrument .arc-done { fill: none; stroke: var(--bronze); stroke-width: 1.4; }
-.daylight__instrument .arc-horizon { stroke: rgba(244, 239, 230, 0.35); stroke-width: 1; }
-.daylight__instrument circle { fill: #f6e3bf; filter: drop-shadow(0 0 10px rgba(255, 210, 140, 0.9)); transition: fill 0.6s; }
-.daylight__instrument text { font-family: var(--sans); font-size: 9px; letter-spacing: 0.18em; fill: rgba(244, 239, 230, 0.6); }
-.daylight__moment { grid-column: 1 / -1; grid-row: 2; align-self: end; justify-self: end; max-width: 30ch; margin-bottom: 4vh; font-family: var(--serif); font-size: clamp(22px, 2vw, 32px); line-height: 1.2; color: #f6f1e8; text-align: right; text-shadow: 0 2px 30px rgba(0, 0, 0, 0.7); }
+.daylight__instrument { grid-column: 2; grid-row: 3; align-self: end; width: clamp(270px, 23vw, 370px); aspect-ratio: 1; border-radius: 50%; background: rgba(13, 12, 11, 0.5); -webkit-backdrop-filter: blur(18px) saturate(1.25); backdrop-filter: blur(18px) saturate(1.25); box-shadow: 0 0 0 1px rgba(244, 239, 230, 0.16), 0 0 0 5px rgba(13, 12, 11, 0.28), 0 30px 80px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.12); }
+.dial { width: 100%; height: 100%; display: block; overflow: visible; }
+.dial text { font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.dial__ring { fill: none; stroke: rgba(244, 239, 230, 0.2); stroke-width: 0.75; }
+.dial__sector { fill: none; stroke-width: 1.5; }
+.dial__sector--day { stroke: rgba(233, 196, 142, 0.6); }
+.dial__tick { stroke: rgba(244, 239, 230, 0.26); stroke-width: 0.7; transition: stroke 0.5s; }
+.dial__tick--hour { stroke-width: 1; stroke: rgba(244, 239, 230, 0.48); }
+.dial__tick.is-lit { stroke: #edc98f; }
+.dial__num { font-size: 8.5px; letter-spacing: 0.04em; fill: rgba(244, 239, 230, 0.72); }
+.dial__mark { fill: #edc98f; }
+.dial__track { fill: none; stroke: rgba(244, 239, 230, 0.12); stroke-width: 1.5; stroke-linecap: round; }
+.dial__done { fill: none; stroke: #edc98f; stroke-width: 1.5; stroke-linecap: round; }
+.dial__needle { stroke: #f8e6c4; stroke-width: 1; }
+.dial__head { fill: #fff3dc; filter: drop-shadow(0 0 5px rgba(255, 214, 150, 0.95)); }
+.dial__stars { fill: #f2efe6; }
+.dial__moon-disc { fill: rgba(242, 239, 230, 0.07); stroke: rgba(242, 239, 230, 0.32); stroke-width: 0.5; }
+.dial__moon-lit { fill: #eee9dc; }
+.dial__ray { stroke: rgba(255, 245, 225, 0.32); stroke-width: 0.6; stroke-dasharray: 1.5 3; }
+.dial__rays { stroke: #fff5df; stroke-width: 0.8; stroke-linecap: round; }
+.dial__sun { fill: #fff8e8; }
+.dial__land { fill: #0d0c0b; stroke: rgba(244, 239, 230, 0.34); stroke-width: 0.5; }
+.dial__house rect { fill: #0d0c0b; stroke: rgba(244, 239, 230, 0.5); stroke-width: 0.4; }
+.dial__house .dial__glass { fill: #ffc77f; stroke: none; filter: drop-shadow(0 0 3px rgba(255, 190, 110, 0.9)); }
+.dial__swell { stroke: #f4efe6; stroke-width: 0.5; }
+.dial__glint { stroke: #ffe3b4; stroke-width: 1; stroke-linecap: round; }
+.dial__horizon { stroke: rgba(244, 239, 230, 0.6); stroke-width: 0.75; }
+.dial__edge { font-size: 8px; letter-spacing: 0.1em; fill: rgba(244, 239, 230, 0.6); }
+.dial text.dial__value { font-family: var(--serif); font-weight: 400; font-size: 24px; letter-spacing: 0.01em; fill: #f8f3ea; }
+.dial__caption { font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; fill: rgba(244, 239, 230, 0.72); }
+.dial__caption--alt { fill: #edc98f; letter-spacing: 0.16em; }
+.daylight__moment { grid-column: 1; grid-row: 3; align-self: end; justify-self: end; max-width: 32ch; text-wrap: balance; margin: 0 clamp(24px, 3vw, 56px) clamp(6px, 1.4vh, 18px) 0; font-family: var(--serif); font-size: clamp(22px, 2vw, 32px); line-height: 1.2; color: #f6f1e8; text-align: right; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75), 0 2px 26px rgba(0, 0, 0, 0.8); }
 .daylight__note { position: absolute; right: var(--gutter); top: calc(14px + 64px + 4vh); font-size: 10px; letter-spacing: 0.26em; text-transform: uppercase; color: rgba(244, 239, 230, 0.7); display: flex; align-items: center; gap: 10px; }
 .daylight__note::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #e2564a; box-shadow: 0 0 0 4px rgba(226, 86, 74, 0.2); animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(226, 86, 74, 0.05); } }
@@ -535,10 +559,14 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
   .plans, .stills { grid-template-columns: 1fr; }
   .daylight { height: 420vh; }
   .daylight__pin { grid-template-columns: 1fr; padding-top: calc(10px + 60px + 3vh); }
-  .daylight__clock { font-size: 26vw; }
-  .daylight__instrument { grid-column: 1; grid-row: 3; justify-self: end; width: 42vw; margin-bottom: 14vw; }
-  .daylight__moment { font-size: 20px; justify-self: start; text-align: left; }
-  .daylight__note { top: auto; bottom: calc(var(--gutter) * 1.2 + 30vw); }
+  .daylight__clock { font-size: 26vw; margin-bottom: 6vw; }
+  .daylight__instrument { grid-column: 1; grid-row: 3; justify-self: end; width: min(58vw, 340px); margin-bottom: 31vw; }
+  .daylight__moment { grid-row: 2; font-size: 20px; justify-self: start; text-align: left; margin: 0 0 3vh; }
+  .daylight__note { top: auto; right: auto; left: var(--gutter); max-width: 30vw; align-items: flex-start; line-height: 1.6; bottom: calc(var(--gutter) * 1.2 + 36vw); }
+  .dial__num { font-size: 12px; }
+  .dial__num--minor, .dial__edge, .dial__caption--alt { display: none; }
+  .dial text.dial__value { font-size: 30px; }
+  .dial__caption { font-size: 10px; letter-spacing: 0.16em; }
   .details { grid-template-columns: 1fr; }
   .detail--tall, .detail--wide { grid-row: auto; grid-column: auto; }
   .detail--tall .detail__frame { height: auto; min-height: 0; aspect-ratio: 4 / 5; }

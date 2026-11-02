@@ -208,16 +208,7 @@
           <h2 class="display display--s" id="daylight-h" data-split>Eighteen hours, one scroll.</h2>
         </div>
         <div class="daylight__clock" aria-live="off"><span id="dayClock">05:24</span></div>
-        <div class="daylight__instrument" aria-hidden="true">
-          <svg viewBox="0 0 320 170">
-            <path class="arc-track" d="M20,150 A140,140 0 0 1 300,150" />
-            <path class="arc-done" id="dayArc" d="M20,150 A140,140 0 0 1 300,150" />
-            <line x1="6" y1="150" x2="314" y2="150" class="arc-horizon" />
-            <circle id="daySun" cx="20" cy="150" r="7" />
-            <text x="20" y="168" text-anchor="middle">06:24</text>
-            <text x="300" y="168" text-anchor="middle">20:06</text>
-          </svg>
-        </div>
+        <div class="daylight__instrument" id="dayDial" aria-hidden="true"></div>
         <p class="daylight__moment" id="dayMoment">First light. The sea turns pewter before the sky does.</p>
         <p class="daylight__note">Rendered live as you scroll</p>
       </div>

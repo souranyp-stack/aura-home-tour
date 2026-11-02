@@ -2,7 +2,8 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin';
-import { upperPlan, lowerPlan, sectionAA, approachMap, paperSheet } from './drawings.js';
+import { upperPlan, lowerPlan, sectionAA, approachMap, paperSheet, sunDial, dialAngle, DIAL } from './drawings.js';
+import { sunDirection } from '../world/atmosphere.js';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
 
@@ -39,18 +40,80 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
     [20.2, 'Blue hour. The house begins to glow from inside.'],
     [21.4, 'Night. A lantern on the headland.'],
   ];
-  const dayClock = $('#dayClock'), daySun = $('#daySun'), dayArc = $('#dayArc'), dayMoment = $('#dayMoment');
+  const DAY_FROM = 5.4, DAY_TO = 23.4;
+  // the dial's sky at each hour: zenith, mid sky, horizon, the sea below it, the sun's halo
+  const DIAL_SKY = [
+    [5.4, '#151c2c', '#3a4356', '#7c8290', '#3c424e', '#9fb3d8'],
+    [6.4, '#2d3a58', '#8a7f8c', '#eda987', '#6d5a56', '#ffc79a'],
+    [8.0, '#44709c', '#8fb2c8', '#dfe6e0', '#4e6a78', '#fff0d0'],
+    [13.25, '#2f6698', '#6d9fc4', '#c2dae6', '#3f6377', '#fff6e0'],
+    [17.0, '#3d6a94', '#86a5b6', '#ecd9ae', '#5b6a68', '#ffe6b0'],
+    [19.0, '#3f4d70', '#a9846f', '#f4a95f', '#70533c', '#ffbe70'],
+    [20.1, '#262b4c', '#7c4f60', '#e5704a', '#5a3530', '#ff8f58'],
+    [20.9, '#121832', '#26305a', '#47567f', '#1f2740', '#7c8cc0'],
+    [22.0, '#070a18', '#0d1328', '#172038', '#0e1422', '#7c8cc0'],
+    [23.4, '#05070f', '#090d1c', '#10172a', '#0a0e18', '#7c8cc0'],
+  ];
+  $('#dayDial').innerHTML = sunDial({ sunrise: SUNRISE, sunset: SUNSET, from: DAY_FROM, to: DAY_TO });
+  const dayClock = $('#dayClock'), dayMoment = $('#dayMoment');
+  const dial = Object.fromEntries(['SkyTop', 'SkyMid', 'SkyLow', 'SeaTop', 'Stars', 'Moon', 'Ray', 'Sun', 'Glass', 'Glint', 'Value', 'Caption', 'Alt', 'Done', 'Pointer'].map((k) => [k, $(`#dial${k}`)]));
+  const dialHalo = $$('.dial__halo');
+  const dialTicks = $$('.dial__tick').map((el) => ({ el, h: +el.dataset.h }));
+  const { C, ORBIT } = DIAL;
+  const clamp01 = gsap.utils.clamp(0, 1);
+  const ramp = (x, a, b) => { const t = clamp01((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+  const dialSky = (h) => {
+    let i = 0;
+    while (i < DIAL_SKY.length - 2 && h > DIAL_SKY[i + 1][0]) i++;
+    const a = DIAL_SKY[i], b = DIAL_SKY[i + 1], t = clamp01((h - a[0]) / (b[0] - a[0]));
+    return a.slice(1).map((c, n) => gsap.utils.interpolate(c, b[n + 1], t));
+  };
+  const span = (hrs) => {
+    const min = Math.floor(hrs * 60);
+    return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`;
+  };
+  let dialLit = -1;
+  const showDial = (hours) => {
+    const [top, mid, low, sea, halo] = dialSky(hours);
+    dial.SkyTop.setAttribute('stop-color', top);
+    dial.SkyMid.setAttribute('stop-color', mid);
+    dial.SkyLow.setAttribute('stop-color', low);
+    dial.SeaTop.setAttribute('stop-color', sea);
+    dialHalo.forEach((stop) => stop.setAttribute('stop-color', halo));
+
+    const deg = dialAngle(hours), a = (deg * Math.PI) / 180, s = Math.sin(a), c = Math.cos(a);
+    const alt = (Math.asin(sunDirection(hours).y) * 180) / Math.PI;
+    dial.Sun.setAttribute('transform', `translate(${(C + ORBIT * s).toFixed(1)} ${(C - ORBIT * c).toFixed(1)})`);
+    dial.Moon.setAttribute('transform', `translate(${(C - ORBIT * s).toFixed(1)} ${(C + ORBIT * c).toFixed(1)}) rotate(${(deg * 0.5 - 30).toFixed(1)})`);
+    dial.Moon.style.opacity = (1 - ramp(alt, -5, 7)).toFixed(3);
+    dial.Stars.setAttribute('transform', `rotate(${deg.toFixed(1)} ${C} ${C})`);
+    dial.Stars.style.opacity = (1 - ramp(alt, -14, -3)).toFixed(3);
+    dial.Ray.setAttribute('transform', `rotate(${deg.toFixed(1)} ${C} ${C})`);
+    dial.Pointer.setAttribute('transform', `rotate(${deg.toFixed(1)} ${C} ${C})`);
+    // the same evening and dawn lighting as the interior in the scene
+    dial.Glass.style.opacity = Math.max(0.55 * (1 - ramp(hours, 6.4, 7.4)), 0.95 * ramp(hours, 19.6, 20.8)).toFixed(3);
+    // the sun lays a path on the water when it is low
+    dial.Glint.setAttribute('transform', `translate(${(C + ORBIT * s).toFixed(1)} ${(C - ORBIT * Math.cos((dialAngle(SUNRISE) * Math.PI) / 180)).toFixed(1)})`);
+    dial.Glint.style.opacity = (ramp(alt, -5, 0) * (1 - ramp(alt, 14, 34)) * 0.95).toFixed(3);
+
+    const before = hours < SUNRISE, day = !before && hours < SUNSET;
+    dial.Value.textContent = span(before ? SUNRISE - hours : day ? SUNSET - hours : 24 + SUNRISE - hours);
+    dial.Caption.textContent = day ? 'until sunset' : 'until sunrise';
+    dial.Alt.textContent = `sun ${alt < 0 ? '−' : '+'}${Math.abs(alt).toFixed(0)}°`;
+
+    gsap.set(dial.Done, { drawSVG: `0% ${(((hours - DAY_FROM) / (DAY_TO - DAY_FROM)) * 100).toFixed(2)}%` });
+    const lit = Math.floor(hours * 4);
+    if (lit !== dialLit) {
+      dialLit = lit;
+      dialTicks.forEach(({ el, h }) => el.classList.toggle('is-lit', h >= DAY_FROM - 0.25 && h * 4 <= lit));
+    }
+  };
   let dayActive = false, dayT = 0, lastMoment = '';
   const fmt = (h) => `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
   const showDay = () => {
-    const hours = 5.4 + dayT * 18.0;
+    const hours = DAY_FROM + dayT * (DAY_TO - DAY_FROM);
     dayClock.textContent = fmt(hours);
-    const f = Math.min(1, Math.max(0, (hours - SUNRISE) / (SUNSET - SUNRISE)));
-    const a = Math.PI * f;
-    daySun.setAttribute('cx', (160 - 140 * Math.cos(a)).toFixed(1));
-    daySun.setAttribute('cy', (150 - 140 * Math.sin(a) + (hours > SUNSET ? 14 : hours < SUNRISE ? 14 : 0)).toFixed(1));
-    daySun.style.fill = hours > SUNSET + 0.3 || hours < SUNRISE - 0.2 ? '#9fb3d8' : '';
-    gsap.set(dayArc, { drawSVG: `0% ${(f * 100).toFixed(2)}%` });
+    showDial(hours);
     let m = MOMENTS[0][1];
     for (const [h, txt] of MOMENTS) if (hours >= h) m = txt;
     if (m !== lastMoment) {
@@ -231,6 +294,11 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
   // the section is finished by the time it fills the screen, so its notes can be read
   drawOn(sectionFig, 'top 85%', 'top 12%');
   $$('.plan').forEach((p) => drawOn(p, 'top 85%', 'bottom 70%'));
+
+  // the dial assembles as the section arrives: the case, then the minute track round the ring
+  const dialIn = { trigger: '#daylight', start: 'top 45%', toggleActions: 'play none none reverse' };
+  gsap.from('#dayDial', { scale: 0.84, opacity: 0, rotation: -14, duration: 1.5, ease: EASE, scrollTrigger: dialIn });
+  gsap.from('.dial__tick', { opacity: 0, duration: 0.4, ease: 'none', stagger: { amount: 1 }, scrollTrigger: dialIn });
 
   // ---------------------------------------------------------------- materials: pinned horizontal gallery
   mm.add('(min-width: 901px)', () => {
