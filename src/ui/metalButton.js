@@ -505,7 +505,17 @@ function upgrade(btn) {
     sizeTarget(T_a, dw, dh); sizeTarget(T_b, dw, dh);
     needResize = false;
   };
-  new ResizeObserver(() => { needResize = true; }).observe(btn);
+  // the observer alone can miss a change, and a stale canvas stretches the ring past the button
+  const outOfStep = () => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    return btn.offsetWidth * dpr !== BW || btn.offsetHeight * dpr !== BH
+      || Math.round(cv.offsetWidth * dpr) !== W || Math.round(cv.offsetHeight * dpr) !== H;
+  };
+  const resized = () => { needResize = true; wake(); };
+  const watch = new ResizeObserver(resized);
+  watch.observe(btn);
+  watch.observe(cv);
+  addEventListener('resize', resized);
 
   const drawTo = (t) => {
     gl.bindFramebuffer(gl.FRAMEBUFFER, t ? t.fbo : null);
@@ -576,7 +586,7 @@ function upgrade(btn) {
     ptrAmt += (wantWell - ptrAmt) * (1 - Math.pow(0.004, dt));
     if (Math.abs(wantWell - ptrAmt) < 0.002) ptrAmt = wantWell;
 
-    if (needResize) resize();
+    if (needResize || outOfStep()) resize();
     if (!W || !BW) return;
 
     const bw = Math.max(1.5, 3.2 * (BH / 516));
