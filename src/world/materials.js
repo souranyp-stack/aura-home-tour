@@ -6,7 +6,7 @@ import * as S from '../core/surfaces.js';
 export const aura = {
   uSweep: { value: -40 },                         // material front, metres along SWEEP_DIR
   uPlaster: { value: new THREE.Color(0xdcd5c9) },  // maquette colour before materials arrive
-  uEdge: { value: new THREE.Color(1.0, 0.7, 0.42).multiplyScalar(0.8) },
+  uEdge: { value: new THREE.Color(1.0, 0.7, 0.42).multiplyScalar(0.3) },
   uWorldR: { value: 0 },                          // radius of the revealed landscape
   uVoid: { value: new THREE.Color(0x0b0a09) },
   uTime: { value: 0 },
