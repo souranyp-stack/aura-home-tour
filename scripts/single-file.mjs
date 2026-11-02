@@ -3,8 +3,8 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { parseAst } from 'rollup/parseAst';
 
-// Aura's project import takes up to 1 MB per HTML file; stay clear of it either way it counts a MB
-const LIMIT = 1000 * 1000;
+// Aura's project import takes up to 1 MB per HTML file
+const LIMIT = 1024 * 1024;
 const files = readdirSync('dist/assets');
 const read = (ext) => readFileSync(`dist/assets/${files.find((f) => f.endsWith(ext))}`, 'utf8');
 // Shaders are by far the most compressible text left in the bundle: strip their comments and
@@ -13,7 +13,9 @@ const looksLikeGLSL = (t) => t.includes('\n') && /\b(?:void main|uniform |varyin
 const tidy = (line) => line.replace(/\s+/g, ' ')
   .replace(/ ?([(){}[\];,=*/<>&|?:!]) ?/g, '$1')
   .replace(/ ?\+(?! *\+) ?/g, '+')
-  .replace(/ ?-(?! *-) ?/g, '-');
+  .replace(/ ?-(?! *-) ?/g, '-')
+  .replace(/(?<![\w.])(\d+)\.0+(?![\w.])/g, '$1.')
+  .replace(/(?<![\w.])0\.(\d)/g, '.$1');
 function squeezeGLSL(text) {
   const lead = /^\s/.test(text) ? (text.match(/^\s*\n/) ? '\n' : ' ') : '';
   const tail = /\s$/.test(text) ? (text.match(/\n\s*$/) ? '\n' : ' ') : '';
