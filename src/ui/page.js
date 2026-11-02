@@ -20,7 +20,10 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
   // ---------------------------------------------------------------- drawings
   $('#planUpper').innerHTML = upperPlan();
   $('#planLower').innerHTML = lowerPlan();
-  $('#sectionDraw').innerHTML = sectionAA();
+  const sectionFig = $('#sectionDraw');
+  sectionFig.insertAdjacentHTML('afterbegin', sectionAA());
+  // on a phone the drawing scrolls sideways at a legible scale: open it on the house
+  sectionFig.scrollLeft = sectionFig.scrollWidth * 0.55 - sectionFig.clientWidth / 2;
   $('#approachMap').innerHTML = approachMap();
 
   // ---------------------------------------------------------------- a day on the headland
@@ -213,15 +216,20 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
   // ---------------------------------------------------------------- drawings draw themselves
   const drawOn = (fig, start = 'top 80%', end = 'bottom 55%') => {
     const svg = $('svg', fig);
-    const strokes = $$('line, rect, polyline, polygon, circle', svg).filter((n) => !n.closest('pattern'));
-    const fills = $$('.f-hatch, .l-solid, .f-water, polygon[fill]', svg);
-    const labels = $$('text', svg);
+    // drawSVG takes over the dash array, so dashed lines fade in with the labels instead
+    const lines = $$('line, rect, polyline, polygon, circle', svg).filter((n) => !n.closest('pattern'));
+    const isDashed = (n) => getComputedStyle(n).strokeDasharray !== 'none';
+    const strokes = lines.filter((n) => !isDashed(n));
+    const dashed = lines.filter(isDashed);
+    const fills = $$('.f-hatch, .l-solid, .f-water, .f-conc, .f-wall, .f-bronze, .f-fire, .f-light, .g-rock, .l-glass2, polygon[fill]', svg);
+    const labels = [...$$('text', svg), ...dashed];
     const tl = gsap.timeline({ scrollTrigger: { trigger: fig, start, end, scrub: 0.8 } });
     tl.fromTo(strokes, { drawSVG: '0%' }, { drawSVG: '100%', ease: 'none', stagger: { amount: 0.6 }, duration: 0.5 }, 0)
       .fromTo(fills, { fillOpacity: 0 }, { fillOpacity: 1, ease: 'none', duration: 0.3, stagger: { amount: 0.2 } }, 0.55)
       .fromTo(labels, { opacity: 0 }, { opacity: 1, ease: 'none', duration: 0.2, stagger: { amount: 0.25 } }, 0.7);
   };
-  drawOn($('#sectionDraw'));
+  // the section is finished by the time it fills the screen, so its notes can be read
+  drawOn(sectionFig, 'top 85%', 'top 12%');
   $$('.plan').forEach((p) => drawOn(p, 'top 85%', 'bottom 70%'));
 
   // ---------------------------------------------------------------- materials: pinned horizontal gallery

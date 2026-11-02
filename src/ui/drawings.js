@@ -11,7 +11,8 @@ const f = (n) => n.toFixed(1);
 function sheet(w, h) {
   const out = [];
   const defs = `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="rgba(239,233,223,0.35)" stroke-width="1"/></pattern>
-  <pattern id="rock" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><line x1="0" y1="0" x2="0" y2="9" stroke="rgba(239,233,223,0.13)" stroke-width="0.8"/></pattern></defs>`;
+  <pattern id="rock" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(-35)"><line x1="0" y1="0" x2="0" y2="9" stroke="rgba(239,233,223,0.13)" stroke-width="0.8"/></pattern>
+  <pattern id="conc" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="0.7" fill="rgba(239,233,223,0.4)"/><circle cx="5" cy="4.6" r="0.5" fill="rgba(239,233,223,0.3)"/><circle cx="3.6" cy="6.2" r="0.35" fill="rgba(239,233,223,0.3)"/></pattern></defs>`;
   return {
     add: (s) => out.push(s),
     svg: (label) => `<svg class="drw" xmlns="${NS}" viewBox="0 0 ${w} ${h}" role="img" aria-label="${label}">${defs}${out.join('')}</svg>`,
@@ -156,69 +157,156 @@ export function lowerPlan() {
 }
 
 // ---------------------------------------------------------------- section
+// Section A–A at 1:100 through the sliding door (x = 2.25), looking west.
+// The cliff is 38 m tall, so it is drawn with a break: the house and the
+// cliff top at full scale above, the waterline in a strip below.
 export function sectionAA() {
-  const Z0 = -74, Z1 = 24, Y0 = -38, Y1 = 12.5;
-  const k = 12;
-  const w = (Z1 - Z0) * k, h = (Y1 - Y0) * k;
+  const Z0 = -22, Z1 = 23, Y1 = 12, YB = -7.2, YS0 = -30.6, YS1 = -37, GAP = 30;
+  const k = 24;
+  const w = (Z1 - Z0) * k;
+  const upperH = (Y1 - YB) * k;
+  const h = upperH + GAP + (YS0 - YS1) * k;
   const sx = (z) => (z - Z0) * k;
-  const sy = (y) => (Y1 - y) * k;
+  const sy = (y) => (y >= YB ? (Y1 - y) * k : upperH + GAP + (YS0 - y) * k);
   const sh = sheet(w, h);
-  const r = (z0, y0, z1, y1, cls) => `<rect class="${cls}" x="${f(sx(z0))}" y="${f(sy(y1))}" width="${f((z1 - z0) * k)}" height="${f((y1 - y0) * k)}"/>`;
+  const P = (z, y) => `${f(sx(z))},${f(sy(y))}`;
+  const r = (z0, y0, z1, y1, cls, extra = '') =>
+    `<rect class="${cls}" ${extra} x="${f(sx(Math.min(z0, z1)))}" y="${f(sy(Math.max(y0, y1)))}" width="${f(Math.abs(z1 - z0) * k)}" height="${f(Math.abs(sy(Math.min(y0, y1)) - sy(Math.max(y0, y1))))}"/>`;
   const l = (z0, y0, z1, y1, cls, extra = '') => `<line class="${cls}" ${extra} x1="${f(sx(z0))}" y1="${f(sy(y0))}" x2="${f(sx(z1))}" y2="${f(sy(y1))}"/>`;
-  const t = (z, y, s, cls = 't-room', anchor = 'middle') => `<text class="${cls}" text-anchor="${anchor}" x="${f(sx(z))}" y="${f(sy(y))}">${s}</text>`;
+  const pl = (pts, cls, closed = false, extra = '') => `<${closed ? 'polygon' : 'polyline'} class="${cls}" ${extra} points="${pts.map(([z, y]) => P(z, y)).join(' ')}"/>`;
+  const t = (z, y, str, cls = 't-dim', anchor = 'start') => `<text class="${cls}" text-anchor="${anchor}" x="${f(sx(z))}" y="${f(sy(y))}">${str}</text>`;
+  const add = (...a) => a.forEach((x) => sh.add(x));
 
+  // ---- ground: the headland cut at x = 2.25, in two parts either side of the break
+  const prof = [];
+  for (let z = Z0; z <= Z1 + 1e-6; z += 0.2) prof.push([z, heightAt(2.25, z)]);
+  const cross = (yv) => { for (let i = 1; i < prof.length; i++) if (prof[i - 1][1] < yv && prof[i][1] >= yv) return prof[i - 1][0] + (prof[i][0] - prof[i - 1][0]) * (yv - prof[i - 1][1]) / (prof[i][1] - prof[i - 1][1]); return Z0; };
+  const zTop = cross(YB), zLow = cross(YS0);
+  const upper = [[zTop, YB], ...prof.filter(([z, y]) => z > zTop && y >= YB), [Z1, YB]];
+  add(pl(upper, 'g-rock', true));
+  add(pl(upper.slice(0, -1), 'l-ground'));
+  // the foot of the cliff: the face continues below the break into the sea,
+  // with a few fallen blocks at the waterline
+  const foot = [[zLow, YS0], [zLow - 0.5, SEA + 1.4], [zLow - 0.9, SEA - 0.4], [zLow - 2.4, SEA - 1.6], [zLow - 6, YS1 + 0.9], [Z0, YS1 + 0.5]];
+  add(pl([...foot, [Z0, YS1], [Z1, YS1], [Z1, YS0]], 'g-rock', true));
+  add(pl(foot, 'l-ground'));
+  for (const [bz, by, bw, bh] of [[zLow - 1.9, SEA - 0.2, 1.3, 0.75], [zLow - 3.3, SEA - 0.55, 0.9, 0.5], [zLow - 4.6, SEA - 0.8, 0.6, 0.35]])
+    add(`<ellipse class="l-ground g-block" cx="${f(sx(bz))}" cy="${f(sy(by))}" rx="${f(bw * k / 2)}" ry="${f(bh * k / 2)}"/>`);
+  // break lines with the conventional zigzag
+  // drawn in sheet space: the zigzag must not cross into the other side of the break
+  const zig = (z0, z1, y) => {
+    const m = sx((z0 + z1) / 2), yy = sy(y);
+    const pts = [[sx(z0), yy], [m - 9, yy], [m - 4, yy - 11], [m + 4, yy + 11], [m + 9, yy], [sx(z1), yy]];
+    return `<polyline class="l-break" points="${pts.map(([x, v]) => `${f(x)},${f(v)}`).join(' ')}"/>`;
+  };
+  add(zig(zTop - 0.6, Z1, YB), zig(zLow - 0.6, Z1, YS0));
+  add(`<text class="t-note" text-anchor="middle" x="${f(sx((zTop + Z1) / 2 + 4))}" y="${f(upperH + GAP / 2 + 3)}">24 m of bedded limestone omitted</text>`);
   // sea
-  sh.add(l(Z0, SEA, Z1, SEA, 'l-sea'));
-  for (let i = 0; i < 14; i++) sh.add(l(Z0 + 1 + i * 4, SEA - 1.2, Z0 + 3 + i * 4, SEA - 1.2, 'l-sea'));
-  sh.add(t(Z0 + 1, SEA + 1.2, 'Sea level', 't-dim', 'start'));
-  // ground: cut through the headland at x = 2.25, rock poche below
-  const pts = [];
-  for (let z = Z0; z <= Z1 + 0.01; z += 0.5) pts.push([z, Math.max(Y0, heightAt(2.25, z))]);
-  const ground = pts.map(([z, y]) => `${f(sx(z))},${f(sy(y))}`).join(' ');
-  sh.add(`<polygon points="${ground} ${f(sx(Z1))},${f(sy(Y0))} ${f(sx(Z0))},${f(sy(Y0))}" fill="url(#rock)" stroke="none"/>`);
-  sh.add(`<polyline class="l-ground" points="${ground}"/>`);
-  // the spine beyond (not cut): seen in elevation
-  sh.add(r(-11, -6.5, 15, 9.5, 'l-thin'));
-  sh.add(t(13.6, 8.6, 'Spine wall beyond', 't-dim', 'end'));
-  // cut elements: plinth with its window band, floor plate, terrace, back wall, roof
-  sh.add(r(-2, 0, -1.7, 1.375, 'f-hatch'));
-  sh.add(r(-2, 2.725, -1.7, 3.6, 'f-hatch'));
-  sh.add(r(9.7, 0, 10, 3.6, 'f-hatch'));
-  sh.add(l(-1.72, 1.375, -1.72, 2.725, 'l-glass'));
-  sh.add(r(-2, -0.4, 10, 0, 'f-hatch'));
-  sh.add(r(-8, 3.6, 10, 4.05, 'f-hatch'));
-  sh.add(l(-4, 4.05, -4, 7.5, 'l-glass'));
-  sh.add(r(8, 4.05, 8.35, 7.5, 'f-hatch'));
-  sh.add(r(-9.5, 7.5, 10, 8.05, 'f-hatch'));
-  sh.add(l(-7.9, 4.05, -7.9, 5.08, 'l-glass'));
-  // stair to the court and the court itself
-  sh.add(r(10, 0, 16, 0.24, 'l-solid'));
-  // scale figure on the terrace
-  const fz = -6.4, fy = 4.05;
-  sh.add(`<circle class="l-thin" cx="${f(sx(fz))}" cy="${f(sy(fy + 1.62))}" r="${f(0.12 * k)}"/>`);
-  sh.add(l(fz, fy + 1.48, fz, fy + 0.85, 'l-thin'));
-  sh.add(l(fz, fy + 0.85, fz - 0.18, fy, 'l-thin'));
-  sh.add(l(fz, fy + 0.85, fz + 0.18, fy, 'l-thin'));
-  sh.add(l(fz, fy + 1.3, fz - 0.25, fy + 0.9, 'l-thin'));
-  // dimensions
-  const dz = -22;
-  sh.add(l(dz, SEA, dz, 4.05, 'l-dim'));
-  sh.add(l(dz - 0.5, SEA, dz + 0.5, SEA, 'l-dim'));
-  sh.add(l(dz - 0.5, 4.05, dz + 0.5, 4.05, 'l-dim'));
-  sh.add(l(dz, 4.05, -8, 4.05, 'l-dim', 'stroke-dasharray="2 3"'));
-  sh.add(t(dz - 0.8, (SEA + 4.05) / 2, '38.05 m', 't-dim', 'end'));
-  sh.add(l(-9.5, 9.4, -4, 9.4, 'l-dim'));
-  sh.add(l(-9.5, 9.0, -9.5, 9.8, 'l-dim'));
-  sh.add(l(-4, 9.0, -4, 9.8, 'l-dim'));
-  sh.add(t(-6.75, 10.1, '5.50 cantilever', 't-dim'));
-  // rooms
-  sh.add(t(2, 5.4, 'Living'));
-  sh.add(t(4, 1.6, 'Bedroom'));
-  sh.add(t(-6.1, 3.0, 'Terrace', 't-dim'));
-  sh.add(t(-52, SEA + 4, 'Open sea', 't-dim'));
-  sh.add(t(18, 2.2, 'Court', 't-dim'));
-  sh.add(t(Z1 - 1, Y1 - 1.6, 'Section A–A', 't-dim', 'end'));
-  return sh.svg('Section A–A through the house and the cliff');
+  const zWater = zLow - 0.7;
+  add(l(Z0, SEA, zWater, SEA, 'l-water'));
+  for (let i = 0; i < 12; i++) { const z = Z0 + 0.6 + i * 1.6; if (z + 0.7 < zWater) add(l(z, SEA - 0.55, z + 0.7, SEA - 0.55, 'l-wave')); }
+  add(t(Z0 + 0.6, SEA + 0.5, 'Sea level', 't-dim'));
+
+  // ---- lower level: stone plinth on footings
+  add(r(-2.35, -1.25, -1.35, -0.4, 'f-conc'), r(9.35, -1.25, 10.35, -0.4, 'f-conc'));
+  add(r(-2, -0.4, 10, 0, 'f-conc'));
+  add(r(-2, 0, -1.7, 1.375, 'f-hatch'), r(-2, 2.725, -1.7, 3.6, 'f-hatch'));
+  add(r(-1.74, 1.375, -1.66, 2.725, 'l-glass2'), r(-1.78, 1.33, -1.62, 1.375, 'f-bronze'), r(-1.78, 2.725, -1.62, 2.77, 'f-bronze'));
+  add(r(9.7, 2.4, 10, 3.6, 'f-hatch'));
+  add(l(9.85, 0, 9.85, 2.4, 'l-glass'), r(9.7, 2.35, 10, 2.4, 'f-bronze'));
+  add(r(4.5, 0, 4.65, 3.6, 'f-wall'), r(7.2, 0, 7.32, 3.6, 'f-wall'));
+  add(r(5.2, 0, 6.5, 2.1, 'l-beyond'));
+  // bed and lamp seen beyond in the bedroom
+  add(r(0.3, 0, 2.6, 0.42, 'l-fur'), r(0.35, 0.42, 2.55, 0.6, 'l-fur', 'rx="3"'), r(2.45, 0, 2.6, 1.15, 'l-fur'));
+  add(r(2.05, 0.6, 2.4, 0.74, 'l-fur', 'rx="4"'));
+  add(l(3.35, 0, 3.35, 0.55, 'l-fur'), r(3.1, 0.55, 3.6, 0.6, 'l-fur'), r(3.2, 0.95, 3.5, 1.2, 'l-fur', 'rx="2"'), l(3.35, 0.6, 3.35, 0.95, 'l-fur'));
+  add(t(1.4, 2.6, 'Bedroom', 't-room', 'middle'));
+
+  // ---- upper level
+  add(r(-8, 3.6, 10, 4.05, 'f-conc'));
+  add(l(-4, 4.05, 8, 4.05, 'l-finish'));
+  for (let z = -7.6; z < -4.1; z += 0.6) add(l(z, 4.05, z, 4.12, 'l-fur'));
+  add(l(-7.92, 4.05, -7.92, 5.06, 'l-glass'), r(-7.98, 5.06, -7.86, 5.1, 'f-bronze'));
+  add(r(-4.05, 4.05, -3.95, 4.11, 'f-bronze'), r(-4.06, 7.4, -3.94, 7.5, 'f-bronze'), l(-4.0, 4.11, -4.0, 7.4, 'l-glass2'));
+  add(r(8, 4.05, 8.35, 7.5, 'f-hatch'));
+  // roof: core plate, oak soffit, fascia over a shadow gap, membrane and PV
+  add(r(-9.38, 7.55, 9.88, 8.0, 'f-conc'));
+  add(l(-9.38, 7.5, 9.88, 7.5, 'l-finish'));
+  add(r(-9.5, 7.83, -9.47, 8.05, 'f-bronze'), r(9.97, 7.83, 10.0, 8.05, 'f-bronze'));
+  add(l(-9.38, 8.02, 9.88, 8.02, 'l-fur'));
+  for (let j = 0; j < 5; j++) { const z0 = -2.35 + j * 1.08; add(r(z0, 8.04, z0 + 1.0, 8.09, 'f-bronze')); }
+  for (const z of [0.4, 5.4]) add(r(z - 0.05, 7.46, z + 0.05, 7.5, 'f-light'));
+  for (const z of [1.2, 3.8, 6.6]) add(r(z - 0.06, 7.47, z + 0.06, 7.5, 'f-light'));
+  // seen beyond: the spine wall, the hearth with its firebox, the living group
+  add(r(-11, 0.01, 15, 9.5, 'l-beyond'));
+  add(t(-10.8, 9.1, 'Spine wall beyond', 't-dim'));
+  add(r(4.5, 4.05, 7, 10.2, 'l-beyond'));
+  add(r(4.9, 4.53, 6.6, 5.15, 'f-fire'));
+  add(r(4.15, 4.05, 7.35, 4.43, 'l-fur'));
+  add(r(3.58, 4.05, 4.62, 4.45, 'l-fur', 'rx="4"'), r(4.4, 4.45, 4.62, 4.92, 'l-fur', 'rx="4"'));
+  add(r(1.95, 4.05, 2.85, 4.39, 'l-fur'));
+  add(r(1.0, 4.15, 1.8, 4.5, 'l-fur', 'rx="3"'), r(1.62, 4.5, 1.8, 4.9, 'l-fur', 'rx="3"'));
+  add(t(2, 6.2, 'Living', 't-room', 'middle'), t(5.75, 5.55, 'Hearth beyond', 't-dim', 'middle'));
+  add(t(-5.5, 4.6, 'Terrace', 't-dim', 'middle'));
+
+  // ---- entry court and the garden olive beyond
+  add(r(10, 0, 16, 0.24, 'f-conc'));
+  // the olive: a twisting trunk and a scalloped crown of overlapping clumps
+  add(pl([[13.2, 0.24], [13.05, 0.9], [13.3, 1.5], [13.15, 2.2]], 'l-fur'), pl([[13.2, 1.6], [13.9, 2.3]], 'l-fur'), pl([[13.15, 1.8], [12.5, 2.4]], 'l-fur'));
+  for (const [cz, cy, cr] of [[12.0, 2.9, 0.75], [12.8, 3.4, 0.85], [13.7, 3.35, 0.8], [14.5, 2.95, 0.7], [13.2, 2.7, 0.7], [12.4, 3.6, 0.55], [14.0, 3.8, 0.55]])
+    add(`<circle class="l-fur g-block" cx="${f(sx(cz))}" cy="${f(sy(cy))}" r="${f(cr * k)}"/>`);
+  add(t(13.2, -0.9, 'Entry court', 't-dim', 'middle'));
+
+  // ---- people, for scale
+  const person = (z, y) => [
+    `<circle class="l-person" cx="${f(sx(z))}" cy="${f(sy(y + 1.62))}" r="${f(0.11 * k)}"/>`,
+    l(z, y + 1.5, z, y + 0.85, 'l-person'), l(z, y + 0.85, z - 0.16, y, 'l-person'), l(z, y + 0.85, z + 0.14, y, 'l-person'),
+    l(z, y + 1.32, z - 0.22, y + 0.9, 'l-person'), l(z, y + 1.32, z + 0.2, y + 0.92, 'l-person'),
+  ];
+  add(...person(-7.6, 4.05), ...person(-0.6, 4.05), ...person(12.2, 0.24));
+
+  // ---- the sun at 19:30: under the roof edge, across the room, onto the back wall
+  const tan = Math.tan((8 * Math.PI) / 180);
+  // the ray clears the roof edge by 300 mm and lands on the back wall
+  const sunY = (z) => 7.2 - tan * (z + 9.5);
+  add(l(Z0 + 0.4, sunY(Z0 + 0.4), 8, sunY(8), 'l-sun'));
+  add(`<circle class="f-datum" cx="${f(sx(8))}" cy="${f(sy(sunY(8)))}" r="2.5"/>`);
+  add(t(Z0 + 0.6, 7.45, 'Sun at 19:30, 8° above the horizon', 't-sun'));
+
+  // ---- levels, on the right
+  const datum = (y, label) => [
+    l(16.6, y, 22.6, y, 'l-dim'),
+    `<path class="f-datum" d="M${f(sx(17.1))},${f(sy(y))} l${f(-0.18 * k)},${f(-0.3 * k)} l${f(0.36 * k)},0 Z"/>`,
+    t(17.5, y + 0.22, label, 't-lev'),
+  ];
+  add(...datum(8.05, '+8.05 roof'), ...datum(7.5, '+7.50 soffit'), ...datum(4.05, '+4.05 upper floor'), ...datum(0, '±0.00 lower floor'));
+  add(...[l(16.6, SEA, 22.6, SEA, 'l-dim'), t(17.5, SEA + 0.22, '−34.00 sea', 't-lev')]);
+  // dimension string behind the back wall
+  const dz = 11.6;
+  add(l(dz, 0, dz, 8.05, 'l-dim'));
+  for (const y of [0, 3.6, 4.05, 7.5, 8.05]) add(l(dz - 0.2, y - 0.2, dz + 0.2, y + 0.2, 'l-dim'));
+  for (const [y0, y1, s] of [[0, 3.6, '3.60'], [4.05, 7.5, '3.45']]) add(`<text class="t-dim" text-anchor="middle" transform="translate(${f(sx(dz) - 6)},${f(sy((y0 + y1) / 2))}) rotate(-90)">${s}</text>`);
+  // horizontal dimensions above the roof
+  const hd = (z0, z1, y, s) => [l(z0, y, z1, y, 'l-dim'), l(z0 - 0.2, y - 0.2, z0 + 0.2, y + 0.2, 'l-dim'), l(z1 - 0.2, y - 0.2, z1 + 0.2, y + 0.2, 'l-dim'), t((z0 + z1) / 2, y + 0.3, s, 't-dim', 'middle')];
+  add(...hd(-9.5, -4, 9.6, '5.50 roof beyond the glass'), ...hd(-4, 8, 9.6, '12.00 living pavilion'));
+  add(...hd(-8, -3.5, 2.9, '4.50 beyond the cliff edge'));
+  add(l(-3.5, 3.5, -3.5, 0.2, 'l-dim', 'stroke-dasharray="3 3"'));
+
+  // ---- material notes, set out in the clear space over the sea
+  const notes = [
+    [10.9, 'Bronze fascia over a 120 mm shadow gap', -9.5, 7.95],
+    [10.2, 'Concealed photovoltaic field, 86 m²', -2.0, 8.07],
+    [9.5, 'Oak soffit with recessed light lines', -6.5, 7.5],
+    [6.2, 'Low-iron glass, bronze frame, sliding', -4.0, 6.2],
+    [5.5, 'Frameless glass balustrade', -7.92, 4.8],
+    [4.8, 'Honed travertine on pedestals', -7.0, 4.08],
+    [1.9, 'Split-face limestone, 600 mm', -1.85, 0.8],
+    [1.2, 'Window band, deep reveal', -1.7, 2.0],
+    [-0.8, 'Footings on the bedrock', -1.85, -0.85],
+  ];
+  for (const [y, txt, tz, ty] of notes) add(t(-21.4, y, txt, 't-note'), pl([[-21.4 + txt.length * 0.19 + 0.2, y + 0.12], [tz - 0.6, y + 0.12], [tz, ty]], 'l-leader'), `<circle class="f-datum" cx="${f(sx(tz))}" cy="${f(sy(ty))}" r="2"/>`);
+  add(t(Z1 - 0.4, YS1 + 0.6, 'Section A–A · 1:100', 't-title', 'end'));
+  return sh.svg('Section A–A through the house and the top of the cliff');
 }
 
 // ---------------------------------------------------------------- approach map
