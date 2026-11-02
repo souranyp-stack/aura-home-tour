@@ -2,7 +2,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin';
-import { upperPlan, lowerPlan, sectionAA } from './drawings.js';
+import { upperPlan, lowerPlan, sectionAA, approachMap } from './drawings.js';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
 
@@ -13,7 +13,7 @@ gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
 const EASE = 'expo.out';
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-export function initPage({ filmEnd, onReadyStills, onReadySwatches }) {
+export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () => {} }) {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
@@ -21,12 +21,55 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches }) {
   $('#planUpper').innerHTML = upperPlan();
   $('#planLower').innerHTML = lowerPlan();
   $('#sectionDraw').innerHTML = sectionAA();
+  $('#approachMap').innerHTML = approachMap();
+
+  // ---------------------------------------------------------------- a day on the headland
+  // The section is a window onto the live scene: while it is on screen the
+  // renderer draws the house at the hour set by scroll position.
+  const SUNRISE = 6.4, SUNSET = 20.1;
+  const MOMENTS = [
+    [5.0, 'First light. The sea turns pewter before the sky does.'],
+    [7.2, 'Morning. Sun on the spine wall; the terrace still in shade.'],
+    [11.0, 'Noon. The deep roof keeps the glass in its own shadow.'],
+    [15.0, 'Afternoon. The stone has stored the heat and starts to give it back.'],
+    [18.6, 'Golden hour. The western face turns the colour of the cliff.'],
+    [20.2, 'Blue hour. The house begins to glow from inside.'],
+    [21.4, 'Night. A lantern on the headland.'],
+  ];
+  const dayClock = $('#dayClock'), daySun = $('#daySun'), dayArc = $('#dayArc'), dayMoment = $('#dayMoment');
+  let dayActive = false, dayT = 0, lastMoment = '';
+  const fmt = (h) => `${String(Math.floor(h) % 24).padStart(2, '0')}:${String(Math.floor((h % 1) * 60)).padStart(2, '0')}`;
+  const showDay = () => {
+    const hours = 5.4 + dayT * 18.0;
+    dayClock.textContent = fmt(hours);
+    const f = Math.min(1, Math.max(0, (hours - SUNRISE) / (SUNSET - SUNRISE)));
+    const a = Math.PI * f;
+    daySun.setAttribute('cx', (160 - 140 * Math.cos(a)).toFixed(1));
+    daySun.setAttribute('cy', (150 - 140 * Math.sin(a) + (hours > SUNSET ? 14 : hours < SUNRISE ? 14 : 0)).toFixed(1));
+    daySun.style.fill = hours > SUNSET + 0.3 || hours < SUNRISE - 0.2 ? '#9fb3d8' : '';
+    gsap.set(dayArc, { drawSVG: `0% ${(f * 100).toFixed(2)}%` });
+    let m = MOMENTS[0][1];
+    for (const [h, txt] of MOMENTS) if (hours >= h) m = txt;
+    if (m !== lastMoment) {
+      lastMoment = m;
+      gsap.to(dayMoment, { opacity: 0, y: -10, duration: 0.25, ease: 'power2.in', onComplete: () => {
+        dayMoment.textContent = m;
+        gsap.fromTo(dayMoment, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.7, ease: EASE });
+      } });
+    }
+    onDay(dayActive, dayT);
+  };
+  ScrollTrigger.create({ trigger: '#daylight', start: 'top bottom', end: 'bottom top', onToggle: (st) => { dayActive = st.isActive; onDay(dayActive, dayT); } });
+  ScrollTrigger.create({ trigger: '#daylight', start: 'top top', end: 'bottom bottom', scrub: true, onUpdate: (st) => { dayT = st.progress; showDay(); } });
+  showDay();
 
   if (reduced) {
     onReadySwatches();
     onReadyStills();
     return { heroIn: () => {}, frameIn: () => {} };
   }
+
+  const mm = gsap.matchMedia();
 
   // ---------------------------------------------------------------- split headings
   $$('[data-split]').forEach((el) => {
@@ -100,7 +143,6 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches }) {
   $$('.plan').forEach((p) => drawOn(p, 'top 85%', 'bottom 70%'));
 
   // ---------------------------------------------------------------- materials: pinned horizontal gallery
-  const mm = gsap.matchMedia();
   mm.add('(min-width: 901px)', () => {
     const track = $('#swatches');
     const pin = $('.materials__pin');
@@ -135,9 +177,50 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches }) {
     gsap.from($('figcaption', fig), { y: 20, opacity: 0, duration: 1.2, ease: EASE, scrollTrigger: { trigger: fig, start: 'top 70%', once: true } });
   });
 
+  // ---------------------------------------------------------------- details: windows open from the centre, a lens follows the cursor
+  $$('.detail').forEach((fig, i) => {
+    const frame = $('.detail__frame', fig);
+    const img = $('.detail__img', fig);
+    gsap.fromTo(frame, { '--clip': '18%' }, { '--clip': '0%', duration: 1.6, ease: 'power3.inOut', delay: (i % 3) * 0.08, scrollTrigger: { trigger: fig, start: 'top 88%', once: true } });
+    gsap.from($('figcaption', fig), { y: 20, opacity: 0, duration: 1.2, ease: EASE, delay: 0.3 + (i % 3) * 0.08, scrollTrigger: { trigger: fig, start: 'top 88%', once: true } });
+    frame.addEventListener('pointermove', (e) => {
+      const r = frame.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width) * 100, y = ((e.clientY - r.top) / r.height) * 100;
+      frame.style.setProperty('--mx', `${x}%`); frame.style.setProperty('--my', `${y}%`);
+      img.style.setProperty('--ox', `${x}%`); img.style.setProperty('--oy', `${y}%`);
+    });
+  });
+
+  // ---------------------------------------------------------------- the approach: the road draws itself, the car follows
+  const route = $('#route');
+  const len = route.getTotalLength();
+  const car = $('#routeCar');
+  const pinsG = $('#routePins');
+  const steps = $$('#approachSteps li');
+  const pins = steps.map((li) => {
+    const pt = route.getPointAtLength(parseFloat(li.dataset.at) * len);
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('class', 'pin'); c.setAttribute('r', '7'); c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y);
+    pinsG.appendChild(c);
+    return c;
+  });
+  const drive = (prog) => {
+    gsap.set(route, { drawSVG: `0% ${(prog * 100).toFixed(2)}%` });
+    const pt = route.getPointAtLength(prog * len);
+    car.setAttribute('cx', pt.x); car.setAttribute('cy', pt.y);
+    steps.forEach((li, i) => { const on = prog >= parseFloat(li.dataset.at) - 0.001; li.classList.toggle('is-on', on); pins[i].classList.toggle('is-on', on); });
+  };
+  drive(0);
+  mm.add('(min-width: 901px)', () => {
+    ScrollTrigger.create({ trigger: '#approach', pin: '.approach__pin', start: 'top top', end: '+=160%', scrub: 0.6, onUpdate: (st) => drive(st.progress) });
+  });
+  mm.add('(max-width: 900px)', () => {
+    ScrollTrigger.create({ trigger: '#approachMap', start: 'top 80%', end: 'bottom 40%', scrub: 0.6, onUpdate: (st) => drive(st.progress) });
+  });
+
   // the stills are rendered from the live model just before they are needed
   ScrollTrigger.create({ trigger: '#materials', start: 'top bottom', once: true, onEnter: () => onReadySwatches() });
-  ScrollTrigger.create({ trigger: '#spaces', start: 'top 180%', once: true, onEnter: () => onReadyStills() });
+  ScrollTrigger.create({ trigger: '#details', start: 'top 200%', once: true, onEnter: () => onReadyStills() });
 
   // ---------------------------------------------------------------- call to action
   gsap.fromTo('.cta__bg', { '--zoom': 1.18, '--py': '-5%' }, { '--zoom': 1.02, '--py': '5%', ease: 'none', scrollTrigger: { trigger: '.cta', start: 'top bottom', end: 'bottom top', scrub: true } });

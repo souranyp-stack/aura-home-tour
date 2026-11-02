@@ -191,6 +191,13 @@ async function boot() {
     terrace: { pos: [22, 5.3, -23], tgt: [1, 4.9, -5], fov: 36, env: { time: 19.5, mist: 0.06, interior: 0.45, fire: 0, veil: 0 } },
     hearth: { pos: [0.9, 5.35, 1.0], tgt: [-7.2, 4.85, 5.75], fov: 46, env: { time: 21.7, mist: 0.06, interior: 0.85, fire: 1, veil: 0.65 } },
     fog: { pos: [-46, -4, -72], tgt: [4, 1, 0], fov: 30, env: { time: 7.1, mist: 0.55, interior: 0.3, fire: 0, veil: 0 } },
+    // Details at 1:1
+    roofEdge: { pos: [20.6, 6.3, -12.9], tgt: [16.6, 7.75, -8.9], fov: 30, env: { time: 19.3, mist: 0.04, interior: 0.5, fire: 0, veil: 0 } },
+    leather: { pos: [0.35, 4.78, 0.15], tgt: [-0.5, 4.58, 0.8], fov: 30, env: { time: 19.6, mist: 0.04, interior: 0.75, fire: 1, veil: 0 } },
+    pool: { pos: [12.8, 4.3, -9.7], tgt: [10.2, 3.95, -7.6], fov: 34, env: { time: 19.4, mist: 0.04, interior: 0.4, fire: 0, veil: 0 } },
+    stone: { pos: [-7.6, 3.8, -15.2], tgt: [-9.6, 3.0, -11.0], fov: 30, env: { time: 19.2, mist: 0.04, interior: 0.3, fire: 0, veil: 0 } },
+    teak: { pos: [-3.05, 4.85, -7.05], tgt: [-3.95, 4.33, -6.25], fov: 34, env: { time: 19.4, mist: 0.04, interior: 0.4, fire: 0, veil: 0 } },
+    fire: { pos: [-5.7, 4.98, 5.1], tgt: [-7.2, 4.84, 5.75], fov: 36, env: { time: 21.6, mist: 0.04, interior: 0.35, fire: 1, veil: 0 } },
   };
   let stillN = 0;
   function still(kind) {
@@ -215,6 +222,44 @@ async function boot() {
     return canvas.toDataURL('image/jpeg', 0.9);
   }
 
+  // A day on the headland: the finished house from the sea at a scrolled hour.
+  const day = { active: false, t: 0 };
+  const dayFrom = new THREE.Vector3(-30, 9, -80), dayTo = new THREE.Vector3(-16, 7, -86);
+  const dayTgt = new THREE.Vector3(3, 2.8, 0);
+  function applyDay(t, time) {
+    const hours = 5.4 + t * 18.0;
+    house.update(1, 0);
+    aura.uSweep.value = 18;
+    aura.uTime.value = time;
+    interior.root.visible = true;
+    house.door.position.x = doorX;
+    house.door.position.z = doorZ;
+    land.group.visible = veg.visible = true;
+    const S = THREE.MathUtils.smoothstep;
+    const env = {
+      time: hours,
+      mist: 0.04 + 0.32 * (1 - S(hours, 5.6, 8.2)) + 0.05 * S(hours, 21, 23),
+      interior: Math.max(0.55 * (1 - S(hours, 6.4, 7.4)), 0.95 * S(hours, 19.6, 20.8)),
+      fire: S(hours, 20.0, 20.6),
+      veil: 0,
+    };
+    const sky = atmo.update({ studio: 0, time: hours, mist: env.mist, worldR: 2800, voidOpacity: 0, now: time, dust: 0 });
+    interior.update(env, time);
+    M.glassDark.emissive.copy(warmGlow).multiplyScalar(env.interior * (1 - sky.daylight) * 0.5);
+    M.textures.waves.normalMap.offset.set(time * 0.012, time * 0.007);
+    if (post.ao) post.ao.enabled = false;
+    camera.position.lerpVectors(dayFrom, dayTo, t);
+    camera.position.y += Math.sin(time * 0.3) * 0.08;
+    camera.aspect = innerWidth / innerHeight;
+    camera.fov = camera.aspect < 1.6
+      ? Math.min(62, THREE.MathUtils.lerp(25, THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(25) / 2) * 1.6 / camera.aspect)), 0.8))
+      : 25;
+    if (camera.aspect >= 1) camera.setViewOffset(innerWidth, innerHeight, -0.1 * innerWidth, 0, innerWidth, innerHeight);
+    else camera.setViewOffset(innerWidth, innerHeight, 0, innerHeight * 0.08, innerWidth, innerHeight);
+    camera.updateProjectionMatrix();
+    camera.lookAt(dayTgt);
+  }
+
   // Compile every program up front so reveals never hitch.
   mark('atmosphere');
   status('Polishing the glass', 0.86);
@@ -234,6 +279,7 @@ async function boot() {
   let swatchesDone = false, stillsDone = false;
   page = initPage({
     filmEnd,
+    onDay: (active, t) => { day.active = active; day.t = t; },
     onReadySwatches: () => {
       if (swatchesDone) return;
       swatchesDone = true;
@@ -253,8 +299,8 @@ async function boot() {
       const shots = {};
       const go = () => {
         // stills need the canvas hidden behind the page; wait until it is
-        if (!covered) { setTimeout(go, 250); return; }
-        for (const kind of ['terrace', 'hearth', 'fog']) shots[kind] = still(kind);
+        if (!covered || day.active) { setTimeout(go, 250); return; }
+        for (const kind of Object.keys(STILLS)) shots[kind] = still(kind);
         document.querySelectorAll('[data-still]').forEach((el) => setBg(el, shots[el.dataset.still]));
         document.querySelectorAll('[data-still-bg]').forEach((el) => setBg(el, shots[el.dataset.stillBg]));
       };
@@ -279,6 +325,7 @@ async function boot() {
   addEventListener('resize', onResize);
   onResize();
   let sizeKey = '';
+  let canvasShown = true;
 
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.1);
@@ -289,9 +336,15 @@ async function boot() {
     // Lenis already eases the scroll; this only removes the last bit of jitter
     prog += (target - prog) * (1 - Math.exp(-dt * (reducedMotion ? 4.2 : 9)));
     pointerEased.lerp(pointer, 1 - Math.exp(-dt * 2.5));
-    // once the landing page covers the canvas there is nothing to draw
-    if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; return; }
-    apply(prog, time, dt);
+    // once the landing page covers the canvas there is nothing to draw,
+    // except while the daylight section holds its window open onto the scene
+    // the canvas is only shown where it is meant to be seen: the film, or the
+    // daylight window; any gap between page sections shows the page colour
+    const showCanvas = day.active || !covered;
+    if (showCanvas !== canvasShown) { canvasShown = showCanvas; canvas.style.visibility = showCanvas ? 'visible' : 'hidden'; }
+    if (day.active) applyDay(day.t, time);
+    else if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; return; }
+    else apply(prog, time, dt);
     post.grade.uniforms.uTime.value = time;
     post.composer.render();
 
@@ -330,6 +383,7 @@ async function boot() {
       setProgress: (p) => { prog = target = p; },
       post,
       renderAt: (p, t = 10) => { prog = target = p; apply(p, t, 0.016); post.composer.render(); },
+      renderDay: (t, time = 10) => { applyDay(t, time); post.composer.render(); },
     };
     // contact sheets of exact scroll positions, posted to a local capture server
     const send = (name, c) => fetch(`http://127.0.0.1:5299/save?name=${name}`, { method: 'POST', body: c.toDataURL('image/jpeg', 0.88) });

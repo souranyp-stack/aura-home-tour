@@ -195,11 +195,11 @@ void main(){
   vec2 uv = vUv;
   float t = uTime;
   float tongues = fbm(vec2(uv.x * 9.0, uv.y * 2.5 - t * 2.6));
-  float body = (1.0 - uv.y) * (0.55 + tongues * 0.95) - 0.22;
+  float body = (1.0 - uv.y) * (0.5 + tongues * 1.05) - 0.3;
   float f = smoothstep(0.0, 0.55, body);
   f *= smoothstep(0.0, 0.07, uv.x) * smoothstep(1.0, 0.93, uv.x);
   vec3 col = mix(vec3(1.0, 0.22, 0.03), vec3(1.0, 0.72, 0.36), smoothstep(0.35, 0.95, f));
-  gl_FragColor = vec4(col * f * uIntensity * 2.4, 1.0);
+  gl_FragColor = vec4(col * f * f * uIntensity * 1.15, 1.0);
 }`;
 
 export function createInterior(M) {

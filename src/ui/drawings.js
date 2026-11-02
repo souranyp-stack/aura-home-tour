@@ -220,3 +220,33 @@ export function sectionAA() {
   sh.add(t(Z1 - 1, Y1 - 1.6, 'Section A–A', 't-dim', 'end'));
   return sh.svg('Section A–A through the house and the cliff');
 }
+
+// ---------------------------------------------------------------- approach map
+// A stylised survey of the coast: the harbour village to the north-west, the
+// road along the hills, the headland and the house at its tip.
+export function approachMap() {
+  const coast = 'M0,300 C120,282 168,338 232,362 C300,386 262,468 304,520 C344,566 300,642 362,654 C424,666 432,566 486,562 C566,556 604,642 704,642 C806,642 864,702 1000,700';
+  const land = `${coast} L1000,0 L0,0 Z`;
+  const road = 'M128,252 C262,176 430,196 530,262 C642,334 772,392 712,478 C664,548 548,500 486,562 C442,606 398,600 352,628';
+  const contours = [1, 2, 3, 4, 5, 6].map((i) =>
+    `<path class="contour" d="${coast}" transform="translate(${i * 9},${-i * 34}) scale(${1 - i * 0.012})"/>`).join('');
+  const grid = [];
+  for (let x = 100; x < 1000; x += 100) grid.push(`<line class="grid" x1="${x}" y1="0" x2="${x}" y2="760"/>`);
+  for (let y = 100; y < 760; y += 100) grid.push(`<line class="grid" x1="0" y1="${y}" x2="1000" y2="${y}"/>`);
+  return `<svg class="map" xmlns="${NS}" viewBox="0 0 1000 760" role="img" aria-label="Route from the harbour village along the coast road to the house">
+    <defs><clipPath id="landClip"><path d="${land}"/></clipPath></defs>
+    <rect class="sea" width="1000" height="760"/>
+    ${grid.join('')}
+    <path class="land" d="${land}"/>
+    <g clip-path="url(#landClip)">${contours}</g>
+    <text class="sea-label" x="120" y="560">Open sea</text>
+    <text x="150" y="232">Harbour</text>
+    <path class="road-bg" d="${road}"/>
+    <path class="road" id="route" d="${road}"/>
+    <g id="routePins"></g>
+    <circle class="car" id="routeCar" r="6" cx="128" cy="252"/>
+    <text class="big" x="300" y="700">AURA</text>
+    <g transform="translate(860,80)"><circle class="pin" r="16"/><path d="M0,-11 L4,4 L0,1 L-4,4 Z" fill="rgba(244,239,230,0.8)"/><text x="0" y="-24" text-anchor="middle">N</text></g>
+    <g transform="translate(760,720)"><line x1="0" y1="0" x2="160" y2="0" stroke="rgba(244,239,230,0.6)"/><line x1="0" y1="-5" x2="0" y2="5" stroke="rgba(244,239,230,0.6)"/><line x1="160" y1="-5" x2="160" y2="5" stroke="rgba(244,239,230,0.6)"/><text x="80" y="-10" text-anchor="middle">1 km</text></g>
+  </svg>`;
+}
