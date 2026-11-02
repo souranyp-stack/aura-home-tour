@@ -41,6 +41,7 @@
       <a href="#daylight">A day</a>
       <a href="#materials">Materials</a>
       <a href="#details">Details</a>
+      <button type="button" data-walk>Walk</button>
     </nav>
     <a class="pill" href="#enquire" data-metal>Private viewing</a>
   </header>
@@ -56,6 +57,7 @@
           <p class="hero__sub"><em>The living</em> sanctuary</p>
           <div class="hero__aside">
             <p class="hero__lede">Nine masses, held apart in the air. Scroll, and they come down into a house on the edge of the sea.</p>
+            <button class="link hero__walk" type="button" data-walk>Or walk it freely</button>
             <a class="hero__begin" href="#" data-begin>
               <svg viewBox="0 0 120 120" aria-hidden="true">
                 <defs><path id="ring" d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0" /></defs>
@@ -118,8 +120,8 @@
         <h2>Live in it<br /><em>at any hour</em></h2>
         <p>The house is rendered live. Change the hour, the weather, the lights and the fire, and watch the stone respond.</p>
         <div class="frame__cta">
+          <button class="pill" type="button" data-walk data-metal>Walk the house</button>
           <a class="pill" href="#enquire" data-metal>Request a viewing</a>
-          <a class="link" href="#residence">Read about the house</a>
         </div>
       </section>
     </main>
@@ -286,7 +288,10 @@
       <div class="sec__label" data-reveal><span>07</span>Spaces</div>
       <div class="sec__head">
         <h2 class="display display--s" id="spaces-h" data-split>Three hours of the same day.</h2>
-        <p data-reveal>Taken from the live model as you reach this section. Each one is the same house at a different hour.</p>
+        <div class="spaces__intro">
+          <p data-reveal>Taken from the live model as you reach this section. Each one is the same house at a different hour.</p>
+          <div class="spaces__walk" data-reveal><button class="pill" type="button" data-walk data-metal>Walk through it yourself</button></div>
+        </div>
       </div>
       <div class="stills">
         <figure class="still still--wide"><div class="still__frame"><div class="still__img" data-still="terrace"></div></div><figcaption><span>19:30</span>The terrace and the vanishing edge</figcaption></figure>
@@ -377,6 +382,26 @@
       <p class="foot__word" aria-hidden="true">AURA</p>
       <div class="foot__small"><span>© 2026 AURA</span><span>Concept, not for sale</span><span>Built with three.js and GSAP</span></div>
     </footer>
+  </div>
+
+  <!-- ─────────────── walking the house ─────────────── -->
+  <div class="walk" id="walk" role="dialog" aria-label="Walk through the house" hidden>
+    <div class="walk__surface" aria-hidden="true"></div>
+    <div class="walk__ui">
+      <div class="walk__where" aria-live="polite">
+        <h2 id="walkWhere"></h2>
+        <p id="walkNote"></p>
+      </div>
+      <button class="walk__leave" type="button">Leave <kbd>Esc</kbd></button>
+      <div class="walk__map" aria-hidden="true"></div>
+      <div class="walk__dock">
+        <p class="walk__hint"><span class="walk__hint-mouse">Drag to look. Click the floor, or use W A S D, to walk. Hold Shift to go faster.</span><span class="walk__hint-touch">Drag to look. Use the stick, or tap the floor, to walk.</span></p>
+        <div class="walk__places" role="group" aria-label="Go to a place"></div>
+        <div class="walk__hours" role="group" aria-label="Time of day"></div>
+      </div>
+      <div class="walk__stick" aria-hidden="true"><i></i></div>
+    </div>
+    <div class="walk__veil" aria-hidden="true"></div>
   </div>
 
   <script type="module" src="/src/main.js"></script>

@@ -25,6 +25,7 @@ const K = 20; // px per metre
 const W = (PX1 - PX0) * K, H = (PZ1 - PZ0) * K;
 const X = (x) => (x - PX0) * K;
 const Y = (z) => (PZ1 - z) * K;
+export const planXY = (x, z) => [X(x), Y(z)];
 
 const rect = (x0, z0, x1, z1, cls, extra = '') =>
   `<rect class="${cls}" ${extra} x="${f(X(Math.min(x0, x1)))}" y="${f(Y(Math.max(z0, z1)))}" width="${f(Math.abs(x1 - x0) * K)}" height="${f(Math.abs(z1 - z0) * K)}"/>`;
@@ -97,9 +98,9 @@ export function upperPlan() {
   sh.add(rect(16.7, 1, 17.5, 7, 'f-hatch'));
   sh.add(rect(-9, 4.5, -7.2, 7, 'f-hatch'));
   // external stair down to the court
-  sh.add(rect(12.2, 6, 13.8, 10, 'l-thin'));
-  for (let i = 1; i < 14; i++) sh.add(line(12.2, 6 + i * 0.29, 13.8, 6 + i * 0.29, 'l-fur'));
-  sh.add(text(13, 5.2, 'Down', 't-dim'));
+  sh.add(rect(12.2, 10, 13.8, 16.4, 'l-thin'));
+  for (let i = 1; i < 22; i++) sh.add(line(12.2, 10 + i * 0.291, 13.8, 10 + i * 0.291, 'l-fur'));
+  sh.add(text(13, 8.9, 'Down', 't-dim'));
   furnitureUpper(sh);
   // section mark A–A through the door
   sh.add(line(2.25, -10.8, 2.25, 15.5, 'l-dim', 'stroke-dasharray="10 4 2 4"'));
@@ -126,6 +127,10 @@ export function lowerPlan() {
   sh.add(circle(9.5, 13.2, 2.4, 'l-fur'));
   sh.add(circle(9.5, 13.2, 0.25, 'l-fur'));
   sh.add(text(3, 13.6, 'Entry court'));
+  // the external stair, landing at the edge of the court
+  sh.add(rect(12.2, 10, 13.8, 16.4, 'l-thin'));
+  for (let i = 1; i < 22; i++) sh.add(line(12.2, 10 + i * 0.291, 13.8, 10 + i * 0.291, 'l-fur'));
+  sh.add(text(13, 17, 'Up', 't-dim'));
   // stone plinth: outer face, inner face (wall poche between)
   sh.add(rect(-13, -2, 15, 10, 'l-solid'));
   sh.add(rect(-12.4, -1.4, 14.4, 9.4, 'l-cut', 'style="fill:#121110"'));

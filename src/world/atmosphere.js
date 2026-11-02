@@ -98,18 +98,18 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   water.rotation.x = -Math.PI / 2;
   water.position.y = SEA;
   water.material.uniforms.size.value = 1.6;
-  Object.assign(water.material.uniforms, { uWorldR: aura.uWorldR, uVoid: aura.uVoid });
+  Object.assign(water.material.uniforms, { uWorldR: aura.uWorldR });
   water.material.fragmentShader = water.material.fragmentShader
     // physically plausible reflectance (F0 ≈ 0.02) and no grey lift in the mirror term
     .replace('float rf0 = 0.3;', 'float rf0 = 0.02;')
     .replace('( vec3( 0.1 ) + reflectionSample * 0.9 + reflectionSample * specularLight )', '( reflectionSample + reflectionSample * specularLight )')
-    .replace('uniform vec3 waterColor;', 'uniform vec3 waterColor;\nuniform float uWorldR;\nuniform vec3 uVoid;')
+    .replace('uniform vec3 waterColor;', 'uniform vec3 waterColor;\nuniform float uWorldR;')
     .replace(
       '#include <fog_fragment>',
       `#include <fog_fragment>
       float wd = length(worldPosition.xz - vec2(3.0, 2.0));
       float wv = 1.0 - smoothstep(uWorldR - 80.0, uWorldR, wd);
-      gl_FragColor.rgb = mix(uVoid, gl_FragColor.rgb, wv);`
+      gl_FragColor.rgb = mix(fogColor, gl_FragColor.rgb, wv);`
     );
   scene.add(water);
   const mirrorExcluded = [];
@@ -224,6 +224,16 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   scene.add(hemi);
 
   scene.fog = new THREE.FogExp2(0x000000, 0.001);
+
+  // Below the horizon the sky is black, so a skirt in the fog's colour carries the
+  // far sea into the haze where the water ends.
+  const skirt = new THREE.Mesh(
+    new THREE.SphereGeometry(8500, 48, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+    new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false }),
+  );
+  skirt.frustumCulled = false;
+  skirt.renderOrder = -11;
+  scene.add(skirt);
 
   // Environment for reflections and ambient: a second sky plus a dark sea disc.
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -349,6 +359,8 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     water.material.uniforms.waterColor.value.setRGB(0.012, 0.07, 0.095).multiplyScalar(0.3 + 0.7 * day);
     water.material.uniforms.time.value = state.now * 0.6;
     water.visible = state.worldR > 1;
+    skirt.visible = state.worldR > 1;
+    skirt.material.color.copy(scene.fog.color);
 
     scene.environmentIntensity = THREE.MathUtils.lerp(0.1 + 0.9 * day * (1 - 0.45 * gold), 0.42, state.studio);
 

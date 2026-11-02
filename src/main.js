@@ -11,6 +11,7 @@ import { createPost } from './core/post.js';
 import { createUI } from './ui/ui.js';
 import { initPage } from './ui/page.js';
 import { renderSamples } from './world/samples.js';
+import { createWalk } from './ui/walk.js';
 import Lenis from 'lenis';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -260,6 +261,33 @@ async function boot() {
     camera.lookAt(dayTgt);
   }
 
+  // Walking the house: the finished model, with the sea door slid open.
+  const walk = createWalk({
+    camera, scene, plantings: land.plantings,
+    onOpen: () => lenis?.stop(),
+    onClose: () => { lenis?.start(); readScroll(); },
+  });
+  function applyWalk(time, dt) {
+    walk.update(dt);
+    const env = walk.env;
+    house.update(1, 0);
+    aura.uSweep.value = 18;
+    aura.uTime.value = time;
+    interior.root.visible = true;
+    house.door.position.x = doorX + 2.46;
+    house.door.position.z = doorZ - 0.07;
+    land.group.visible = veg.visible = true;
+    const sky = atmo.update({ studio: 0, time: env.time, mist: env.mist, worldR: 2800, voidOpacity: 0, now: time, dust: 0 });
+    interior.update(env, time);
+    M.glassDark.emissive.copy(warmGlow).multiplyScalar(env.interior * (1 - sky.daylight) * 0.35);
+    M.textures.waves.normalMap.offset.set(time * 0.012, time * 0.007);
+    if (post.ao) post.ao.enabled = true;
+    camera.clearViewOffset();
+    camera.aspect = innerWidth / innerHeight;
+    camera.fov = camera.aspect < 1 ? 74 : 60;
+    camera.updateProjectionMatrix();
+  }
+
   // Compile every program up front so reveals never hitch.
   mark('atmosphere');
   status('Polishing the glass', 0.86);
@@ -299,7 +327,7 @@ async function boot() {
       const shots = {};
       const go = () => {
         // stills need the canvas hidden behind the page; wait until it is
-        if (!covered || day.active) { setTimeout(go, 250); return; }
+        if (!covered || day.active || walk.active) { setTimeout(go, 250); return; }
         for (const kind of Object.keys(STILLS)) shots[kind] = still(kind);
         document.querySelectorAll('[data-still]').forEach((el) => setBg(el, shots[el.dataset.still]));
         document.querySelectorAll('[data-still-bg]').forEach((el) => setBg(el, shots[el.dataset.stillBg]));
@@ -350,9 +378,10 @@ async function boot() {
     // except while the daylight section holds its window open onto the scene
     // the canvas is only shown where it is meant to be seen: the film, or the
     // daylight window; any gap between page sections shows the page colour
-    const showCanvas = day.active || !covered;
+    const showCanvas = walk.active || day.active || !covered;
     if (showCanvas !== canvasShown) { canvasShown = showCanvas; canvas.style.visibility = showCanvas ? 'visible' : 'hidden'; }
-    if (day.active) applyDay(day.t, time);
+    if (walk.active) applyWalk(time, dt);
+    else if (day.active) applyDay(day.t, time);
     else if (covered && Math.abs(target - prog) < 1e-4) { lastFrameAt = 0; return; }
     else apply(prog, time, dt);
     post.grade.uniforms.uTime.value = time;

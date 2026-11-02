@@ -110,6 +110,25 @@ export function createHouse(M) {
       g.add(box(alongX ? len : 0.08, 0.05, alongX ? 0.08 : len, M.bronze, x, 0.225 + 0.025, z, 0.008));
     };
     rail(13.3, -6.25, -8.9, true);
+    // external stair from the east deck down to the court: 22 solid stone steps
+    // rising from grade, in slab coordinates (world x - 3, y - (FL - 0.225), z - 1)
+    {
+      const STEPS = 22, rise = (FL - 0.24) / STEPS, run = 6.4 / STEPS, top = 0.225;
+      for (let i = 0; i < STEPS; i++) {
+        const y = top - i * rise;
+        const bottom = -FL + 0.225 + 0.24;
+        const h = y - bottom;
+        g.add(box(1.6, h - 0.05, run, M.limestone, 10, y - 0.05 - (h - 0.05) / 2, 9 + run * (i + 0.5)));
+        g.add(box(1.68, 0.05, run + 0.02, M.travertine, 10, y - 0.025, 9 + run * (i + 0.5)));
+      }
+      const slope = Math.hypot(6.4, FL - 0.24);
+      for (const x of [9.14, 10.86]) {
+        const handrail = box(0.04, 0.04, slope, M.bronze, x, top + 0.86 - (FL - 0.24) / 2, 9 + 3.2);
+        handrail.rotation.x = Math.atan2(FL - 0.24, 6.4);
+        g.add(handrail);
+        for (const t of [0.08, 0.5, 0.92]) g.add(box(0.025, 0.86, 0.025, M.bronze, x, top - t * (FL - 0.24) + 0.43, 9 + t * 6.4));
+      }
+    }
     add('slab', g, new THREE.Vector3(3, FL - 0.225, 1),
       { pos: new THREE.Vector3(3, 9.85, 2), quat: q(0, 22, 0), spin: 0.55 }, [0.3, 0.62]);
   }
