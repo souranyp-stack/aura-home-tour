@@ -152,7 +152,7 @@ em { font-style: italic; }
 .stats { display: flex; gap: 28px; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
 .stats dt { font-family: var(--serif); font-size: 30px; line-height: 1; }
 .stats dd { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--faint); margin-top: 8px; }
-.cta { display: flex; align-items: center; gap: 22px; margin-top: 26px; flex-wrap: wrap; }
+.frame__cta { display: flex; align-items: center; gap: 22px; margin-top: 26px; flex-wrap: wrap; }
 .link { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; border-bottom: 1px solid var(--bronze); padding-bottom: 3px; }
 
 /* bottom chapter index */
@@ -233,7 +233,7 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
 .manifesto__sign { font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--faint); justify-self: end; margin-right: 8vw; }
 .manifesto__label { display: flex; gap: 14px; align-items: baseline; font-size: 11px; letter-spacing: 0.26em; text-transform: uppercase; color: var(--mute); }
 .manifesto__label span { font-family: var(--serif); font-size: 15px; color: var(--bronze); }
-.manifesto__text { font-family: var(--serif); font-weight: 300; font-size: clamp(40px, 6.6vw, 128px); line-height: 1.0; letter-spacing: -0.018em; max-width: 19ch; text-indent: 1.6em; }
+.manifesto__text { font-family: var(--serif); font-weight: 300; font-size: clamp(42px, 7.6vw, 150px); line-height: 0.98; letter-spacing: -0.02em; max-width: 25ch; text-indent: 2.2em; text-wrap: balance; }
 .manifesto__text .w { opacity: 0.13; text-indent: 0; }
 .manifesto__text .w.is-key { font-style: italic; color: var(--bronze); }
 
@@ -426,12 +426,13 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.24 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E"),
     radial-gradient(140% 90% at 50% 40%, rgba(255, 252, 244, 0.6), rgba(214, 202, 178, 0.35));
 }
-.fold__front::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(60, 48, 30, 0.12), rgba(60, 48, 30, 0) 6%, rgba(60, 48, 30, 0) 94%, rgba(60, 48, 30, 0.08)); }
+.fold__front::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(60, 48, 30, 0.1), rgba(60, 48, 30, 0) 5%, rgba(255, 255, 255, 0.05) 50%, rgba(60, 48, 30, 0) 95%, rgba(60, 48, 30, 0.07)), linear-gradient(180deg, rgba(255, 252, 244, 0.25), rgba(255, 252, 244, 0) 30%, rgba(80, 64, 40, 0.06)); }
 .fold__back { transform: rotateY(180deg); background-color: #e8e0cd; }
 .fold__back::after { content: ''; position: absolute; inset: 14% 18%; border: 1px solid rgba(60, 50, 38, 0.18); }
 .fold__shade { position: absolute; inset: 0; background: #1a120a; opacity: var(--shade, 0); pointer-events: none; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .fold__front svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.sheet__paper::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: calc(var(--pw) * 4); transform: translateZ(-1px); box-shadow: 0 40px 90px rgba(0, 0, 0, var(--drop, 0.55)); pointer-events: none; }
+/* the shadow on the table follows the open width of the sheet */
+.sheet__paper::after { content: ''; position: absolute; left: 2%; top: 3%; height: 94%; width: calc(var(--pw) * var(--span, 1) * 0.96); transform: translateZ(-2px); background: rgba(0, 0, 0, 0.35); filter: blur(18px); box-shadow: 0 50px 80px rgba(0, 0, 0, var(--drop, 0.55)); pointer-events: none; }
 /* ink on paper */
 .paper-svg { --ink-c: #2a2520; }
 .paper-svg .frame { fill: none; stroke: var(--ink-c); stroke-width: 1.6; }
@@ -497,7 +498,7 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
   .controls { left: 12px; right: 12px; width: auto; top: auto; bottom: calc(var(--bar) + 8px); transform: translateY(20px); padding: 16px; gap: 12px; }
   .controls.is-live { transform: none; }
   .frame--atmo { top: calc(var(--gutter) + 64px); bottom: auto; }
-  .frame--atmo p:not(.numeral), .frame--atmo .cta { display: none; }
+  .frame--atmo p:not(.numeral), .frame--atmo .frame__cta { display: none; }
   .spec li { grid-template-columns: 80px 1fr; font-size: 13px; }
   .stats { gap: 18px; }
   .stats dt { font-size: 24px; }

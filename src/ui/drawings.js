@@ -51,8 +51,8 @@ function furnitureUpper(sh) {
   sh.add(rect(-4.68, 4.32, -1.32, 4.62, 'l-fur'));
   sh.add(rect(-3.85, 1.95, -2.15, 2.85, 'l-fur'));
   sh.add(circle(-1.75, 2.95, 0.32, 'l-fur'));
-  sh.add(poly(rotRect(-5.4, 1.0, 0.74, 0.8, -Math.PI * 0.82), 'l-fur'));
-  sh.add(poly(rotRect(-0.6, 0.9, 0.74, 0.8, Math.PI * 0.82), 'l-fur'));
+  sh.add(poly(rotRect(-4.95, 1.4, 0.82, 0.84, Math.PI * 0.68), 'l-fur'));
+  sh.add(poly(rotRect(-1.05, 1.4, 0.82, 0.84, -Math.PI * 0.68), 'l-fur'));
   sh.add(rect(4.9, 2.45, 8.1, 3.55, 'l-fur'));
   for (const x of [5.4, 6.5, 7.6]) { sh.add(rect(x - 0.24, 1.96, x + 0.24, 2.44, 'l-fur')); sh.add(rect(x - 0.24, 3.56, x + 0.24, 4.04, 'l-fur')); }
   sh.add(circle(6.5, 3.0, 0.8, 'l-fur'));

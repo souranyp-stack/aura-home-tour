@@ -255,12 +255,13 @@ export function createInterior(M) {
   s.position.set(-3, FL, 4.1);
   root.add(s);
   const c1 = loungeChair(M);
-  c1.position.set(-5.4, FL, 1.0);
-  c1.rotation.y = Math.PI * 0.82;
+  // the pair faces the coffee table and the sofa across the rug
+  c1.position.set(-4.95, FL, 1.4);
+  c1.rotation.y = -Math.PI * 0.68;
   root.add(c1);
   const c2 = loungeChair(M);
-  c2.position.set(-0.6, FL, 0.9);
-  c2.rotation.y = -Math.PI * 0.82;
+  c2.position.set(-1.05, FL, 1.4);
+  c2.rotation.y = Math.PI * 0.68;
   root.add(c2);
   // coffee table: two honed travertine slabs on a recessed plinth, offset like a step
   root.add(mesh(rbox(1.2, 0.2, 0.62, 0.01), M.travertine, -3.15, FL + 0.1, 2.42));

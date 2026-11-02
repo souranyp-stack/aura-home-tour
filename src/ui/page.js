@@ -79,7 +79,7 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
     }
     // accordion: each panel folds back on its neighbour, alternating, a few
     // degrees short of flat so the packet has the thickness of real paper
-    const FOLDED = [0, 176, -176, 176];
+    const FOLDED = [0, 179.4, -179.4, 179.4];
     const WINDOWS = [null, [0.14, 0.36], [0.26, 0.48], [0.38, 0.6]];
     const ease = gsap.parseEase('power2.inOut');
     const st = (p, a, b) => { const t = Math.min(1, Math.max(0, (p - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -92,10 +92,12 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
     size();
     addEventListener('resize', size);
 
-    // ink: every stroke on the sheet is drawn as it opens; notes come last
-    const strokes = $$('.fold__front svg :is(line, rect, polyline, polygon, circle, path)', paper).filter((n) => !n.closest('pattern') && !n.closest('.notes'));
-    const fills = $$('.fold__front svg :is(.f-hatch, .l-solid, .f-water)', paper);
-    const words = $$('.fold__front svg text', paper).filter((n) => !n.closest('.notes'));
+    // ink: the title block is printed from the start (it is the cover when
+    // folded); the plan itself is drawn as the sheet opens; notes come last
+    const plan = '.fold__front .paper-svg > svg.drw:last-of-type';
+    const strokes = $$(`${plan} :is(line, rect, polyline, polygon, circle, path)`, paper).filter((n) => !n.closest('pattern'));
+    const fills = $$(`${plan} :is(.f-hatch, .l-solid, .f-water)`, paper);
+    const words = $$(`${plan} text`, paper);
     const notes = $$('.fold__front .notes path', paper);
     const noteText = $$('.fold__front .notes text', paper);
     const ink = gsap.timeline({ paused: true })
@@ -120,14 +122,16 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
       const c = pw / 2 + 1.5 * pw * U;
       gsap.set(paper, {
         transformOrigin: `${c.toFixed(1)}px 50%`,
-        x: -1.5 * pw * U,
-        y: (1 - arrive) * innerHeight * 0.5 + (1 - flat) * innerHeight * 0.05,
-        rotationX: 52 * (1 - flat),
-        rotation: -10 * (1 - flat) + (phone ? 90 * flat : 0),
+        // folded, the packet sits to the right of the copy; it moves to centre as it opens
+        x: -1.5 * pw * U + (phone ? 0 : innerWidth * 0.14 * (1 - U)),
+        y: (1 - arrive) * innerHeight * 0.5 + (1 - flat) * innerHeight * 0.06 + (phone ? innerHeight * 0.08 * (1 - flat) : 0),
+        rotationX: 40 * (1 - flat),
+        rotation: -7 * (1 - flat) + (phone ? 90 * flat : 0),
         scale: (0.62 + 0.38 * flat) * (1 + (phone ? 0 : 0.12) * zoom),
         opacity: arrive,
       });
       paper.style.setProperty('--drop', (0.6 - 0.25 * flat).toFixed(2));
+      paper.style.setProperty('--span', (1 + 3 * U).toFixed(3));
       ink.progress(st(p, 0.18, 0.84));
       pen.progress(st(p, 0.8, 0.98));
       copy.style.opacity = (1 - st(p, 0.42, 0.58)).toFixed(3);
@@ -377,7 +381,7 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
     const split = frameSplits.get(frame);
     if (!split) return;
     gsap.fromTo(split.lines, { yPercent: 110 }, { yPercent: 0, duration: 1.3, ease: EASE, stagger: 0.09, overwrite: true });
-    gsap.fromTo($$('.numeral, p, .spec li, .stats > div, .cta', frame), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 1.2, ease: EASE, stagger: 0.06, delay: 0.15, overwrite: true });
+    gsap.fromTo($$('.numeral, p, .spec li, .stats > div, .frame__cta', frame), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 1.2, ease: EASE, stagger: 0.06, delay: 0.15, overwrite: true });
   };
 
   return { heroIn, frameIn };
