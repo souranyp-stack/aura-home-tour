@@ -4,6 +4,7 @@ import { SplitText } from 'gsap/SplitText';
 import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin';
 import { upperPlan, lowerPlan, sectionAA, sunDial, dialAngle, DIAL } from './drawings.js';
 import { sunDirection } from '../world/atmosphere.js';
+import { initMetalButtons } from './metalButton.js';
 import { createPlanRoll } from '../world/planRoll.js';
 import { createCoastMap } from '../world/coastMap.js';
 import { ROAD_KM, HOUSE, GROVE, heightAt, roadAt } from '../world/coast.js';
@@ -20,6 +21,8 @@ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () => {} }) {
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+  initMetalButtons();
 
   // ---------------------------------------------------------------- drawings
   $('#planUpper').innerHTML = upperPlan();
@@ -445,20 +448,6 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
     if (!sec) return;
     ScrollTrigger.create({ trigger: sec, start: 'top 50%', end: 'bottom 50%', onToggle: (st) => a.classList.toggle('is-current', st.isActive) });
   });
-
-  // ---------------------------------------------------------------- magnetic controls
-  if (matchMedia('(hover: hover)').matches) {
-    $$('[data-magnetic]').forEach((el) => {
-      const xTo = gsap.quickTo(el, 'x', { duration: 0.6, ease: 'power3.out' });
-      const yTo = gsap.quickTo(el, 'y', { duration: 0.6, ease: 'power3.out' });
-      el.addEventListener('pointermove', (e) => {
-        const r = el.getBoundingClientRect();
-        xTo((e.clientX - (r.left + r.width / 2)) * 0.28);
-        yTo((e.clientY - (r.top + r.height / 2)) * 0.36);
-      });
-      el.addEventListener('pointerleave', () => { xTo(0); yTo(0); });
-    });
-  }
 
   // ---------------------------------------------------------------- film overlays
   // The hero arrives once the loader lifts: the word rises letter by letter.
