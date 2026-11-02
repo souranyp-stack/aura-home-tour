@@ -434,27 +434,54 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
 .detail figcaption b { grid-row: span 2; font-family: var(--serif); font-weight: 400; font-size: 26px; line-height: 1; color: var(--bronze); }
 .detail figcaption span { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--bone); }
 
-/* the approach: a pinned route map */
-.approach__pin { height: 100vh; display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); gap: clamp(24px, 4vw, 72px); align-items: center; padding: calc(14px + 64px) var(--gutter) var(--gutter); max-width: 1680px; margin: 0 auto; }
-.approach__copy .display--s { margin-bottom: clamp(28px, 4vh, 48px); }
-.approach__steps { list-style: none; display: grid; gap: 0; border-top: 1px solid var(--line); }
-.approach__steps li { display: grid; grid-template-columns: 96px 1fr; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 14px; color: var(--faint); transition: color 0.6s; }
-.approach__steps li b { font-weight: 400; font-size: 11px; letter-spacing: 0.14em; color: var(--faint); font-variant-numeric: tabular-nums; padding-top: 2px; transition: color 0.6s; }
-.approach__steps li.is-on { color: var(--bone); }
-.approach__steps li.is-on b { color: var(--bronze); }
-.approach__map svg { width: 100%; height: auto; display: block; overflow: visible; }
-.map .sea { fill: #0f1316; }
-.map .land { fill: #15130f; stroke: rgba(244, 239, 230, 0.45); stroke-width: 1.2; }
-.map .contour { fill: none; stroke: rgba(244, 239, 230, 0.09); stroke-width: 1; }
-.map .road-bg { fill: none; stroke: rgba(244, 239, 230, 0.12); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 1 7; }
-.map .road { fill: none; stroke: var(--bronze); stroke-width: 2.2; stroke-linecap: round; }
-.map .pin { fill: var(--ink); stroke: rgba(244, 239, 230, 0.6); stroke-width: 1.2; }
-.map .pin.is-on { fill: var(--bronze); stroke: var(--bronze); }
-.map .car { fill: #f6e3bf; filter: drop-shadow(0 0 8px rgba(255, 210, 140, 0.9)); }
-.map text { font-family: var(--sans); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; fill: rgba(244, 239, 230, 0.55); }
-.map text.big { font-family: var(--serif); font-size: 22px; letter-spacing: 0.3em; fill: #f6f1e8; }
-.map text.sea-label { font-family: var(--serif); font-style: italic; font-size: 20px; letter-spacing: 0.04em; text-transform: none; fill: rgba(244, 239, 230, 0.35); }
-.map .grid { stroke: rgba(244, 239, 230, 0.04); stroke-width: 1; }
+/* the approach: following the road on a full-screen relief map */
+.approach__pin { height: 100vh; position: relative; overflow: hidden; background: var(--ink); }
+.approach__canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.approach__tags { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.approach__pin::before, .approach__pin::after { content: ''; position: absolute; left: 0; right: 0; pointer-events: none; z-index: 1; }
+.approach__pin::before { top: 0; height: 22vh; background: linear-gradient(var(--ink), rgba(11, 10, 9, 0)); }
+.approach__pin::after { bottom: 0; height: 46vh; background: linear-gradient(rgba(11, 10, 9, 0), rgba(11, 10, 9, 0.78) 42%, var(--ink) 78%); }
+.approach__copy { position: absolute; z-index: 2; left: var(--gutter); bottom: 29vh; width: min(44vw, 680px); }
+.approach__copy .display--s { font-size: clamp(36px, 4.2vw, 68px); margin-top: 18px; }
+.approach__compass { position: absolute; z-index: 2; right: var(--gutter); top: calc(14px + 64px + 4vh); width: 68px; }
+.approach__compass svg { width: 100%; display: block; overflow: visible; }
+.approach__compass circle { fill: rgba(11, 10, 9, 0.35); stroke: rgba(244, 239, 230, 0.4); stroke-width: 0.8; }
+.approach__compass path { fill: #edc98f; }
+.approach__compass text { font-family: var(--sans); font-size: 7.5px; letter-spacing: 0.1em; fill: rgba(244, 239, 230, 0.75); }
+
+.approach__panel { position: absolute; z-index: 2; left: var(--gutter); right: var(--gutter); bottom: calc(var(--gutter) * 0.9); display: grid; grid-template-columns: clamp(180px, 17vw, 280px) minmax(0, 1fr); gap: clamp(20px, 3vw, 56px); align-items: end; }
+.approach__km { display: flex; align-items: baseline; gap: 10px; font-family: var(--serif); font-weight: 300; line-height: 0.85; color: #f6f1e8; }
+.approach__km b { font-weight: 300; font-size: clamp(64px, 7.4vw, 124px); letter-spacing: -0.015em; font-variant-numeric: tabular-nums; }
+.approach__km span { font-size: clamp(20px, 1.8vw, 30px); color: rgba(244, 239, 230, 0.7); }
+.approach__alt { margin-top: 12px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--faint); }
+.approach__alt span { color: #edc98f; font-variant-numeric: tabular-nums; }
+.approach__profile { width: 100%; height: clamp(48px, 8vh, 84px); display: block; overflow: visible; }
+.profile__base { stroke: rgba(244, 239, 230, 0.26); stroke-width: 1; }
+.profile__line { fill: none; stroke: rgba(244, 239, 230, 0.3); stroke-width: 1; }
+.profile__done { fill: none; stroke: #edc98f; stroke-width: 1.5; }
+.profile__stop { stroke: rgba(244, 239, 230, 0.35); stroke-width: 1; stroke-dasharray: 2 3; }
+.profile__cursor { stroke: #fff3dc; stroke-width: 1; }
+.approach__steps { list-style: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(12px, 1.6vw, 28px); margin-top: 14px; }
+.approach__steps li { position: relative; padding-top: 12px; border-top: 1px solid rgba(244, 239, 230, 0.16); font-size: clamp(12px, 0.95vw, 15px); line-height: 1.35; color: var(--faint); transition: color 0.6s, border-color 0.6s; }
+.approach__steps li b { display: block; margin-bottom: 5px; font-weight: 400; font-size: 11px; letter-spacing: 0.14em; font-variant-numeric: tabular-nums; color: inherit; transition: color 0.6s; }
+.approach__steps li.is-past { color: rgba(244, 239, 230, 0.62); border-top-color: rgba(237, 201, 143, 0.5); }
+.approach__steps li.is-now { color: var(--bone); border-top-color: #edc98f; }
+.approach__steps li.is-now b { color: #edc98f; }
+
+.cmap__head { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 3; }
+.cmap__head::before { content: ''; position: absolute; left: -5px; top: -5px; width: 10px; height: 10px; border-radius: 50%; background: #fff3dc; box-shadow: 0 0 0 3px rgba(255, 233, 196, 0.25), 0 0 18px 4px rgba(255, 200, 130, 0.8); }
+.cmap__head::after { content: ''; position: absolute; left: -16px; top: -16px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255, 233, 196, 0.5); animation: cmap-pulse 2.6s var(--ease) infinite; }
+@keyframes cmap-pulse { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.5); opacity: 0; } }
+.cmap__tag { position: absolute; left: 0; top: 0; width: 0; height: 0; white-space: nowrap; opacity: 0; will-change: transform; }
+.cmap__tag > * { position: absolute; }
+.cmap__tag--place span { left: 20px; bottom: 14px; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: #f6f1e8; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), 0 0 16px rgba(0, 0, 0, 0.7); }
+.cmap__tag--place::before { content: ''; position: absolute; left: 0; bottom: 0; width: 22px; height: 1px; background: rgba(244, 239, 230, 0.7); transform-origin: left; transform: rotate(-30deg); }
+.cmap__tag--house { z-index: 2; }
+.cmap__tag--house::before { content: ''; position: absolute; left: 0; bottom: 8px; width: 1px; height: 44px; background: linear-gradient(rgba(244, 239, 230, 0.85), rgba(244, 239, 230, 0.15)); }
+.cmap__tag--house span { left: 0; bottom: 56px; transform: translateX(-50%); font-family: var(--serif); font-size: clamp(22px, 2.1vw, 34px); letter-spacing: 0.34em; margin-left: 0.17em; color: #fbf6ec; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.75); }
+.cmap__tag--house small { left: 10px; bottom: 34px; font-size: 10px; letter-spacing: 0.18em; color: #edc98f; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); }
+.cmap__tag--sea { font-family: var(--serif); font-style: italic; font-size: clamp(17px, 1.5vw, 24px); letter-spacing: 0.08em; color: rgba(170, 208, 226, 0.78); }
+.cmap__tag--sounding { font-family: var(--serif); font-style: italic; font-size: 13px; color: rgba(150, 196, 216, 0.62); }
 
 /* the drawing: a roll of paper that opens into a big plan */
 .sheet { position: relative; }
@@ -558,7 +585,16 @@ button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outlin
   .detail--tall, .detail--wide { grid-row: auto; grid-column: auto; }
   .detail--tall .detail__frame { height: auto; min-height: 0; aspect-ratio: 4 / 5; }
   .detail--wide .detail__frame { aspect-ratio: 4 / 3; }
-  .approach__pin { height: auto; grid-template-columns: 1fr; padding: clamp(96px, 12vw, 180px) var(--gutter); }
+  .approach__panel { grid-template-columns: 1fr; gap: 10px; }
+  .approach__read { display: flex; align-items: baseline; justify-content: space-between; }
+  .approach__km b { font-size: 60px; }
+  .approach__alt { margin-top: 0; }
+  .approach__copy { width: auto; right: var(--gutter); bottom: 33vh; }
+  .approach__copy .display--s { font-size: clamp(28px, 8vw, 44px); }
+  .approach__compass, .cmap__tag--sea { display: none; }
+  .approach__steps { display: block; margin-top: 10px; min-height: 66px; }
+  .approach__steps li { display: none; font-size: 15px; }
+  .approach__steps li.is-now { display: block; }
   .sheet__copy { top: calc(10px + 60px + 3vh); right: var(--gutter); }
   .sheet__copy p { display: none; }
   .still--offset { margin-top: 0; }

@@ -2,9 +2,11 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import { DrawSVGPlugin } from 'gsap/DrawSVGPlugin';
-import { upperPlan, lowerPlan, sectionAA, approachMap, sunDial, dialAngle, DIAL } from './drawings.js';
+import { upperPlan, lowerPlan, sectionAA, sunDial, dialAngle, DIAL } from './drawings.js';
 import { sunDirection } from '../world/atmosphere.js';
 import { createPlanRoll } from '../world/planRoll.js';
+import { createCoastMap } from '../world/coastMap.js';
+import { ROAD_KM, HOUSE, GROVE, heightAt, roadAt } from '../world/coast.js';
 
 gsap.registerPlugin(ScrollTrigger, SplitText, DrawSVGPlugin);
 
@@ -26,7 +28,6 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
   sectionFig.insertAdjacentHTML('afterbegin', sectionAA());
   // on a phone the drawing scrolls sideways at a legible scale: open it on the house
   sectionFig.scrollLeft = sectionFig.scrollWidth * 0.55 - sectionFig.clientWidth / 2;
-  $('#approachMap').innerHTML = approachMap();
 
   // ---------------------------------------------------------------- a day on the headland
   // The section is a window onto the live scene: while it is on screen the
@@ -166,7 +167,106 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
     ScrollTrigger.create({ trigger: '#sheet', start: 'top bottom', end: 'bottom top', onToggle: (t) => { on = t.isActive; if (on) { prepare(); draw(); } } });
   }
 
+  // ---------------------------------------------------------------- the approach: following the road on a relief map
+  // Called from where its pin belongs in page order: ScrollTrigger measures each pin
+  // after the ones created before it, so this has to come after the Materials pin.
+  const setUpApproach = () => {
+    const canvas = $('#coastCanvas'), tagHost = $('#coastTags'), headDot = $('#coastHead');
+    const kmOut = $('#coastKm'), altOut = $('#coastAlt'), needle = $('#coastNeedle'), copy = $('.approach__copy');
+    const steps = $$('#approachSteps li');
+    const stops = steps.map((li) => parseFloat(li.dataset.km));
+    const st = (x, a, b) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const altitude = (km) => { const p = roadAt(km); return heightAt(p.x, p.z); };
+
+    // the elevation profile of the road, read from the same land as the map
+    const SAMPLES = 160;
+    const alts = Array.from({ length: SAMPLES + 1 }, (_, i) => altitude((i / SAMPLES) * ROAD_KM));
+    const top = Math.max(...alts) * 1.12;
+    const px = (km) => (km / ROAD_KM) * 1000, py = (a) => 88 - (a / top) * 78;
+    const curve = alts.map((a, i) => `${i ? 'L' : 'M'}${px((i / SAMPLES) * ROAD_KM).toFixed(1)},${py(a).toFixed(1)}`).join(' ');
+    $('#coastProfile').innerHTML = `
+      <defs><linearGradient id="coastFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9c48e" stop-opacity="0.34"/><stop offset="1" stop-color="#e9c48e" stop-opacity="0"/></linearGradient>
+      <clipPath id="coastDone"><rect id="coastDoneRect" x="0" y="0" width="0" height="96"/></clipPath></defs>
+      <line class="profile__base" x1="0" y1="88" x2="1000" y2="88" vector-effect="non-scaling-stroke"/>
+      <path class="profile__line" d="${curve}" vector-effect="non-scaling-stroke"/>
+      <g clip-path="url(#coastDone)"><path class="profile__fill" d="${curve} L1000,88 L0,88 Z" fill="url(#coastFill)"/><path class="profile__done" d="${curve}" vector-effect="non-scaling-stroke"/></g>
+      ${stops.map((km) => `<line class="profile__stop" x1="${px(km)}" y1="${py(altitude(km)).toFixed(1)}" x2="${px(km)}" y2="88" vector-effect="non-scaling-stroke"/>`).join('')}
+      <line class="profile__cursor" id="coastCursor" x1="0" y1="0" x2="0" y2="88" vector-effect="non-scaling-stroke"/>`;
+    const doneRect = $('#coastDoneRect'), cursor = $('#coastCursor');
+
+    // the road's stops take most of the scroll where the story needs it
+    const KEYS = [[0, 0], [0.04, 0], [0.32, 2.4], [0.58, 4.6], [0.82, 5.9], [0.97, 6.2], [1, 6.2]];
+    const kmAt = (p) => {
+      let i = 0;
+      while (i < KEYS.length - 2 && p > KEYS[i + 1][0]) i++;
+      const [p0, k0] = KEYS[i], [p1, k1] = KEYS[i + 1];
+      return k0 + (k1 - k0) * ((p - p0) / (p1 - p0));
+    };
+
+    const place = (km) => { const p = roadAt(km); return { x: p.x, z: p.z }; };
+    const near = (a, b) => (km) => st(km, a - 0.25, a) * (1 - st(km, b, b + 0.25));
+    const labels = [
+      { kind: 'place', html: '<span>Harbour</span>', ...place(0), show: near(0.25, 2) },
+      { kind: 'place', html: '<span>The last houses</span>', ...place(2.4), show: near(1.75, 3.6) },
+      { kind: 'place', html: '<span>Olive terraces</span>', x: GROVE.x, z: GROVE.z, show: near(3.6, 5.5) },
+      { kind: 'place', html: '<span>The gate</span>', ...place(5.9), show: near(5.2, 6.02) },
+      { kind: 'house', html: '<span>AURA</span><small>38 m</small>', x: HOUSE.x, z: HOUSE.z, show: (km) => 0.28 + 0.72 * st(km, 5.4, 6.1) },
+      { kind: 'sea', html: 'Open sea', x: 3.2, z: 5.1, y: 0, show: (km) => 1 - st(km, 2.2, 4.2) },
+      { kind: 'sea', html: 'The cove', x: 5.32, z: 4.04, y: 0, show: (km) => st(km, 3.5, 5) },
+      ...[[2.3, 4.5, 18], [4.2, 4.72, 31], [4.3, 5.5, 62], [6.0, 5.75, 44], [7.4, 5.5, 58], [8.3, 4.9, 24]].map(([x, z, d]) => ({ kind: 'sounding', html: `${d}`, x, z, y: 0, show: (km) => 0.75 * (1 - st(km, 4.6, 5.7)) })),
+    ];
+
+    let map = null, on = false, built = false;
+    let goal = reduced ? 1 : 0, now = goal, drawn = -1, lastStep = -1;
+    const putHead = (x, y, yaw) => {
+      headDot.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      needle.setAttribute('transform', `rotate(${(-yaw * 180 / Math.PI).toFixed(1)} 32 32)`);
+    };
+    const showRoute = (km) => {
+      kmOut.textContent = km.toFixed(1).padStart(4, '0');
+      altOut.textContent = `+${Math.round(altitude(km))} m`;
+      const x = px(km);
+      doneRect.setAttribute('width', x.toFixed(1));
+      cursor.setAttribute('x1', x.toFixed(1));
+      cursor.setAttribute('x2', x.toFixed(1));
+      cursor.setAttribute('y1', py(altitude(km)).toFixed(1));
+      let current = 0;
+      stops.forEach((s, i) => { if (km >= s - 0.04) current = i; });
+      if (current !== lastStep) {
+        lastStep = current;
+        steps.forEach((li, i) => { li.classList.toggle('is-past', i < current); li.classList.toggle('is-now', i === current); });
+      }
+    };
+    const draw = () => {
+      const km = kmAt(now);
+      showRoute(km);
+      copy.style.opacity = (1 - st(now, 0.16, 0.3)).toFixed(3);
+      if (map && built) { map.render(km, putHead); drawn = now; }
+    };
+    const prepare = () => {
+      if (map) return;
+      map = createCoastMap(canvas, tagHost, { labels });
+      map.ready.then(() => { built = true; draw(); });
+      new ResizeObserver(() => { map.resize(); draw(); }).observe(canvas);
+    };
+    let lastTick = performance.now();
+    gsap.ticker.add(() => {
+      // real elapsed time, so the road catches up after a hitch instead of lagging
+      const clock = performance.now(), dt = Math.min(0.5, (clock - lastTick) / 1000);
+      lastTick = clock;
+      if (!on || !built) return;
+      now += (goal - now) * (1 - Math.exp(-dt * 4.5));
+      if (Math.abs(goal - now) < 0.0002) now = goal;
+      if (now !== drawn) draw();
+    });
+    ScrollTrigger.create({ trigger: '#approach', start: 'top 320%', once: true, onEnter: prepare });
+    if (!reduced) ScrollTrigger.create({ trigger: '#approach', pin: '.approach__pin', start: 'top top', end: '+=420%', onUpdate: (t) => { goal = t.progress; } });
+    ScrollTrigger.create({ trigger: '#approach', start: 'top bottom', end: 'bottom top', onToggle: (t) => { on = t.isActive; if (on) { prepare(); draw(); } } });
+    draw();
+  };
+
   if (reduced) {
+    setUpApproach();
     onReadySwatches();
     onReadyStills();
     return { heroIn: () => {}, frameIn: () => {} };
@@ -304,32 +404,7 @@ export function initPage({ filmEnd, onReadyStills, onReadySwatches, onDay = () =
     });
   });
 
-  // ---------------------------------------------------------------- the approach: the road draws itself, the car follows
-  const route = $('#route');
-  const len = route.getTotalLength();
-  const car = $('#routeCar');
-  const pinsG = $('#routePins');
-  const steps = $$('#approachSteps li');
-  const pins = steps.map((li) => {
-    const pt = route.getPointAtLength(parseFloat(li.dataset.at) * len);
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    c.setAttribute('class', 'pin'); c.setAttribute('r', '7'); c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y);
-    pinsG.appendChild(c);
-    return c;
-  });
-  const drive = (prog) => {
-    gsap.set(route, { drawSVG: `0% ${(prog * 100).toFixed(2)}%` });
-    const pt = route.getPointAtLength(prog * len);
-    car.setAttribute('cx', pt.x); car.setAttribute('cy', pt.y);
-    steps.forEach((li, i) => { const on = prog >= parseFloat(li.dataset.at) - 0.001; li.classList.toggle('is-on', on); pins[i].classList.toggle('is-on', on); });
-  };
-  drive(0);
-  mm.add('(min-width: 901px)', () => {
-    ScrollTrigger.create({ trigger: '#approach', pin: '.approach__pin', start: 'top top', end: '+=160%', scrub: 0.6, onUpdate: (st) => drive(st.progress) });
-  });
-  mm.add('(max-width: 900px)', () => {
-    ScrollTrigger.create({ trigger: '#approachMap', start: 'top 80%', end: 'bottom 40%', scrub: 0.6, onUpdate: (st) => drive(st.progress) });
-  });
+  setUpApproach();
 
   // the stills are rendered from the live model just before they are needed
   ScrollTrigger.create({ trigger: '#materials', start: 'top bottom', once: true, onEnter: () => onReadySwatches() });

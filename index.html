@@ -308,18 +308,31 @@
 
     <section class="approach" id="approach" aria-labelledby="approach-h">
       <div class="approach__pin">
+        <canvas class="approach__canvas" id="coastCanvas" role="img" aria-label="Relief map of the coast, following the road from the harbour to the house"></canvas>
+        <div class="approach__tags" id="coastTags" aria-hidden="true"><i class="cmap__head" id="coastHead"></i></div>
         <div class="approach__copy">
           <div class="sec__label"><span>09</span>The approach</div>
           <h2 class="display display--s" id="approach-h" data-split>Six kilometres of coast road, then nothing.</h2>
-          <ol class="approach__steps" id="approachSteps">
-            <li data-at="0.0"><b>00.0 km</b>The harbour village</li>
-            <li data-at="0.36"><b>02.4 km</b>The coast road leaves the last houses</li>
-            <li data-at="0.62"><b>04.6 km</b>Through the olive terraces</li>
-            <li data-at="0.86"><b>05.9 km</b>A bronze gate in a dry-stone wall</li>
-            <li data-at="1.0"><b>06.2 km</b>AURA, 38 m above the sea</li>
-          </ol>
         </div>
-        <figure class="approach__map" id="approachMap" aria-label="Map of the route from the harbour to the house"></figure>
+        <div class="approach__compass" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="23"/><g id="coastNeedle"><path d="M32,13 L37,32 L32,28.5 L27,32 Z"/><text x="32" y="9" text-anchor="middle">N</text></g></svg>
+        </div>
+        <div class="approach__panel">
+          <div class="approach__read" aria-hidden="true">
+            <p class="approach__km"><b id="coastKm">00.0</b><span>km</span></p>
+            <p class="approach__alt"><span id="coastAlt">+3 m</span> elevation</p>
+          </div>
+          <div class="approach__route">
+            <svg class="approach__profile" id="coastProfile" viewBox="0 0 1000 96" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <ol class="approach__steps" id="approachSteps">
+              <li data-km="0"><b>00.0 km</b>The harbour village</li>
+              <li data-km="2.4"><b>02.4 km</b>The coast road leaves the last houses</li>
+              <li data-km="4.6"><b>04.6 km</b>Through the olive terraces</li>
+              <li data-km="5.9"><b>05.9 km</b>A bronze gate in a dry-stone wall</li>
+              <li data-km="6.2"><b>06.2 km</b>AURA, 38 m above the sea</li>
+            </ol>
+          </div>
+        </div>
       </div>
     </section>
 
