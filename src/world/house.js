@@ -196,37 +196,87 @@ export function createHouse(M) {
   // one draw per material per mass; the sliding door stays separate so it can move
   for (const p of pieces) mergeStatic(p.group, p.name === 'pavilion' ? [door] : []);
 
-  // Sculpture: a stacked tower on a stone column. Each layer turns slowly at
-  // its own rate and direction, like a kinetic mobile; the spine blade orbits.
-  const pivot = new THREE.Vector3(3, 9, 2);
+  // Sculpture: an exploded axonometric of the house itself. Every mass keeps
+  // its true plan position and is lifted apart in layers, joined to where it
+  // will land by bronze projection lines, the way an architect draws one.
+  // Assembly is the layers coming straight down those lines.
+  const EXPLODE = {
+    court: { d: [0, -3.4, 0], win: [0.0, 0.32] },
+    plinth: { d: [0, 0, 0], win: [0.0, 0.2] },
+    spine: { d: [-9, 4, 0], win: [0.06, 0.44] },
+    fin: { d: [7.5, 5, 0], win: [0.1, 0.48] },
+    slab: { d: [0, 5, 0], win: [0.18, 0.56] },
+    pool: { d: [0, 2.2, -6.5], win: [0.3, 0.66] },
+    pavilion: { d: [0, 8.6, 0], win: [0.38, 0.76] },
+    hearth: { d: [0, 13.2, 0], win: [0.52, 0.88] },
+    roof: { d: [0, 18.5, 0], win: [0.6, 1.0] },
+  };
+  for (const p of pieces) {
+    const e = EXPLODE[p.name];
+    p.sculptPos = p.buildPos.clone().add(new THREE.Vector3(...e.d));
+    p.sculptQuat = new THREE.Quaternion();
+    p.win = e.win;
+    p.drift = pieces.indexOf(p) * 0.9;
+  }
+  const pivot = new THREE.Vector3(3, 8.5, 2);
+
+  // projection lines: each lifted layer's corners, down to where they land
+  const footprints = {
+    court: [-9, 10, 15, 16, 0.24],
+    slab: [-10, -8, 16, 10, 4.05],
+    pavilion: [-9, -4, 11, 8, 7.5],
+    hearth: [-9, 4.5, -7.2, 7, 10.2],
+    roof: [-10, -9.5, 17.5, 10, 8.05],
+    pool: [3.5, -8, 17, -4.4, 4.05],
+  };
+  const seg = [];
+  for (const [name, [x0, z0, x1, z1, y]] of Object.entries(footprints)) {
+    const d = EXPLODE[name].d;
+    for (const [x, z] of [[x0, z0], [x1, z0], [x1, z1], [x0, z1]]) seg.push(x, y, z, x + d[0], y + d[1], z + d[2]);
+  }
+  for (const [name, x, y0, z] of [['spine', -9.6, 9.5, -11], ['spine', -9.6, 9.5, 15], ['fin', 17.1, 7.5, 1], ['fin', 17.1, 7.5, 7]]) {
+    const d = EXPLODE[name].d;
+    seg.push(x, y0, z, x + d[0], y0 + d[1], z + d[2]);
+  }
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
+  const lineMat = new THREE.LineDashedMaterial({ color: 0xe0bd84, dashSize: 0.34, gapSize: 0.24, transparent: true, opacity: 0, depthWrite: false, fog: false });
+  const lines = new THREE.LineSegments(lineGeo, lineMat);
+  lines.computeLineDistances();
+  lines.frustumCulled = false;
+  const lineRig = new THREE.Group();
+  lineRig.position.copy(pivot);
+  lines.position.copy(pivot).multiplyScalar(-1);
+  lineRig.add(lines);
+  root.add(lineRig);
 
   const _p = new THREE.Vector3();
   const _q = new THREE.Quaternion();
-  const _spin = new THREE.Quaternion();
+  const _sway = new THREE.Quaternion();
   const up = new THREE.Vector3(0, 1, 0);
   const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
   /**
-   * @param assemble 0 = sculpture, 1 = built
-   * @param time seconds, for the gentle breathing of the sculpture
-   * @param dt seconds since last frame; layers only turn while the sculpture is idle
+   * @param assemble 0 = exploded, 1 = built
+   * @param time seconds, for the slow sway and the breathing of the layers
    */
-  function update(assemble, time, dt = 0) {
-    const idle = 1 - THREE.MathUtils.smoothstep(assemble, 0, 0.12);
+  function update(assemble, time) {
+    const idle = 1 - THREE.MathUtils.smoothstep(assemble, 0, 0.14);
+    const sway = 0.36 * Math.sin(time * 0.1) * idle;
+    _sway.setFromAxisAngle(up, sway);
     for (const p of pieces) {
       const [a, b] = p.win;
       const t = THREE.MathUtils.clamp((assemble - a) / (b - a), 0, 1);
       const e = ease(t);
-      p.angle += dt * 0.06 * p.spin * idle;
-      _spin.setFromAxisAngle(up, p.angle);
-      _p.copy(p.sculptPos);
-      if (p.orbit) _p.sub(pivot).applyQuaternion(_spin).add(pivot);
-      _p.y += Math.sin(time * 0.5 + p.sculptPos.y * 0.12) * 0.12 * idle;
-      _q.copy(_spin).multiply(p.sculptQuat);
+      _p.copy(p.sculptPos).sub(pivot).applyQuaternion(_sway).add(pivot);
+      _p.y += Math.sin(time * 0.55 + p.drift) * 0.16 * idle;
+      _q.copy(_sway);
       p.group.position.lerpVectors(_p, p.buildPos, e);
-      p.group.position.y += Math.sin(Math.PI * e) * 0.6;
       p.group.quaternion.slerpQuaternions(_q, p.buildQuat, e);
     }
+    lineRig.quaternion.copy(_sway);
+    lineMat.opacity = 0.85 * (1 - THREE.MathUtils.smoothstep(assemble, 0.02, 0.3));
+    lines.visible = lineMat.opacity > 0.01;
   }
 
   return { root, pieces, update, door, poolWater, pavilion: pav };

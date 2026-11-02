@@ -130,7 +130,7 @@ async function boot() {
 
   function apply(p, time, dt) {
     const s = storyAt(p);
-    house.update(s.assemble, reducedMotion ? 0 : time, reducedMotion ? 0 : dt);
+    house.update(s.assemble, reducedMotion ? 0 : time);
     aura.uSweep.value = s.sweep;
     aura.uTime.value = time;
     interior.root.visible = s.sweep > 2.5;

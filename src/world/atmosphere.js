@@ -79,7 +79,7 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     new THREE.MeshStandardMaterial({ color: 0x24201b, roughness: 0.9, metalness: 0, transparent: true, alphaMap: floorTex, envMapIntensity: 0.08, depthWrite: false })
   );
   galleryFloor.rotation.x = -Math.PI / 2;
-  galleryFloor.position.set(3, -5.4, 2);
+  galleryFloor.position.set(3, -6.6, 2);
   galleryFloor.receiveShadow = true;
   scene.add(galleryFloor);
 
@@ -151,6 +151,70 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
   pool.shadow.bias = -0.0004;
   pool.shadow.radius = 6;
   scene.add(pool, pool.target);
+
+  // The beam itself: a soft additive cone from the spot to the floor, and dust
+  // that only shows where it drifts through the light.
+  const apex = pool.position.clone();
+  const base = pool.target.position.clone();
+  const axis = base.clone().sub(apex);
+  const beamLen = axis.length();
+  const beamR = Math.tan(pool.angle) * beamLen;
+  const beamMat = new THREE.ShaderMaterial({
+    uniforms: { uAmount: { value: 0 } },
+    vertexShader: `varying float vH; varying vec3 vN; varying vec3 vV;
+      void main(){ vH = 1.0 - (position.y / ${beamLen.toFixed(2)} + 0.5);
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform float uAmount; varying float vH; varying vec3 vN; varying vec3 vV;
+      void main(){ float edge = pow(abs(dot(vN, vV)), 1.6);
+        float fall = smoothstep(0.0, 0.35, vH) * (1.0 - smoothstep(0.75, 1.0, vH));
+        gl_FragColor = vec4(vec3(1.0, 0.93, 0.82) * edge * fall * uAmount, 1.0); }`,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false,
+  });
+  const beam = new THREE.Mesh(new THREE.ConeGeometry(beamR, beamLen, 64, 1, true), beamMat);
+  beam.position.copy(apex).addScaledVector(axis, 0.5);
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), axis.clone().normalize());
+  beam.userData.noAO = true;
+  scene.add(beam);
+
+  const DUST = mobile ? 700 : 1800;
+  const dustPos = new Float32Array(DUST * 3);
+  const dustSeed = new Float32Array(DUST);
+  for (let i = 0; i < DUST; i++) {
+    const r = Math.sqrt(Math.random()) * beamR * 1.15;
+    const a = Math.random() * Math.PI * 2;
+    dustPos.set([base.x + Math.cos(a) * r, base.y + Math.random() * 34, base.z + Math.sin(a) * r], i * 3);
+    dustSeed[i] = Math.random();
+  }
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+  dustGeo.setAttribute('aSeed', new THREE.BufferAttribute(dustSeed, 1));
+  const dustMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uAmount: { value: 0 }, uApex: { value: apex }, uAxis: { value: axis.clone().normalize() }, uTan: { value: Math.tan(pool.angle) }, uScale: { value: 1 } },
+    vertexShader: `attribute float aSeed; uniform float uTime; uniform vec3 uApex; uniform vec3 uAxis; uniform float uTan; uniform float uScale;
+      varying float vLit; varying float vSeed;
+      void main(){
+        vec3 p = position;
+        p.y = ${base.y.toFixed(2)} + mod(p.y - ${base.y.toFixed(2)} + uTime * (0.12 + aSeed * 0.25), 34.0);
+        p.x += sin(uTime * 0.3 + aSeed * 40.0) * 0.6;
+        p.z += cos(uTime * 0.27 + aSeed * 31.0) * 0.6;
+        vec3 d = p - uApex; float along = dot(d, uAxis); float radial = length(d - uAxis * along);
+        vLit = 1.0 - smoothstep(0.75, 1.0, radial / max(0.01, along * uTan));
+        vSeed = aSeed;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        // motes near the lens would read as snow: fade them and cap their size
+        vLit *= smoothstep(18.0, 45.0, -mv.z);
+        gl_PointSize = min((1.2 + aSeed * 2.4) * uScale * (90.0 / -mv.z), 3.5 * uScale);
+        gl_Position = projectionMatrix * mv; }`,
+    fragmentShader: `uniform float uAmount; varying float vLit; varying float vSeed;
+      void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d);
+        gl_FragColor = vec4(vec3(1.0, 0.92, 0.8) * a * vLit * uAmount * (0.4 + vSeed), 1.0); }`,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
+  });
+  const dust = new THREE.Points(dustGeo, dustMat);
+  dust.frustumCulled = false;
+  scene.add(dust);
 
   const moon = new THREE.DirectionalLight(0x8fa6d8, 0);
   moon.position.set(-60, 80, -40);
@@ -246,8 +310,14 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
 
     moon.intensity = (1 - day) * 0.35 * (1 - state.studio);
     rim.intensity = 2.4 * state.studio;
-    pool.intensity = 11000 * state.studio * state.voidOpacity;
+    pool.intensity = 7500 * state.studio * state.voidOpacity;
     pool.visible = pool.intensity > 1;
+    const gallery = state.studio * state.voidOpacity;
+    beamMat.uniforms.uAmount.value = 0.075 * gallery;
+    dustMat.uniforms.uAmount.value = 1.6 * gallery;
+    dustMat.uniforms.uTime.value = state.now;
+    dustMat.uniforms.uScale.value = renderer.getPixelRatio();
+    beam.visible = dust.visible = gallery > 0.01;
 
     hemi.color.setRGB(0.62, 0.72, 0.86).lerp(C(0.92, 0.72, 0.56), gold).lerp(C(0.12, 0.14, 0.24), 1 - day)
       .lerp(C(1.0, 0.9, 0.78), state.studio);

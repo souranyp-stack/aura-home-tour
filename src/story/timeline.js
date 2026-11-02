@@ -9,10 +9,10 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // shift: horizontal framing offset (fraction of width) that keeps the subject
 // clear of the chapter copy; positive moves the subject right.
 export const CAMERA_KEYS = [
-  { p: 0.0, pos: V(51, 11.5, -79), tgt: V(3, 8.5, 2), fov: 30, shift: 0.23 },
-  { p: 0.07, pos: V(34, 10.5, -84), tgt: V(3, 8.5, 2), fov: 30, shift: 0.21 },
-  { p: 0.15, pos: V(4, 11, -82), tgt: V(3, 7.5, 2), fov: 32, shift: 0.14 },
-  { p: 0.24, pos: V(34, 15, -52), tgt: V(3, 4.5, 2), fov: 34, shift: -0.14 },
+  { p: 0.0, pos: V(88, 52, -98), tgt: V(3, 9.5, 2), fov: 22, shift: 0.22 },
+  { p: 0.07, pos: V(64, 47, -112), tgt: V(3, 9, 2), fov: 22, shift: 0.2 },
+  { p: 0.15, pos: V(30, 40, -112), tgt: V(3, 7, 2), fov: 24, shift: 0.13 },
+  { p: 0.24, pos: V(52, 26, -72), tgt: V(3, 5, 2), fov: 28, shift: -0.14 },
   { p: 0.33, pos: V(44, 9, -26), tgt: V(3, 4, 2), fov: 32, shift: -0.12 },
   { p: 0.39, pos: V(24, 3.2, -30), tgt: V(3, 4.5, 0), fov: 30, shift: 0.12 },
   { p: 0.45, pos: V(10, 9, -52), tgt: V(2, 3, 1), fov: 32, shift: 0.06 },
