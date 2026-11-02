@@ -36,6 +36,7 @@ export function createUI({ onJump, onAnchor, onFrameLive = () => {} }) {
     return b;
   });
   const railFills = railButtons.map((b) => b.querySelector('b'));
+  document.querySelector('[data-begin]')?.addEventListener('click', (e) => { e.preventDefault(); onJump(CHAPTERS[1].p + 0.012); });
   document.querySelectorAll('[data-jump]').forEach((a) => {
     a.addEventListener('click', (e) => { e.preventDefault(); onJump(0); });
   });

@@ -18,6 +18,10 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 const mobile = matchMedia('(max-width: 900px)').matches || /Mobi|Android/i.test(navigator.userAgent);
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// a scroll film always opens on its first frame
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.scrollTo(0, 0);
+
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
 const maxDpr = Math.min(window.devicePixelRatio, 1.5);
@@ -143,6 +147,7 @@ async function boot() {
     const sky = atmo.update({
       studio: s.studio, time: env.time, mist: env.mist,
       worldR: s.worldR, voidOpacity: s.voidOpacity, now: time,
+      dust: 1 - THREE.MathUtils.smoothstep(p, 0.12, 0.26),
     });
     interior.update(env, time);
     land.group.visible = veg.visible = s.worldR > 1;

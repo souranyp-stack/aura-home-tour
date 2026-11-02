@@ -73,59 +73,103 @@ function sofa(M) {
   g.add(backL, backR);
   g.add(mesh(cushion(0.2, 0.3, 1.04, 0.0, 0.09), M.boucle, -1.68, 0.45, 0));
   g.add(mesh(cushion(0.2, 0.3, 1.04, 0.0, 0.09), M.boucle, 1.68, 0.45, 0));
+  for (const x0 of [-1.61, 0.01]) g.add(piping([[x0, 0.45, -0.475], [x0 + 0.8, 0.458, -0.477], [x0 + 1.6, 0.45, -0.475]], M.boucleDark, 0.008));
+  for (const sx of [-1, 1]) g.add(piping([[sx * 1.68, 0.6, -0.5], [sx * 1.68, 0.605, 0], [sx * 1.68, 0.6, 0.5]], M.boucleDark, 0.008));
   const throwPillow = mesh(cushion(0.5, 0.42, 0.13, 0.04, 0.06), M.wool, -1.15, 0.64, 0.16);
   throwPillow.rotation.set(-0.2, 0.15, 0.05);
   g.add(throwPillow);
   return g;
 }
 
-// Lounge chair: one continuous bronze tube per side traces foot, seat rail
-// and back post; a leather sling is slung between, with loose cushions.
+// A run of piping (a welted seam) along a path, in a contrasting leather or cord.
+function piping(points, mat, r = 0.0065) {
+  return mesh(tube(points, r), mat, 0, 0, 0, { cast: false });
+}
+
+// Tapered turned leg, slightly splayed.
+function leg(mat, x, z, h, rTop, rBot, splay = 0.06) {
+  const m = mesh(new THREE.CylinderGeometry(rTop, rBot, h, 18), mat, x, h / 2, z);
+  m.rotation.z = -Math.sign(x) * splay;
+  m.rotation.x = Math.sign(z) * splay;
+  return m;
+}
+
+// Club lounge chair: a tight saddle-leather shell on tapered walnut legs,
+// piped arms, crowned loose seat and back cushions. 820 x 840, seat at 450.
 function loungeChair(M) {
   const g = new THREE.Group();
-  const W = 0.74;
-  for (const sx of [-W / 2, W / 2]) {
-    g.add(mesh(tube([
-      [sx, 0.0, -0.36], [sx, 0.12, -0.34], [sx, 0.3, -0.3], [sx, 0.34, -0.1],
-      [sx, 0.33, 0.18], [sx, 0.42, 0.34], [sx, 0.74, 0.48], [sx, 0.78, 0.5],
-    ], 0.014), M.bronzeInterior, 0, 0, 0));
-    g.add(mesh(tube([[sx, 0.0, 0.42], [sx, 0.2, 0.37], [sx, 0.34, 0.3]], 0.014), M.bronzeInterior, 0, 0, 0));
-    g.add(mesh(new THREE.SphereGeometry(0.022, 12, 8), M.bronzeInterior, sx, 0.008, -0.36));
-    g.add(mesh(new THREE.SphereGeometry(0.022, 12, 8), M.bronzeInterior, sx, 0.008, 0.42));
-    // arm: a walnut rail laid on the frame
-    g.add(mesh(rbox(0.07, 0.03, 0.56, 0.012), M.walnut, sx, 0.52, 0.02));
-    g.add(mesh(tube([[sx, 0.34, -0.22], [sx, 0.5, -0.24]], 0.01), M.bronzeInterior, 0, 0, 0));
+  for (const [x, z] of [[-0.33, -0.33], [0.33, -0.33], [-0.33, 0.33], [0.33, 0.33]]) g.add(leg(M.walnut, x, z, 0.11, 0.022, 0.015));
+  g.add(mesh(rbox(0.82, 0.3, 0.84, 0.06), M.cognac, 0, 0.25, 0));
+  for (const sx of [-1, 1]) {
+    g.add(mesh(cushion(0.13, 0.25, 0.8, 0.01, 0.055), M.cognac, sx * 0.345, 0.515, 0.0));
   }
-  g.add(mesh(tube([[-W / 2, 0.3, -0.3], [W / 2, 0.3, -0.3]], 0.012), M.bronzeInterior, 0, 0, 0));
-  g.add(mesh(tube([[-W / 2, 0.42, 0.34], [W / 2, 0.42, 0.34]], 0.012), M.bronzeInterior, 0, 0, 0));
-  // leather sling: seat and back in one curved piece
-  g.add(mesh(bentSlab(W - 0.04, 0.018, [[0.33, -0.3], [0.31, -0.05], [0.31, 0.2], [0.4, 0.34], [0.72, 0.47]], 0.008), M.cognac, 0, 0, 0));
-  // loose seat and back cushions in the same leather
-  const seat = mesh(cushion(W - 0.1, 0.09, 0.54, 0.025, 0.04), M.cognac, 0, 0.375, -0.05);
-  seat.rotation.x = 0.04;
-  const back = mesh(cushion(W - 0.12, 0.075, 0.42, 0.02, 0.035), M.cognac, 0, 0.58, 0.39);
-  back.rotation.x = -1.18;
-  g.add(seat, back);
+  const back = mesh(cushion(0.82, 0.48, 0.14, 0.0, 0.06), M.cognac, 0, 0.62, 0.35);
+  back.rotation.x = -0.12;
+  g.add(back);
+  const seat = mesh(cushion(0.56, 0.11, 0.66, 0.026, 0.045), M.cognac, 0, 0.455, -0.045);
+  const backC = mesh(cushion(0.56, 0.36, 0.12, 0.022, 0.045), M.cognac, 0, 0.7, 0.235);
+  backC.rotation.x = -0.24;
+  g.add(seat, backC);
+  // welts: arm tops, seat front, back top
+  for (const sx of [-1, 1]) for (const ox of [-0.058, 0.058])
+    g.add(piping([[sx * 0.345 + ox, 0.633, -0.385], [sx * 0.345 + ox, 0.637, 0], [sx * 0.345 + ox, 0.633, 0.385]], M.cognacDark));
+  g.add(piping([[-0.27, 0.515, -0.38], [0, 0.522, -0.381], [0.27, 0.515, -0.38]], M.cognacDark));
+  g.add(piping([[-0.4, 0.86, 0.39], [0, 0.865, 0.385], [0.4, 0.86, 0.39]], M.cognacDark));
   return g;
 }
 
+// Dining chair: splayed walnut legs that rise into the back posts, an apron,
+// a curved back rail and a leather pad on the seat.
 function diningChair(M) {
   const g = new THREE.Group();
-  g.add(mesh(rbox(0.48, 0.06, 0.48, 0.02), M.walnut, 0, 0.45, 0));
-  g.add(mesh(rbox(0.46, 0.05, 0.42, 0.02), M.boucle, 0, 0.5, 0.01));
-  g.add(mesh(rbox(0.48, 0.32, 0.04, 0.015), M.walnut, 0, 0.78, 0.22));
-  for (const [x, z] of [[-0.21, -0.21], [0.21, -0.21], [-0.21, 0.21], [0.21, 0.21]])
-    g.add(mesh(boxG(0.035, 0.45, 0.035), M.walnut, x, 0.225, z));
+  for (const x of [-0.2, 0.2]) {
+    g.add(leg(M.walnut, x, -0.2, 0.44, 0.017, 0.012, 0.04));
+    const post = mesh(rbox(0.032, 0.86, 0.032, 0.008), M.walnut, x, 0.43, 0.215);
+    post.rotation.x = -0.09;
+    g.add(post);
+  }
+  for (const [w, d, x, z] of [[0.4, 0.02, 0, -0.2], [0.4, 0.02, 0, 0.2], [0.02, 0.4, -0.2, 0], [0.02, 0.4, 0.2, 0]])
+    g.add(mesh(rbox(w, 0.055, d, 0.006), M.walnut, x, 0.41, z));
+  g.add(mesh(rbox(0.46, 0.025, 0.45, 0.008), M.walnut, 0, 0.45, 0));
+  g.add(mesh(cushion(0.43, 0.045, 0.42, 0.012, 0.02), M.cognac, 0, 0.483, -0.01));
+  g.add(mesh(bentSlab(0.12, 0.022, [[0.0, -0.2], [0.03, -0.07], [0.04, 0.0], [0.03, 0.07], [0.0, 0.2]], 0.008), M.walnut, 0, 0, 0));
+  // the bent slab runs along z; turn it to span the back, curved toward the sitter
+  const rail = g.children[g.children.length - 1];
+  rail.rotation.set(Math.PI / 2, Math.PI / 2, 0);
+  rail.position.set(0, 0.78, 0.25);
   return g;
 }
 
+// Teak chaise: two side rails on square legs (wheels at the head), a run of
+// 22 slats, a hinged slatted backrest, thick piped cushions and a rolled towel.
 function lounger(M) {
   const g = new THREE.Group();
-  g.add(mesh(boxG(0.76, 0.22, 2.0), M.teak, 0, 0.14, 0));
-  g.add(mesh(rbox(0.72, 0.1, 1.4, 0.04), M.outdoorFabric, 0, 0.3, 0.28));
-  const back = mesh(rbox(0.72, 0.1, 0.66, 0.04), M.outdoorFabric, 0, 0.47, -0.66);
-  back.rotation.x = -0.6;
+  const L = 1.98, W = 0.7;
+  for (const sx of [-1, 1]) g.add(mesh(rbox(0.05, 0.085, L, 0.008), M.teak, sx * (W / 2 - 0.025), 0.27, 0));
+  for (const z of [-0.18, L / 2 - 0.06]) g.add(mesh(rbox(W - 0.1, 0.06, 0.04, 0.006), M.teak, 0, 0.25, z));
+  for (const [sx, z] of [[-1, L / 2 - 0.08], [1, L / 2 - 0.08], [-1, -L / 2 + 0.14], [1, -L / 2 + 0.14]])
+    g.add(mesh(rbox(0.05, 0.27, 0.05, 0.006), M.teak, sx * (W / 2 - 0.025), 0.135, z));
+  for (const sx of [-1, 1]) {
+    const wheel = mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.035, 28), M.basalt, sx * (W / 2 + 0.01), 0.075, -L / 2 + 0.07);
+    wheel.rotation.z = Math.PI / 2;
+    g.add(wheel);
+  }
+  for (let i = 0; i < 22; i++) g.add(mesh(rbox(W - 0.08, 0.018, 0.058, 0.005), M.teak, 0, 0.32, -0.36 + i * 0.062));
+  // backrest, hinged at z = -0.4 and raised 38 degrees
+  const back = new THREE.Group();
+  back.position.set(0, 0.32, -0.4);
+  back.rotation.x = 0.66;
+  for (const sx of [-1, 1]) back.add(mesh(rbox(0.04, 0.04, 0.6, 0.006), M.teak, sx * (W / 2 - 0.07), 0, -0.3));
+  for (let i = 0; i < 9; i++) back.add(mesh(rbox(W - 0.16, 0.016, 0.052, 0.005), M.teak, 0, 0.02, -0.04 - i * 0.064));
+  back.add(mesh(cushion(W - 0.12, 0.065, 0.6, 0.02, 0.03), M.outdoorFabric, 0, 0.06, -0.31));
+  back.add(piping([[-(W - 0.12) / 2, 0.06, -0.01], [0, 0.062, -0.01], [(W - 0.12) / 2, 0.06, -0.01]], M.cord, 0.007));
   g.add(back);
+  g.add(mesh(cushion(W - 0.12, 0.075, 1.36, 0.022, 0.03), M.outdoorFabric, 0, 0.368, 0.3));
+  for (const sx of [-1, 1]) g.add(piping([[sx * (W - 0.12) / 2, 0.378, -0.37], [sx * (W - 0.12) / 2, 0.38, 0.3], [sx * (W - 0.12) / 2, 0.378, 0.97]], M.cord, 0.007));
+  // rolled towel resting at the head of the seat
+  const towel = mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.46, 32), M.towel, 0, 0.47, -0.3);
+  towel.rotation.z = Math.PI / 2;
+  g.add(towel);
   return g;
 }
 
@@ -292,6 +336,12 @@ export function createInterior(M) {
   const curtain = mesh(cg, M.linen, 1, CEIL - 0.03, -3.78, { cast: false, receive: true });
   curtain.scale.y = 0.001;
   root.add(curtain);
+
+  // terrace: a travertine drum between the loungers, with a ceramic bowl
+  root.add(mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.42, 48), M.travertine, -5.1, FL + 0.21, -6.6));
+  const tb = vase(M, M.ceramicDark, 0.08, 0.12);
+  tb.position.set(-5.1, FL + 0.42, -6.6);
+  root.add(tb);
 
   // terrace loungers facing the sea
   for (const x of [-6.2, -4.0]) {

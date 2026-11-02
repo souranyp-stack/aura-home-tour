@@ -129,28 +129,28 @@ void surface(vec2 uv, out vec3 col, out float h, out float r){
   // cathedral grain: growth rings sliced at a shallow angle
   float drift = pfbm(vec2(ux, uv.y), vec2(3.0, 20.0), 3);
   float arch = (v - 0.5) * 2.0;
-  float g = abs(arch + 0.35 * sin(ux * 6.28318 * 2.0 + pid * 6.28) + drift * 0.5);
-  float ringN = 7.0 + pid * 6.0;
+  float g = abs(arch + 0.22 * sin(ux * 6.28318 * 2.0 + pid * 6.28) + drift * 0.3);
+  float ringN = 14.0 + pid * 10.0;
   float ring = fract(g * ringN + ux * (1.0 + pid) * 2.0);
-  float late = smoothstep(0.62, 0.95, ring) * (1.0 - smoothstep(0.95, 1.0, ring));
+  float late = smoothstep(0.7, 0.96, ring) * (1.0 - smoothstep(0.96, 1.0, ring));
   float fine = pfbm(vec2(ux, uv.y + drift * 0.01), vec2(4.0, 260.0), 4);
 
   vec3 light = vec3(0.72, 0.56, 0.39);
   vec3 mid = vec3(0.62, 0.47, 0.32);
   vec3 dark = vec3(0.45, 0.32, 0.21);
   col = mix(light, mid, 0.3 + 0.45 * pid + 0.3 * fine);
-  col = mix(col, dark, late * 0.6);
+  col = mix(col, dark, late * 0.32);
   // quartersawn ray flecks: rare, small, satin
   vec3 vo = pvoronoi(vec2(ux, uv.y), vec2(18.0, 300.0));
   float fleck = (1.0 - smoothstep(0.05, 0.25, vo.x)) * step(0.93, vo.z);
   col = mix(col, light * 1.06, fleck * 0.5);
   // pin knots
   vec3 kn = pvoronoi(uv, vec2(5.0, 10.0));
-  float knot = (1.0 - smoothstep(0.02, 0.06, kn.x)) * step(0.9, kn.z);
+  float knot = (1.0 - smoothstep(0.015, 0.045, kn.x)) * step(0.97, kn.z);
   col = mix(col, vec3(0.36, 0.26, 0.18), knot);
 
   float seamV = 1.0 - smoothstep(0.0, 0.0035, min(v, 1.0 - v));
-  float seamU = 1.0 - smoothstep(0.0, 0.0016, dj);
+  float seamU = (1.0 - smoothstep(0.0, 0.0016, dj)) * 0.55;
   float seam = max(seamV, seamU);
   col = mix(col, col * 0.5, seam * 0.8);
 

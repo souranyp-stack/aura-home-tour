@@ -48,11 +48,22 @@
   <div class="film-ui" id="filmUi">
     <main class="story" id="story">
       <section class="frame frame--hero" data-in="-1" data-out="0.055">
-        <p class="eyebrow"><span>Concept residence</span><span>Western headland</span><span>Two levels</span></p>
+        <div class="hero__scrim" aria-hidden="true"></div>
+        <p class="eyebrow"><span>N° 01</span><span>Concept residence</span><span>38 m above the sea</span></p>
         <h1 class="hero__word">AURA</h1>
         <div class="hero__foot">
-          <p class="hero__sub"><em>The living sanctuary</em></p>
-          <p class="hero__lede">It starts as a sculpture with no doors, no rooms and no address. Keep scrolling and it becomes a house on the edge of the sea.</p>
+          <p class="hero__sub"><em>The living</em> sanctuary</p>
+          <div class="hero__aside">
+            <p class="hero__lede">Nine masses, held apart in the air. Scroll, and they come down into a house on the edge of the sea.</p>
+            <a class="hero__begin" href="#" data-begin data-magnetic>
+              <svg viewBox="0 0 120 120" aria-hidden="true">
+                <defs><path id="ring" d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0" /></defs>
+                <text><textPath href="#ring">Scroll to assemble · nine masses · one house ·</textPath></text>
+              </svg>
+              <i aria-hidden="true">↓</i>
+              <span class="sr-only">Begin the film</span>
+            </a>
+          </div>
         </div>
       </section>
 
@@ -151,7 +162,7 @@
 
     <div class="index" id="index">
       <p class="index__now"><span id="chapterNum">00</span><span id="chapterName">Prologue</span></p>
-      <div class="cue" id="cue" aria-hidden="true"><i></i><span>Scroll to assemble</span></div>
+      <div class="cue" id="cue" aria-hidden="true"><i></i><span>Nine masses · one house</span></div>
       <nav class="index__ticks" id="rail" aria-label="Chapters"></nav>
     </div>
   </div>

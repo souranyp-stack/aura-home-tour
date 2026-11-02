@@ -149,6 +149,9 @@ export function createMaterials(renderer) {
   };
 
   const std = (params, opts) => auraPatch(new THREE.MeshStandardMaterial(params), opts);
+  // physical layers where the eye expects them: fabric sheen, leather and oiled
+  // wood clearcoat, brushed-metal anisotropy
+  const phys = (params, opts) => auraPatch(new THREE.MeshPhysicalMaterial(params), opts);
   const set = (tx) => ({ map: tx.map, normalMap: tx.normalMap, roughnessMap: tx.roughnessMap });
 
   const m = {
@@ -157,7 +160,7 @@ export function createMaterials(renderer) {
     limestone: std({ ...set(t.limestone), roughness: 1 }, { uvScale: 1 / 3 }),
     oak: std({ ...set(t.oak), roughness: 1 }, { uvScale: 1 / 2.4 }),
     render: std({ ...set(t.render), roughness: 1 }, { uvScale: 1 / 4 }),
-    bronze: std({ ...set(t.bronze), metalness: 1, roughness: 1 }, { uvScale: 1 }),
+    bronze: phys({ ...set(t.bronze), metalness: 1, roughness: 1, anisotropy: 0.55 }, { uvScale: 1 }),
     glass: auraPatch(
       new THREE.MeshPhysicalMaterial({
         color: 0xd7e3e2, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.16,
@@ -173,14 +176,16 @@ export function createMaterials(renderer) {
     }, { uvScale: 1 / 3 }),
 
     // Interior (printed in by the sweep)
-    floorOak: std({ ...set(t.oak), roughness: 1 }, { uvScale: 1 / 2.4, mode: 'reveal' }),
+    floorOak: phys({ ...set(t.oak), roughness: 1, clearcoat: 0.18, clearcoatRoughness: 0.42 }, { uvScale: 1 / 2.4, mode: 'reveal' }),
     wallTravertine: std({ ...set(t.travertine), roughness: 1 }, { uvScale: 1 / 2.4, mode: 'reveal' }),
-    boucle: std({ ...set(t.boucle), roughness: 1, color: 0xf3efe7 }, { uvScale: 1 / 0.4, mode: 'reveal' }),
+    boucle: phys({ ...set(t.boucle), roughness: 1, color: 0xf1ece3, sheen: 1, sheenRoughness: 0.75, sheenColor: 0xfff4e6 }, { uvScale: 1 / 0.4, mode: 'reveal' }),
+    boucleDark: phys({ ...set(t.boucle), roughness: 1, color: 0xc9bfae, sheen: 1, sheenRoughness: 0.7, sheenColor: 0xe9dcc8 }, { uvScale: 1 / 0.2, mode: 'reveal' }),
     wool: std({ ...set(t.wool), roughness: 1 }, { uvScale: 1, mode: 'reveal' }),
-    walnut: std({ ...set(t.walnut), roughness: 1 }, { uvScale: 1 / 1.2, mode: 'reveal' }),
-    cognac: std({ ...set(t.leather), roughness: 1 }, { uvScale: 1 / 0.3, mode: 'reveal' }),
+    walnut: phys({ ...set(t.walnut), roughness: 1, clearcoat: 0.3, clearcoatRoughness: 0.35 }, { uvScale: 1 / 1.2, mode: 'reveal' }),
+    cognac: phys({ ...set(t.leather), roughness: 1, clearcoat: 0.35, clearcoatRoughness: 0.5, sheen: 0.4, sheenRoughness: 0.6, sheenColor: 0x8a4a2a }, { uvScale: 1 / 0.3, mode: 'reveal' }),
+    cognacDark: phys({ ...set(t.leather), roughness: 1, color: 0x7a5a48, clearcoat: 0.4, clearcoatRoughness: 0.45 }, { uvScale: 1 / 0.15, mode: 'reveal' }),
     basalt: std({ color: 0x2b2926, roughness: 0.62, normalMap: t.render.normalMap }, { uvScale: 1, mode: 'reveal' }),
-    bronzeInterior: std({ ...set(t.bronze), metalness: 1, roughness: 1 }, { uvScale: 1, mode: 'reveal' }),
+    bronzeInterior: phys({ ...set(t.bronze), metalness: 1, roughness: 1, anisotropy: 0.55 }, { uvScale: 1, mode: 'reveal' }),
     ceramic: std({ color: 0xcfc6b8, roughness: 0.45 }, { mode: 'reveal' }),
     steel: std({ color: 0x1b1a19, metalness: 0.85, roughness: 0.55, normalMap: t.bronze.normalMap }, { uvScale: 1, mode: 'reveal' }),
     soot: std({ color: 0x050505, roughness: 1 }, { mode: 'reveal' }),
@@ -201,8 +206,10 @@ export function createMaterials(renderer) {
       );
       return mat;
     })(),
-    outdoorFabric: std({ ...set(t.boucle), roughness: 1, color: 0xe9e2d4 }, { uvScale: 1 / 0.4, mode: 'reveal' }),
-    teak: std({ ...set(t.oak), roughness: 1, color: 0xc29a74 }, { uvScale: 1 / 2.4, mode: 'reveal' }),
+    outdoorFabric: phys({ ...set(t.wool), roughness: 1, color: 0xefe8db, sheen: 0.8, sheenRoughness: 0.8, sheenColor: 0xfff6ea }, { uvScale: 2.2, mode: 'reveal' }),
+    cord: std({ color: 0x3d3a35, roughness: 0.9, normalMap: t.wool.normalMap }, { uvScale: 6, mode: 'reveal' }),
+    towel: phys({ ...set(t.boucle), roughness: 1, color: 0xb9a084, sheen: 1, sheenRoughness: 0.9, sheenColor: 0xf0e2cc }, { uvScale: 1 / 0.25, mode: 'reveal' }),
+    teak: phys({ ...set(t.walnut), roughness: 1, color: 0xf0c49a, clearcoat: 0.12, clearcoatRoughness: 0.6 }, { uvScale: 1 / 1.2, mode: 'reveal' }),
   };
   cache = m;
   return m;

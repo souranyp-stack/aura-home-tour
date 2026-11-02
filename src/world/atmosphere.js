@@ -314,7 +314,7 @@ export function createAtmosphere(renderer, scene, M, { mobile }) {
     pool.visible = pool.intensity > 1;
     const gallery = state.studio * state.voidOpacity;
     beamMat.uniforms.uAmount.value = 0.075 * gallery;
-    dustMat.uniforms.uAmount.value = 1.6 * gallery;
+    dustMat.uniforms.uAmount.value = 1.6 * gallery * (state.dust ?? 1);
     dustMat.uniforms.uTime.value = state.now;
     dustMat.uniforms.uScale.value = renderer.getPixelRatio();
     beam.visible = dust.visible = gallery > 0.01;
