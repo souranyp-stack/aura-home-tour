@@ -1,0 +1,16 @@
+{
+  "name": "aura-broll",
+  "private": true,
+  "type": "module",
+  "description": "Frame-exact B-roll capture and edit for the AURA intro",
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "playwright-core": "^1.49.1"
+  },
+  "scripts": {
+    "versions": "sh setup-versions.sh",
+    "record": "node record.mjs",
+    "render": "node edit/render.mjs",
+    "render:clean": "node edit/render.mjs --clean"
+  }
+}

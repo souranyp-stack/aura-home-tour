@@ -1,0 +1,145 @@
+// Every shot of the intro B-roll, in script order. Each one is recorded on its
+// own (npm run record -- <name>) into clips/<name>.mp4 and cut together by
+// edit.mjs. Frame functions run in the page with E (lib/ease.js) in scope;
+// the factories below write them as strings so their numbers travel with them.
+
+const CUR = 'http://localhost:5288/?capture';
+const V1 = 'http://localhost:5301/';
+// the first version has its own markup; keep only its picture
+const V1_CLEAN = 'body > :not(canvas) { opacity: 0 !important; } html, body { cursor: none !important; }';
+
+const J = JSON.stringify;
+const GOLD = { time: 19.62, mist: 0.05, interior: 0.55, fire: 0, veil: 0 };
+const DUSK_IN = { time: 19.4, interior: 0.65, fire: 1, mist: 0.05, veil: 0 };
+
+// a free camera moving between two framings over the finished house
+const pose = (env, a, b, { ease = 'sine', door = 0, ao } = {}) => `(i, t, n) => {
+  const k = E.${ease}(i / (n - 1)), A = ${J(a)}, B = ${J(b)};
+  window.__aura.director = { kind: 'pose', env: ${J(env)}, door: ${door}, ao: ${J(ao)},
+    cam: { pos: E.v(A.pos, B.pos, k), tgt: E.v(A.tgt, B.tgt, k), fov: E.lerp(A.fov, B.fov, k) } };
+}`;
+
+// walking: a path of eye points (and optionally of look points) in the house
+const walk = (env, eyes, looks, fov, { ease = 'sine', levelFn = "() => 'upper'" } = {}) => `(i, t, n) => {
+  const k = E.${ease}(i / (n - 1));
+  const pos = E.path(${J(eyes)}, k), tgt = E.path(${J(looks)}, k);
+  const level = (${levelFn})(pos);
+  window.__aura.director = { kind: 'walk', state: { x: pos[0], z: pos[2], level }, env: ${J(env)},
+    cam: { pos, tgt, fov: ${fov} } };
+}`;
+
+// the scroll film itself, by desk and film progress
+const film = (from, to, ease = 'sine') => `(i, t, n) => {
+  const k = E.${ease}(i / (n - 1)), A = ${J(from)}, B = ${J(to)};
+  window.__aura.director = { kind: 'film', desk: E.lerp(A.desk ?? 1, B.desk ?? 1, k), p: E.lerp(A.p ?? 0, B.p ?? 0, k) };
+}`;
+
+// the real page, scrolled through a section from a to b (fractions of its run)
+const scroll = (sel, a, b, ease = 'sine') => `(i, t, n) => {
+  const S = window.__shot, aura = window.__aura;
+  aura.director = null;
+  if (!S.top) {
+    const el = document.querySelector(${J(sel)}); const host = el.closest('.pin-spacer') || el;
+    S.top = host.getBoundingClientRect().top + scrollY; S.run = Math.max(1, host.offsetHeight - innerHeight);
+  }
+  const y = S.top + S.run * E.lerp(${a}, ${b}, E.${ease}(i / (n - 1)));
+  aura.lenis.scrollTo(y, { immediate: true, force: true });
+}`;
+
+const v1 = (p0, p1) => `(i, t, n) => { window.__aura.setProgress(E.lerp(${p0}, ${p1}, E.sine(i / (n - 1)))); }`;
+
+const stairLevel = "(p) => (p[0] > -0.66 ? 'upper' : p[0] > -6.6 ? 'inside' : 'lower')";
+
+export const SHOTS = [
+  // "This is an architectural plan. Lines on paper. Walls, rooms, a stair."
+  { name: '01_plan', url: CUR, clean: true, seconds: 8, frameFn: film({ desk: 0 }, { desk: 0.012 }),
+    crop: (i, n) => { const k = sine(i / (n - 1)); const w = 1920 - 300 * k; return { x: (1180 - w / 2) * k + 0 * (1 - k), y: (575 - (w * 9) / 32) * k, w }; } },
+  { name: '01b_plan_detail', url: CUR, clean: true, seconds: 7, frameFn: film({ desk: 0 }, { desk: 0 }),
+    crop: (i, n) => { const k = sine(i / (n - 1)); const c = catmull([[1390, 640], [1270, 560], [1190, 500]], k); const w = 1040 - 70 * k; return { x: c[0] - w / 2, y: c[1] - (w * 9) / 32, w }; } },
+  // "Now watch what happens when I scroll." / walls rise, floors slide in, roof lands
+  { name: '02_rise', url: CUR, clean: true, seconds: 12, preroll: 10, frameFn: film({ desk: 0 }, { desk: 0.6 }, 'cubic'),
+    // starts centred on the plan, as the last plan shot ends, and opens out as the walls rise
+    crop: (i, n) => { const k = sine(Math.min(1, (i / (n - 1)) / 0.62)); const w = 1560 + 360 * k; return { x: (1300 - w / 2) * (1 - k), y: (590 - (w * 9) / 32) * (1 - k), w }; } },
+  // the plan floats apart into the sculpture, the desk dissolves into the gallery
+  { name: '03_float', url: CUR, clean: true, seconds: 7, frameFn: `(i, t, n) => {
+      const s = E.sine(i / (n - 1));
+      window.__aura.director = s < 0.75 ? { kind: 'film', desk: E.lerp(0.6, 1, s / 0.75), p: 0 } : { kind: 'film', desk: 1, p: E.lerp(0, 0.03, (s - 0.75) / 0.25) };
+    }` },
+  // "...standing on a cliff above the sea at golden hour."
+  { name: '04_golden', url: CUR, clean: true, seconds: 6.5, frameFn: pose(GOLD,
+      { pos: [-72, 2.4, -90], tgt: [3, 6, 0], fov: 24 }, { pos: [-56, 4.2, -101], tgt: [3, 6.6, 0], fov: 23 }) },
+  // the sculpture in its beam of light, then it snaps together onto the cliff
+  { name: '05_sculpture', url: CUR, clean: true, seconds: 5, frameFn: film({ p: 0.03 }, { p: 0.125 }) },
+  { name: '06_assemble', url: CUR, clean: true, seconds: 7, frameFn: film({ p: 0.14 }, { p: 0.6 }, 'cubic') },
+  // "And this isn't a video. It's a website." (the real page, with its UI)
+  { name: '07_site', url: CUR, clean: false, seconds: 9, preroll: 60, frameFn: `(i, t, n) => {
+      window.__aura.director = null;
+      const y = 1350 * E.cubic(E.span(i / (n - 1), 0.18, 1));
+      window.__aura.lenis.scrollTo(y, { immediate: true, force: true });
+    }` },
+  // "Every stone, every board of oak, the sea, the sunset, even the sound of the fire"
+  { name: '08a_stone', url: CUR, clean: true, seconds: 3.5, frameFn: pose({ time: 19.45, mist: 0.04, interior: 0.3, fire: 0, veil: 0 },
+      { pos: [-7.3, 3.9, -15.6], tgt: [-9.6, 3.1, -11.0], fov: 30 }, { pos: [-8.0, 3.7, -14.3], tgt: [-9.7, 3.0, -11.0], fov: 28 }) },
+  { name: '08b_oak', url: CUR, clean: true, seconds: 3.5, frameFn: walk(DUSK_IN,
+      [[3.4, 4.42, -2.9], [2.2, 4.36, -1.9]], [[-6, 4.2, 4.6], [-6.4, 4.2, 4.8]], 40) },
+  { name: '08c_sea', url: CUR, clean: true, seconds: 3.5, frameFn: walk({ ...GOLD, fire: 1 },
+      [[2.6, 5.5, -6.1], [4.0, 5.45, -6.15]], [[17, 3.6, -6.3], [17, 3.5, -6.3]], 46) },
+  { name: '08d_sunset', url: CUR, clean: true, seconds: 3.5, frameFn: `(i, t, n) => {
+      window.__aura.director = { kind: 'day', t: E.lerp(0.70, 0.86, E.sine(i / (n - 1))) };
+    }` },
+  { name: '08e_fire', url: CUR, clean: true, seconds: 3.5, frameFn: pose({ time: 21.7, mist: 0.06, interior: 0.85, fire: 1, veil: 0.65 },
+      { pos: [0.9, 5.35, 1.0], tgt: [-7.2, 4.85, 5.75], fov: 46 }, { pos: [-1.6, 5.15, 2.75], tgt: [-7.2, 4.8, 5.75], fov: 42 }) },
+  // "There's not a single image file on this page." (wide, for a title)
+  { name: '08f_aerial', url: CUR, clean: true, seconds: 5.5, frameFn: `(i, t, n) => {
+      const k = E.sine(i / (n - 1)), a = E.lerp(-0.86, -0.62, k), r = 92;
+      window.__aura.director = { kind: 'pose', env: ${J(GOLD)}, cam: { pos: [3 + Math.cos(a) * r, E.lerp(46, 40, k), Math.sin(a) * r], tgt: [3, 4, 0], fov: 28 } };
+    }` },
+  // "You can scroll through it like a film,"
+  { name: '09_door', url: CUR, clean: true, seconds: 5, frameFn: film({ p: 0.695 }, { p: 0.79 }) },
+  // "or step inside and walk the whole house."
+  { name: '10_living', url: CUR, clean: true, seconds: 4.5, frameFn: walk(DUSK_IN,
+      [[2.6, 5.67, -3.6], [-2.6, 5.62, 1.4]], [[-7.2, 4.9, 5.75], [-7.2, 4.85, 5.75]], 50) },
+  // "Down the stair,"
+  { name: '11_stair', url: CUR, clean: true, seconds: 4.5, frameFn: walk(DUSK_IN,
+      [[0.9, 5.67, 7.45], [-0.66, 5.67, 7.5], [-3.6, 3.7, 7.5], [-6.6, 1.68, 7.55], [-8.1, 1.64, 7.8]],
+      [[-6, 3.2, 7.5], [-8, 2.6, 7.5], [-10, 1.0, 7.6], [-12, 1.4, 8.0], [-12, 1.5, 8.6]], 54, { levelFn: stairLevel }) },
+  // "into the bedrooms,"
+  { name: '12_bedroom', url: CUR, clean: true, seconds: 4, frameFn: walk(DUSK_IN,
+      [[7.5, 1.64, -1.3], [6.9, 1.6, -0.3]], [[4.4, 0.85, 3.8], [4.3, 0.8, 3.9]], 48, { levelFn: "() => 'lower'" }) },
+  // "out onto the terrace."
+  { name: '13_terrace', url: CUR, clean: true, seconds: 5, frameFn: walk(GOLD,
+      [[1.0, 5.67, -1.2], [1.6, 5.67, -3.8], [2.0, 5.67, -6.0]], [[-6, 4.6, -9], [-8, 4.2, -9.5], [-9, 3.8, -10.5]], 50) },
+  // "But the first version looked nothing like this."
+  { name: '15a_v1_brick', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 3, frameFn: v1(0.37, 0.43) },
+  { name: '15b_v1_cliff', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 3, frameFn: v1(0.6, 0.68) },
+  { name: '15c_v1_sculpture', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 3, frameFn: v1(0.0, 0.09) },
+  { name: '15d_v1_room', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 3, frameFn: v1(0.86, 0.95) },
+  // "...how I got from that to this." / "the prompts, the mistakes, the tricks"
+  { name: '16a_drawings', url: CUR, clean: false, seconds: 5, preroll: 90, frameFn: scroll('#plans', -0.35, 0.55) },
+  { name: '16b_roll', url: CUR, clean: false, seconds: 6, preroll: 120, frameFn: scroll('#sheet', 0.05, 0.95) },
+  { name: '16c_materials', url: CUR, clean: false, seconds: 5, preroll: 120, frameFn: scroll('#materials', 0.05, 0.9) },
+  { name: '16d_day', url: CUR, clean: false, seconds: 5, preroll: 90, frameFn: scroll('#daylight', 0.1, 0.95) },
+  { name: '16e_approach', url: CUR, clean: false, seconds: 6, preroll: 120, frameFn: scroll('#approach', 0.0, 0.92) },
+  { name: '16f_cta', url: CUR, clean: false, seconds: 4.5, preroll: 60,
+    frameFn: `(i, t, n) => { window.__aura.director = null; window.__aura.lenis.scrollTo(0, { immediate: true, force: true }); }`,
+    before: async (i, n, page) => {
+      const k = i / (n - 1);
+      const pts = [[40, 1060], [110, 975], [150, 962], [178, 968], [132, 964]];
+      const [x, y] = catmull(pts, sine(Math.min(1, k * 1.25)));
+      await page.mouse.move(x, y);
+      // press without releasing: the ripple shows, and no click opens walk mode
+      if (i === Math.round(n * 0.86)) await page.mouse.down();
+    },
+    crop: (i, n) => { const k = sine(i / (n - 1)); const w = 1100 - 140 * k; return { x: 0, y: 1080 - (w * 9) / 16 - 40 * (1 - k), w }; } },
+  // "...into something like this." (end card plate)
+  { name: '17_end', url: CUR, clean: true, seconds: 9, frameFn: pose({ ...GOLD, time: 19.7, interior: 0.75 },
+      { pos: [38, 9, -58], tgt: [2, 5.5, 0], fov: 30 }, { pos: [50, 21, -70], tgt: [2, 5, 0], fov: 32 }) },
+];
+
+// Node-side copies for crops and mouse paths
+function sine(t) { return -(Math.cos(Math.PI * Math.min(1, Math.max(0, t))) - 1) / 2; }
+function catmull(pts, t) {
+  const seg = pts.length - 1, f = Math.min(1, Math.max(0, t)) * seg, i = Math.min(seg - 1, Math.floor(f)), u = f - i;
+  const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(seg, i + 2)];
+  return p1.map((_, k) => 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u * u + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u * u * u));
+}

@@ -28,7 +28,8 @@ window.scrollTo(0, 0);
 
 const canvas = document.getElementById('gl');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
-const maxDpr = Math.min(window.devicePixelRatio, 1.5);
+// video capture (dev only, ?capture) renders at the full device ratio for supersampling
+const maxDpr = Math.min(window.devicePixelRatio, import.meta.env.DEV && /[?&]capture\b/.test(location.search) ? 2 : 1.5);
 let dpr = maxDpr;
 renderer.setPixelRatio(dpr);
 renderer.setSize(innerWidth, innerHeight, false);
@@ -336,6 +337,54 @@ async function boot() {
     camera.updateProjectionMatrix();
   }
 
+  // Dev hook: a shot scripted by the video recorder (video/) replaces the
+  // scroll-driven frame. kind: film (p, desk), day (t), walk (state, env) or
+  // pose (env, door); cam {pos, tgt, fov} overrides the shot's own camera.
+  function directed(d, time, dt) {
+    if (!canvasShown) { canvasShown = true; canvas.style.visibility = 'visible'; }
+    let overlay = 0;
+    pointerEased.set(0, 0);
+    if (d.kind === 'film') {
+      prog = target = d.p ?? 0;
+      deskProg = deskTarget = d.desk ?? 1;
+      apply(prog, time, dt);
+      if (deskProg < 0.999) overlay = desk.update(deskProg, time);
+    } else if (d.kind === 'day') {
+      applyDay(d.t, time);
+    } else if (d.kind === 'walk') {
+      Object.assign(walk.state, d.state);
+      if (d.env) Object.assign(walk.env, d.env);
+      applyWalk(time, dt);
+    } else {
+      const env = d.env;
+      house.stand();
+      house.update(1, 0);
+      aura.uSweep.value = 18;
+      aura.uTime.value = time;
+      interior.root.visible = true;
+      house.door.position.x = doorX + (d.door ?? 0) * 2.46;
+      house.door.position.z = doorZ - Math.min(1, (d.door ?? 0) * 6) * 0.07;
+      land.group.visible = veg.visible = true;
+      const sky = atmo.update({ studio: 0, time: env.time, mist: env.mist, worldR: 2800, voidOpacity: 0, now: time, dust: 0 });
+      interior.update(env, time);
+      M.glassDark.emissive.copy(warmGlow).multiplyScalar(env.interior * (1 - sky.daylight) * 0.35);
+      M.textures.waves.normalMap.offset.set(time * 0.012, time * 0.007);
+      if (post.ao) post.ao.enabled = d.ao ?? true;
+    }
+    if (d.cam) {
+      camera.clearViewOffset();
+      camera.aspect = innerWidth / innerHeight;
+      if (d.cam.fov) camera.fov = d.cam.fov;
+      camera.updateProjectionMatrix();
+      camera.position.set(...d.cam.pos);
+      camera.lookAt(...d.cam.tgt);
+    }
+    post.grade.uniforms.uTime.value = time;
+    if (overlay > 0) post.setOverlay(desk.scene, camera, overlay, lendHouse, returnHouse);
+    else post.setOverlay(desk.scene, camera, 0);
+    post.composer.render();
+  }
+
   // Compile every program up front so reveals never hitch.
   mark('atmosphere');
   status('Polishing the glass', 0.86);
@@ -420,6 +469,7 @@ async function boot() {
     // the viewport can change before a resize event reaches us (hidden tabs, embeds)
     const key = `${innerWidth}x${innerHeight}`;
     if (key !== sizeKey) { sizeKey = key; onResize(); }
+    if (import.meta.env.DEV && window.__aura?.director) { directed(window.__aura.director, time, dt); return; }
     // Lenis already eases the scroll; this only removes the last bit of jitter
     prog += (target - prog) * (1 - Math.exp(-dt * (reducedMotion ? 4.2 : 9)));
     deskProg += (deskTarget - deskProg) * (1 - Math.exp(-dt * (reducedMotion ? 4.2 : 9)));
@@ -489,6 +539,7 @@ async function boot() {
       renderDay: (t, time = 10) => { applyDay(t, time); post.composer.render(); },
       walk,
       sound,
+      director: null,
     };
     // contact sheets of exact scroll positions, posted to a local capture server
     const send = (name, c) => fetch(`http://127.0.0.1:5299/save?name=${name}`, { method: 'POST', body: c.toDataURL('image/jpeg', 0.88) });

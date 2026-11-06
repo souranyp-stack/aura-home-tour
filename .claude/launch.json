@@ -17,6 +17,18 @@
         "scripts/serve-aura.mjs"
       ],
       "port": 4190
+    },
+    {
+      "name": "broll-v1",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/d668dca", "--port", "5301", "--strictPort"],
+      "port": 5301
+    },
+    {
+      "name": "broll-tower",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/45dc2b6", "--port", "5302", "--strictPort"],
+      "port": 5302
     }
   ]
 }
