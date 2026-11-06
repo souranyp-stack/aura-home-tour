@@ -38,7 +38,7 @@ window.CUTS.sponsor = (api) => {
     // put it back at its own pace (Private Slack, Agent Skills, Certificates).
     // No click into the next page here: at full speed the pull-back would show
     // the hero's real-clock animations racing.
-    ['dc5_included', 45.6, 7.75, 6.3, 0.25],
+    ['dc5_included', 45.6, 8.0, 6.3, 0.25],
     ['dc6_pass', 51.9, 0.2, 18.3],
     ['dc7_pricing', 70.2, 0.3, 12.6],
   ];
