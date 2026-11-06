@@ -11,6 +11,9 @@
     "versions": "sh setup-versions.sh",
     "record": "node record.mjs",
     "render": "node edit/render.mjs",
-    "render:clean": "node edit/render.mjs --clean"
+    "render:clean": "node edit/render.mjs --clean",
+    "record:sponsor": "node sponsor/record.mjs",
+    "render:sponsor": "node edit/render.mjs --cut=sponsor",
+    "render:sponsor:clean": "node edit/render.mjs --cut=sponsor --clean"
   }
 }

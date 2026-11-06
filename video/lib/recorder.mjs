@@ -60,11 +60,12 @@ function encoder(out, fps, crf = 12) {
 // frameFn runs in the page as (i, t, n) before each step: i = frame index,
 // t = seconds into the shot, n = frame count. preroll frames are stepped but
 // not kept, so eased values settle before the first kept frame.
-// crop(i, n) -> {x, y, w} in CSS px picks a 16:9 window of the page to fill the
-// frame; the canvas renders at twice CSS size, so crops down to half width stay
-// sharp. Output is always 1920x1080.
+// crop(i, n) -> {x, y, w} in CSS px picks a window of the page (in the
+// viewport's aspect) to fill the frame; the canvas renders at twice CSS size, so
+// crops down to half width stay sharp. Output is outW wide (1920 by default).
+// The 16:9 page is the B-roll; a 16:10 one at outW 2880 is a screen recording.
 // before(i, n, page) runs in Node ahead of each frame (e.g. to move the mouse).
-export async function record(s, { out, seconds, frameFn, preroll = 30, fps = FPS, enable = true, crf, crop, before, clean = false }) {
+export async function record(s, { out, seconds, frameFn, preroll = 30, fps = FPS, enable = true, crf, crop, before, clean = false, outW = 1920 }) {
   const { page, cdp, width, height } = s;
   const n = Math.round(seconds * fps);
   await page.evaluate(([src, clean, css]) => {
@@ -88,10 +89,11 @@ export async function record(s, { out, seconds, frameFn, preroll = 30, fps = FPS
     const c = crop ? crop(i, n) : { x: 0, y: 0, w: width };
     c.w = Math.min(width, c.w);
     c.x = Math.min(width - c.w, Math.max(0, c.x));
-    c.y = Math.min(height - (c.w * 9) / 16, Math.max(0, c.y));
+    const aspect = height / width;
+    c.y = Math.min(height - c.w * aspect, Math.max(0, c.y));
     const { data } = await cdp.send('Page.captureScreenshot', {
       format: 'jpeg', quality: 95, optimizeForSpeed: false,
-      clip: { x: c.x + sx, y: c.y + sy, width: c.w, height: (c.w * 9) / 16, scale: 1920 / c.w },
+      clip: { x: c.x + sx, y: c.y + sy, width: c.w, height: c.w * aspect, scale: outW / c.w },
     });
     await enc.write(Buffer.from(data, 'base64'));
     if (i % 120 === 0) process.stdout.write(`  ${out.split('/').pop()} ${i}/${n}\r`);

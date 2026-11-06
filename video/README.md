@@ -60,5 +60,45 @@ How it works:
   Aura build) that sets the film, the day, the walk or a free camera for a frame.
 - Every shot renders at twice the output size and is scaled down, so edges are
   supersampled. Crops of down to half the frame stay sharp.
-- `shots.mjs` lists the shots and `edit/edit.js` is the edit. Each layer is a DOM
-  element whose CSS is set per frame; `edit/render.mjs` screenshots it to H.264.
+- `shots.mjs` lists the shots and `edit/cuts/intro.js` is the edit, run by the
+  compositor in `edit/edit.js`. Each layer is a DOM element whose CSS is set per
+  frame; `edit/render.mjs` screenshots it to H.264.
+
+# DesignCode sponsor read
+
+A screen recording of designcode.io for the sponsor segment, cut to the read in
+the script doc. It's one browser window on a dark violet backdrop, zooming toward
+whatever the cursor is doing, with the real address in the bar.
+
+- `out/aura-sponsor-designcode.mp4`: with a "Sponsored by DesignCode" tag at the
+  start and a "designcode.io · Link in the description" pill at the end.
+- `out/aura-sponsor-designcode-clean.mp4`: the same with no type.
+
+| Cut | Script line | Page | What happens |
+| --- | --- | --- | --- |
+| 0:00 | "Before we dive in, this video is sponsored by DesignCode." | designcode.io | the hero, cursor comes in |
+| 0:04 | "...this looks like every other AI website..." | designcode.io | zoom on "Avoid AI slops.", then the enrol button |
+| 0:13 | "It's run by Meng To... the taste to make it good." | designcode.io | the founder section scrolls; click on Courses |
+| 0:23 | "more than 90 courses and 300+ hours..." | /courses | the "All 94" filter |
+| 0:30 | "...a new course on building with Claude Code, Codex and Framer." | /courses | the Build with AI webinar course |
+| 0:34 | "Every course comes with the prompts, source files and templates..." | /courses | scrolling the catalogue; click on Events |
+| 0:42 | "There are weekly live sessions," | /calendar | the weekly session on the calendar |
+| 0:45 | "a private Slack, agent skills..., and certificates" | designcode.io | the "Included in package" list, then the page loads to Product Pass |
+| 0:52 | "members get the Product Pass, which includes a year of Aura Pro... ThreeUI Pro... Framer, Mobbin" | /product-pass | the offers, Aura, ThreeUI, then Framer and Mobbin; click on Pricing |
+| 1:10 | "You can start free... no card needed." | /pricing | the Free plan |
+| 1:15 | "...a limited-time deal on the Lifetime plan. Check the link in the description." | /pricing | the Lifetime plan, then the link pill |
+
+Recorded logged out, so no account details appear. The cursor only hovers and
+presses; it never releases a click, so nothing on the site was opened or submitted.
+
+```bash
+npm run record:sponsor -- dc6 --force   # one take (or none for all missing ones)
+npm run render:sponsor                  # with type
+npm run render:sponsor:clean            # without
+```
+
+`sponsor/takes.mjs` has each take's scroll, cursor, clicks and zoom, anchored to
+the site's text so it keeps working if the layout moves a little.
+The "Included in package" list on designcode.io steps on the real clock rather
+than the page's, so it ran about 4x fast in the recording; the edit plays that
+stretch at 0.25x to put it back at its own pace.

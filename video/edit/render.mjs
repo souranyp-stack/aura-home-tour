@@ -1,8 +1,8 @@
-// Renders the edit to out/. node edit/render.mjs [--clean] [--from=s --to=s] [--still=s,s,...]
+// Renders a cut to out/. node edit/render.mjs [--cut=intro|sponsor] [--clean] [--from=s --to=s] [--still=s,s,...]
 import { chromium } from 'playwright-core';
 import ffmpegPath from 'ffmpeg-static';
 import { spawn } from 'node:child_process';
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -10,6 +10,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 const arg = (k) => process.argv.find((a) => a.startsWith(`--${k}`))?.split('=')[1];
 const clean = process.argv.includes('--clean');
+const cutName = arg('cut') || 'intro';
 const stills = arg('still')?.split(',').map(Number);
 
 // the code typed on screen: the move that raises the house out of the plan
@@ -23,7 +24,11 @@ const browser = await chromium.launch({
 });
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.error('[page]', e.message));
-await page.goto(`${pathToFileURL(join(here, 'index.html')).href}${clean ? '?titles=0' : ''}`);
+// the sponsor cut reads the cursor tracks its takes were recorded with
+const takes = {};
+for (const f of readdirSync(join(root, 'clips')).filter((f) => f.endsWith('.json'))) takes[f.replace('.json', '')] = JSON.parse(readFileSync(join(root, 'clips', f), 'utf8'));
+await page.addInitScript(`window.__takes = ${JSON.stringify(takes)};`);
+await page.goto(`${pathToFileURL(join(here, 'index.html')).href}?cut=${cutName}${clean ? '&titles=0' : ''}`);
 await page.evaluate(async (code) => { window.__code = code; await window.__edit.ready; }, code);
 const total = await page.evaluate(() => window.__edit.frames);
 const cdp = await page.context().newCDPSession(page);
@@ -33,14 +38,15 @@ mkdirSync(join(root, 'out'), { recursive: true });
 if (stills) {
   for (const s of stills) {
     await page.evaluate((i) => window.__edit.frame(i), Math.round(s * 60));
-    writeFileSync(join(root, 'out', `still-${s}.jpg`), await shot());
+    writeFileSync(join(root, 'out', `still-${cutName}-${s}.jpg`), await shot());
   }
   await browser.close();
   process.exit(0);
 }
 
 const from = Math.round(Number(arg('from') ?? 0) * 60), to = Math.min(total, Math.round(Number(arg('to') ?? total / 60) * 60));
-const out = join(root, 'out', `${clean ? 'aura-intro-broll-clean' : 'aura-intro-broll'}${arg('from') || arg('to') ? `-${from / 60}-${to / 60}` : ''}.mp4`);
+const base = cutName === 'sponsor' ? 'aura-sponsor-designcode' : 'aura-intro-broll';
+const out = join(root, 'out', `${base}${clean ? '-clean' : ''}${arg('from') || arg('to') ? `-${from / 60}-${to / 60}` : ''}.mp4`);
 const ff = spawn(ffmpegPath, [
   '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '60', '-c:v', 'mjpeg', '-i', '-',
   '-vf', 'scale=out_color_matrix=bt709:out_range=tv,format=yuv420p',
