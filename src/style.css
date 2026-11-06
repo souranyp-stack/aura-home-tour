@@ -124,6 +124,7 @@ em { font-style: italic; }
   font-family: var(--serif); font-weight: 300; color: #f6f1e8;
   font-size: clamp(96px, 14.2vw, 250px); line-height: 0.78; letter-spacing: 0.035em;
   margin-left: -0.05em; text-shadow: 0 0 60px rgba(0, 0, 0, 0.45);
+  white-space: nowrap; /* at 250px the word is wider than its 700px column on wide screens */
 }
 .hero__word .ch { display: inline-block; }
 .hero__main { display: grid; justify-items: start; }
