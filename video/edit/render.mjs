@@ -28,11 +28,17 @@ page.on('pageerror', (e) => console.error('[page]', e.message));
 const takes = {};
 for (const f of readdirSync(join(root, 'clips')).filter((f) => f.endsWith('.json'))) takes[f.replace('.json', '')] = JSON.parse(readFileSync(join(root, 'clips', f), 'utf8'));
 await page.addInitScript(`window.__takes = ${JSON.stringify(takes)};`);
-await page.goto(`${pathToFileURL(join(here, 'index.html')).href}?cut=${cutName}${clean ? '&titles=0' : ''}`);
+// --take=<clip> [--take-from=s --take-speed=x --take-dur=s] for the page cut
+const extra = ['take', 'take-from', 'take-speed', 'take-dur'].filter((k) => arg(k)).map((k) => `&${k}=${encodeURIComponent(arg(k))}`).join('');
+await page.goto(`${pathToFileURL(join(here, 'index.html')).href}?cut=${cutName}${clean ? '&titles=0' : ''}${extra}`);
 await page.evaluate(async (code) => { window.__code = code; await window.__edit.ready; }, code);
 const total = await page.evaluate(() => window.__edit.frames);
+const [vw, vh] = await page.evaluate(() => window.__edit.size);
+if (vw !== 1920 || vh !== 1080) await page.setViewportSize({ width: vw, height: vh });
 const cdp = await page.context().newCDPSession(page);
-const shot = async () => Buffer.from((await cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 95 })).data, 'base64');
+const big = vw !== 1920 || vh !== 1080;
+const shot = async () => Buffer.from((await cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: 95,
+  ...(big ? { clip: { x: 0, y: 0, width: vw, height: vh, scale: 1 }, captureBeyondViewport: true } : {}) })).data, 'base64');
 
 mkdirSync(join(root, 'out'), { recursive: true });
 if (stills) {
@@ -45,7 +51,7 @@ if (stills) {
 }
 
 const from = Math.round(Number(arg('from') ?? 0) * 60), to = Math.min(total, Math.round(Number(arg('to') ?? total / 60) * 60));
-const base = cutName === 'sponsor' ? 'aura-sponsor-designcode' : 'aura-intro-broll';
+const base = cutName === 'sponsor' ? 'aura-sponsor-designcode' : cutName === 'page' ? `page-${arg('take')}` : 'aura-intro-broll';
 const out = join(root, 'out', `${base}${clean ? '-clean' : ''}${arg('from') || arg('to') ? `-${from / 60}-${to / 60}` : ''}.mp4`);
 const ff = spawn(ffmpegPath, [
   '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '60', '-c:v', 'mjpeg', '-i', '-',

@@ -228,9 +228,11 @@
       if (on && L.fx) L.fx(t - L.at, L, t);
     }
     gctx.drawImage(tiles[(i * 5) % tiles.length], 0, 0);
-    grain.style.opacity = cut.grain ? cut.grain(t) : 0.07;
+    grain.style.opacity = cut.plain ? 0 : cut.grain ? cut.grain(t) : 0.07;
     cut.frame?.(t, i);
-    black.style.opacity = Math.max(1 - E.sine(span(t, 0, cut.fadeIn ?? 1.4)), E.sine(span(t, DURATION - 1.2, DURATION - 0.05)));
+    // a plain cut (a clip for another editor) has no vignette, grain or fades
+    black.style.opacity = cut.plain ? 0 : Math.max(1 - E.sine(span(t, 0, cut.fadeIn ?? 1.4)), E.sine(span(t, DURATION - 1.2, DURATION - 0.05)));
+    vignette.style.opacity = cut.plain ? 0 : 1;
   }
 
   const ready = (async () => {
@@ -242,5 +244,5 @@
       v.onerror = () => { console.error(`cannot load ${v.src}`); v.__missing = true; r(); };
     }))));
   })();
-  window.__edit = { frame, ready, frames: Math.round(DURATION * FPS), fps: FPS };
+  window.__edit = { frame, ready, frames: Math.round(DURATION * FPS), fps: FPS, size: cut.size || [1920, 1080] };
 })();
