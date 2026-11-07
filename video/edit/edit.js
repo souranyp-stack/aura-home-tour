@@ -27,15 +27,16 @@
 
   // ------------------------------------------------------------ sources
   const videos = new Map();
-  const video = (src) => {
-    if (!videos.has(src)) {
+  // key lets one clip have two decoders, for blending neighbouring frames
+  const video = (src, key = src) => {
+    if (!videos.has(key)) {
       const v = document.createElement('video');
       v.src = `../clips/${src}.mp4`;
       v.muted = true; v.preload = 'auto'; v.playsInline = true;
       v.__frame = -1;
-      videos.set(src, v);
+      videos.set(key, v);
     }
-    return videos.get(src);
+    return videos.get(key);
   };
   async function seekFrame(v, k) {
     const last = Math.max(0, Math.round(v.duration * FPS) - 1);
@@ -72,14 +73,48 @@
     if (L.build) L.build(L);
     (L.parent || stage).appendChild(el);
     if (L.src) L.video = video(L.src);
+    if (L.src && L.blend) L.video2 = video(L.src, `${L.src}#next`);
     layers.push(L);
     return L;
   }
 
+  // Seeks a layer's clip to its frame. blend: also the next frame, mixed by the
+  // fraction between them (smooth slow motion). crop(st) -> {x, y, w} in source
+  // pixels: drawn with high-quality resampling at sub-pixel precision, so slow
+  // zooms glide instead of stepping. paint: the cut draws the frame itself.
   async function feed(L, t) {
     const st = L.from + (t - L.at) * L.speed;
-    await seekFrame(L.video, Math.floor(st * FPS + 1e-3));
-    for (const g of L.canvases) g.drawImage(L.video, 0, 0, g.canvas.width, g.canvas.height);
+    const f = st * FPS, k = Math.floor(f + 1e-3);
+    L.st = st;
+    L.mix = L.blend ? Math.min(1, Math.max(0, f - k)) : 0;
+    await Promise.all([seekFrame(L.video, k), L.blend ? seekFrame(L.video2, k + 1) : null]);
+    if (L.paint) return;
+    const c = L.crop ? L.crop(st) : null;
+    if (c && !L.half) {
+      L.half = document.createElement('canvas');
+      L.half.width = L.video.videoWidth / 2; L.half.height = L.video.videoHeight / 2;
+    }
+    for (const g of L.canvases) {
+      const W = g.canvas.width, H = g.canvas.height;
+      g.imageSmoothingEnabled = true;
+      g.imageSmoothingQuality = 'high';
+      if (c) {
+        // an exact half-size copy (a clean 2:1 box filter) carries the picture;
+        // the full frame is mixed in only where the crop is close enough to need
+        // its detail, so shrinking never aliases and the zoom never shimmers
+        const hc = L.half.getContext('2d');
+        hc.drawImage(L.video, 0, 0, L.half.width, L.half.height);
+        const h = (c.w * H) / W, detail = E.sine(span(W / c.w, 0.6, 0.8));
+        g.globalAlpha = 1;
+        g.drawImage(L.half, c.x / 2, c.y / 2, c.w / 2, h / 2, 0, 0, W, H);
+        if (detail > 0.002) { g.globalAlpha = detail; g.drawImage(L.video, c.x, c.y, c.w, h, 0, 0, W, H); }
+      } else {
+        g.globalAlpha = 1;
+        g.drawImage(L.video, 0, 0, W, H);
+        if (L.mix > 0.002) { g.globalAlpha = L.mix; g.drawImage(L.video2, 0, 0, W, H); }
+      }
+      g.globalAlpha = 1;
+    }
   }
 
   // ------------------------------------------------------------ the browser window

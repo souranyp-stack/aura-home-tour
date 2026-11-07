@@ -96,7 +96,17 @@ for (const take of list) {
   };
 
   const presses = (take.press ?? []).map((t) => Math.round(t * FPS));
-  const cursorTrack = [];
+  const cursorTrack = [], resid = [];
+  // Chrome scrolls in whole CSS pixels, so a slow scroll would step. Each frame
+  // scrolls to the nearest pixel and logs what is left over; the edit moves the
+  // page by that much, and the bars that stay put on screen (fixed or stuck
+  // sticky ones) and the cursor are offset here by the opposite amount.
+  const bars = await page.evaluate(() => {
+    const all = [...document.querySelectorAll('body *')].filter((e) => !e.closest('#__cur') && ['fixed', 'sticky'].includes(getComputedStyle(e).position));
+    window.__bars = all.filter((e) => !all.some((o) => o !== e && o.contains(e)));
+    return window.__bars.map((e) => `${e.tagName.toLowerCase()}.${String(e.className).split(' ')[0]}:${getComputedStyle(e).position}`);
+  });
+  console.log(`  ${take.name} bars: ${bars.join(', ') || 'none'}`);
   await record(s, {
     out: `clips/${take.name}.mp4`, seconds: take.seconds, preroll: 60, outW: 2880, crf: 16,
     frameFn: '() => {}',
@@ -104,23 +114,31 @@ for (const take of list) {
       const t = i / FPS;
       const [x, y] = cursorAt(t);
       const since = presses.map((f) => (i - f) / FPS).filter((d) => d >= 0).sort((a, b) => a - b)[0];
-      await pg.evaluate(([sy, x, y, since]) => {
-        window.scrollTo({ top: sy, behavior: 'instant' });
-        document.getElementById('__cur').style.transform = `translate(${x}px, ${y}px)`;
+      const r = await pg.evaluate(([sy, x, y, since]) => {
+        window.scrollTo({ top: Math.round(sy), behavior: 'instant' });
+        const r = scrollY - sy;
+        for (const b of window.__bars) {
+          b.style.translate = '';
+          const p = getComputedStyle(b).position, top = b.getBoundingClientRect().top;
+          // sticky bars only hold still once they are stuck at their top offset
+          if (p === 'fixed' || Math.abs(top - parseFloat(getComputedStyle(b).top || 'NaN')) < 0.5) b.style.translate = `0 ${-r}px`;
+        }
+        document.getElementById('__cur').style.transform = `translate(${x}px, ${y - r}px)`;
         const ring = document.getElementById('__ring'), arrow = document.getElementById('__arrow');
         const k = since === null ? 1 : Math.min(1, since / 0.5);
         ring.style.opacity = since === null ? 0 : (1 - k) * 0.95;
         ring.style.transform = `scale(${0.35 + k * 1.05})`;
         arrow.style.transform = `scale(${since === null ? 1 : 1 - 0.14 * Math.sin(Math.PI * Math.min(1, since / 0.22))})`;
+        return r;
       }, [scrollAt(t), x, y, since ?? null]);
       await pg.mouse.move(x, y);
       if (presses.includes(i) && cursorTrack.length === i) await pg.mouse.down();
-      if (cursorTrack.length === i) cursorTrack.push([+x.toFixed(1), +y.toFixed(1)]);
+      if (cursorTrack.length === i) { cursorTrack.push([+x.toFixed(2), +y.toFixed(2)]); resid.push(+r.toFixed(3)); }
     },
   });
   writeFileSync(`clips/${take.name}.json`, JSON.stringify({
     name: take.name, path: take.path, seconds: take.seconds, fps: FPS, viewport: [1440, 900],
-    zoom: take.zoom, focus: focusKeys, cursor: cursorTrack,
+    zoom: take.zoom, focus: focusKeys, cursor: cursorTrack, resid,
   }));
   await s.close();
 }

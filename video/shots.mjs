@@ -52,14 +52,12 @@ const stairLevel = "(p) => (p[0] > -0.66 ? 'upper' : p[0] > -6.6 ? 'inside' : 'l
 
 export const SHOTS = [
   // "This is an architectural plan. Lines on paper. Walls, rooms, a stair."
-  { name: '01_plan', url: CUR, clean: true, seconds: 8, frameFn: film({ desk: 0 }, { desk: 0.012 }),
-    crop: (i, n) => { const k = sine(i / (n - 1)); const w = 1920 - 300 * k; return { x: (1180 - w / 2) * k + 0 * (1 - k), y: (575 - (w * 9) / 32) * k, w }; } },
-  { name: '01b_plan_detail', url: CUR, clean: true, seconds: 7, frameFn: film({ desk: 0 }, { desk: 0 }),
-    crop: (i, n) => { const k = sine(i / (n - 1)); const c = catmull([[1390, 640], [1270, 560], [1190, 500]], k); const w = 1040 - 70 * k; return { x: c[0] - w / 2, y: c[1] - (w * 9) / 32, w }; } },
+  // the zooms on these four happen in the edit (edit/cuts/intro.js), from the
+  // whole frame at 3840x2160: a screenshot crop snaps to whole pixels and shakes
+  { name: '01_plan', url: CUR, clean: true, seconds: 8, outW: 3840, crf: 16, frameFn: film({ desk: 0 }, { desk: 0.012 }) },
+  { name: '01b_plan_detail', url: CUR, clean: true, seconds: 7, outW: 3840, crf: 16, frameFn: film({ desk: 0 }, { desk: 0 }) },
   // "Now watch what happens when I scroll." / walls rise, floors slide in, roof lands
-  { name: '02_rise', url: CUR, clean: true, seconds: 12, preroll: 10, frameFn: film({ desk: 0 }, { desk: 0.6 }, 'cubic'),
-    // starts centred on the plan, as the last plan shot ends, and opens out as the walls rise
-    crop: (i, n) => { const k = sine(Math.min(1, (i / (n - 1)) / 0.62)); const w = 1560 + 360 * k; return { x: (1300 - w / 2) * (1 - k), y: (590 - (w * 9) / 32) * (1 - k), w }; } },
+  { name: '02_rise', url: CUR, clean: true, seconds: 12, preroll: 10, frameFn: film({ desk: 0 }, { desk: 0.6 }, 'cubic'), outW: 3840, crf: 16 },
   // the plan floats apart into the sculpture, the desk dissolves into the gallery
   { name: '03_float', url: CUR, clean: true, seconds: 7, frameFn: `(i, t, n) => {
       const s = E.sine(i / (n - 1));
@@ -120,7 +118,7 @@ export const SHOTS = [
   { name: '16c_materials', url: CUR, clean: false, seconds: 5, preroll: 120, frameFn: scroll('#materials', 0.05, 0.9) },
   { name: '16d_day', url: CUR, clean: false, seconds: 5, preroll: 90, frameFn: scroll('#daylight', 0.1, 0.95) },
   { name: '16e_approach', url: CUR, clean: false, seconds: 6, preroll: 120, frameFn: scroll('#approach', 0.0, 0.92) },
-  { name: '16f_cta', url: CUR, clean: false, seconds: 4.5, preroll: 60,
+  { name: '16f_cta', url: CUR, clean: false, seconds: 4.5, preroll: 60, outW: 3840, crf: 16,
     frameFn: `(i, t, n) => { window.__aura.director = null; window.__aura.lenis.scrollTo(0, { immediate: true, force: true }); }`,
     before: async (i, n, page) => {
       const k = i / (n - 1);
@@ -129,8 +127,7 @@ export const SHOTS = [
       await page.mouse.move(x, y);
       // press without releasing: the ripple shows, and no click opens walk mode
       if (i === Math.round(n * 0.86)) await page.mouse.down();
-    },
-    crop: (i, n) => { const k = sine(i / (n - 1)); const w = 1100 - 140 * k; return { x: 0, y: 1080 - (w * 9) / 16 - 40 * (1 - k), w }; } },
+    }, },
   // "...into something like this." (end card plate)
   { name: '17_end', url: CUR, clean: true, seconds: 9, frameFn: pose({ ...GOLD, time: 19.7, interior: 0.75 },
       { pos: [38, 9, -58], tgt: [2, 5.5, 0], fov: 30 }, { pos: [50, 21, -70], tgt: [2, 5, 0], fov: 32 }) },

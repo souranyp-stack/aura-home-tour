@@ -2,12 +2,30 @@
 window.CUTS = window.CUTS || {};
 window.CUTS.intro = (api) => {
   const { add, drift, E, span, lerp, css, bell, T, label, labelFx, masked, rise, V1_LOOK, drawCode } = api;
+
+  // The slow zooms on the desk shots, done here at sub-pixel precision from the
+  // whole 3840x2160 frame. Each path is in 1920x1080 page px, by how far into
+  // the clip (u, 0..1); crop() turns it into source pixels.
+  const cat = (pts, t) => {
+    const seg = pts.length - 1, f = Math.min(1, Math.max(0, t)) * seg, i = Math.min(seg - 1, Math.floor(f)), u = f - i;
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(seg, i + 2)];
+    return p1.map((_, k) => 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u * u + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u * u * u));
+  };
+  const crop = (seconds, path) => (st) => {
+    const c = path(Math.min(1, Math.max(0, st / seconds)));
+    const w = Math.min(1920, c.w), x = Math.min(1920 - w, Math.max(0, c.x)), y = Math.min(1080 - (w * 9) / 16, Math.max(0, c.y));
+    return { x: x * 2, y: y * 2, w: w * 2 };
+  };
+  const PLAN_PUSH = crop(8, (u) => { const k = E.sine(u), w = 1920 - 300 * k; return { x: (1180 - w / 2) * k, y: (575 - (w * 9) / 32) * k, w }; });
+  const PLAN_PAN = crop(7, (u) => { const k = E.sine(u), c = cat([[1390, 640], [1270, 560], [1190, 500]], k), w = 1040 - 70 * k; return { x: c[0] - w / 2, y: c[1] - (w * 9) / 32, w }; });
+  const RISE_OPEN = crop(12, (u) => { const k = E.sine(Math.min(1, u / 0.62)), w = 1560 + 360 * k; return { x: (1300 - w / 2) * (1 - k), y: (590 - (w * 9) / 32) * (1 - k), w }; });
+  const CTA_PUSH = crop(4.5, (u) => { const k = E.sine(u), w = 1100 - 140 * k; return { x: 0, y: 1080 - (w * 9) / 16 - 40 * (1 - k), w }; });
   // ------------------------------------------------------------ the edit
   // 0:00 "This is an architectural plan. Lines on paper. Walls, rooms, a stair."
-  add({ src: '01_plan', at: 0, dur: 4.5, fx: drift({ s: [1, 1.02], fin: 1.6 }) });
-  add({ src: '01b_plan_detail', at: 3.9, dur: 5.5, from: 0.6, fx: drift({ s: [1, 1.02], fin: 0.6 }) });
+  add({ src: '01_plan', at: 0, dur: 4.5, crop: PLAN_PUSH, fx: drift({ s: [1, 1], fin: 1.6 }) });
+  add({ src: '01b_plan_detail', at: 3.9, dur: 5.5, from: 0.6, crop: PLAN_PAN, fx: drift({ s: [1, 1], fin: 0.6 }) });
   // 0:09 "Now watch..." walls rise, floors slide in, the roof lands
-  add({ src: '02_rise', at: 9.25, dur: 10.55, fx: drift({ s: [1, 1.01], zin: 0.8 }) });
+  add({ src: '02_rise', at: 9.25, dur: 10.55, crop: RISE_OPEN, fx: drift({ s: [1, 1], zin: 0.8 }) });
   // 0:19 "...a cliff above the sea at golden hour."
   add({ src: '04_golden', at: 19.4, dur: 4.4, from: 0.3, fx: drift({ s: [1.0, 1.04], fin: 0.8, zout: 0.35 }) });
   add({ cls: 'sweep', at: 19.15, dur: 1.4, html: '', fx: (lt, L) => {
@@ -97,10 +115,10 @@ window.CUTS.intro = (api) => {
   add({ src: '16c_materials', at: 70.5, dur: 1.55, from: 0.8, speed: 1.6, fx: drift({ s: [1, 1.03], zin: 0.45 }) });
   add({ src: '16b_roll', at: 71.95, dur: 1.55, from: 1.0, speed: 2.0, fx: drift({ s: [1, 1.03], zin: 0.45 }) });
   add({ src: '16e_approach', at: 73.4, dur: 1.05, from: 1.5, speed: 2.5, fx: drift({ s: [1, 1.03], zin: 0.45 }) });
-  add({ src: '16f_cta', at: 74.35, dur: 1.3, from: 2.6, fx: drift({ s: [1, 1.04], zin: 0.45 }) });
+  add({ src: '16f_cta', at: 74.35, dur: 1.3, from: 2.6, crop: CTA_PUSH, fx: drift({ s: [1, 1], zin: 0.45 }) });
   // 1:15 "By the end, you'll know how to turn an architectural plan, or any idea,"
   add({ src: '16d_day', at: 75.55, dur: 1.3, from: 1.0, speed: 2.0, fx: drift({ s: [1, 1.03], zin: 0.45 }) });
-  add({ src: '01_plan', at: 76.75, dur: 1.45, from: 5.0, fx: drift({ s: [1, 1.06], zin: 0.45, zout: 0.4 }) });
+  add({ src: '01_plan', at: 76.75, dur: 1.45, from: 5.0, crop: PLAN_PUSH, fx: drift({ s: [1, 1], zin: 0.45, zout: 0.4 }) });
   // 1:18 "...into something like this."
   add({ src: '17_end', at: 78.1, dur: 5.9, from: 3.3, fx: drift({ s: [1.08, 1.0], zin: 0.6 }) });
   add({ titles: true, at: 79.2, dur: 4.4, html: `<div class="end"><div class="end__w">${masked('AURA')}</div><div class="end__s"><span class="mask"><i><em>The living</em> sanctuary</i></span></div></div>`,

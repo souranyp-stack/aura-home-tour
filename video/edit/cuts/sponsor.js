@@ -1,8 +1,11 @@
 // The sponsor read: designcode.io in one browser window, cut to the script.
 // Takes are recorded by sponsor/record.mjs (2880x1800 frames of a 1440x900 page
-// with a drawn cursor); their cursor tracks and zoom keys arrive as
-// window.__takes. The window zooms toward what the cursor is doing, the way a
-// screen-recording editor would, and eases its framing across each cut.
+// with a drawn cursor); their cursor tracks, scroll remainders and zoom keys
+// arrive as window.__takes. The window zooms toward what the cursor is doing,
+// the way a screen-recording editor would, and eases its framing across cuts.
+// The page itself is drawn onto one stage-sized canvas at its exact on-screen
+// rectangle with high-quality resampling, rather than scaling the big frame
+// with CSS: that kept text from shimmering and the zoom from stepping.
 window.CUTS = window.CUTS || {};
 window.CUTS.sponsor = (api) => {
   const { add, E, span, lerp, clamp, css, TITLES, stage } = api;
@@ -22,7 +25,15 @@ window.CUTS.sponsor = (api) => {
       </div>
       <div class="sp-page" style="top:${BAR}px;width:${PW}px;height:${PH}px"></div>
     </div>` });
-  const page = win.el.querySelector('.sp-page'), pathEl = win.el.querySelector('.sp-path'), load = win.el.querySelector('.sp-load');
+  const pathEl = win.el.querySelector('.sp-path'), load = win.el.querySelector('.sp-load');
+  const shot = add({ at: 0, dur: 999, html: '<canvas width="1920" height="1080" style="position:absolute;inset:0;width:1920px;height:1080px"></canvas>' });
+  const g = shot.el.firstChild.getContext('2d');
+  const canvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  const off = canvas(1920, 1080), og = off.getContext('2d');
+  // a two-level pyramid of the frame: full size, and an exact half (a clean 2:1
+  // box filter). Shrinking the full frame straight down would alias and shimmer.
+  const full = canvas(2880, 1800), fg = full.getContext('2d');
+  const half = canvas(1440, 900), hg = half.getContext('2d');
 
   // ------------------------------------------------------------ the takes, back to back
   // at: where it starts in the cut, from: where in the take, dur: how long,
@@ -48,9 +59,8 @@ window.CUTS.sponsor = (api) => {
     // the frame follows the cursor with a little lag, like a camera operator
     const sm = []; let fx = info.cursor[0][0], fy = info.cursor[0][1];
     for (const [x, y] of info.cursor) { fx += (x - fx) * 0.045; fy += (y - fy) * 0.045; sm.push([fx, fy]); }
-    const L = add({ src, at, dur: dur + (i < plan.length - 1 ? XF : 0), from, speed, w: 2880, h: 1800, parent: page, fx: (lt, L) => {
-      css(L.el, { opacity: i === 0 || !xf ? 1 : E.sine(span(lt, 0, xf)) });
-    } });
+    // slowed takes blend neighbouring frames, so slow motion stays fluid
+    const L = add({ src, type: 'paint', paint: true, blend: speed < 1, at, dur: dur + (i < plan.length - 1 ? XF : 0), from, speed });
     return { L, src, at, from, dur, speed, xf, info, sm };
   });
 
@@ -70,10 +80,11 @@ window.CUTS.sponsor = (api) => {
   // where the window sits for a take at take-time tt: zoom z about focus F
   function framing(tk, tt) {
     const z = keyed(tk.info.zoom, tt) ?? 1;
-    const fi = Math.min(tk.sm.length - 1, Math.max(0, Math.round(tt * 60)));
+    // the smoothed cursor between recorded frames, so slowed takes glide too
+    const ff = Math.min(tk.sm.length - 1, Math.max(0, tt * 60)), f0 = Math.floor(ff), f1 = Math.min(tk.sm.length - 1, f0 + 1), fu = ff - f0;
     let f = keyed(tk.info.focus, tt);
-    // a focus key of 'cursor' hands the frame back to the cursor; blend over 0.8 s
-    const cur = tk.sm[fi];
+    // a focus key of 'cursor' hands the frame back to the cursor
+    const cur = [lerp(tk.sm[f0][0], tk.sm[f1][0], fu), lerp(tk.sm[f0][1], tk.sm[f1][1], fu)];
     if (!f || f === 'cursor') f = cur;
     else {
       const last = tk.info.focus.findIndex((k) => k[1] === 'cursor');
@@ -121,6 +132,45 @@ window.CUTS.sponsor = (api) => {
         z = lerp(a.z, z, u); tx = lerp(a.tx, tx, u); ty = lerp(a.ty, ty, u);
       }
       css(win.el, { transform: `translate(${tx}px, ${ty}px) scale(${z})`, transformOrigin: '0 0' });
+      // the page, at exactly the rectangle the window gives it
+      const rx = PX * z + tx, ry = PY * z + ty, rw = PW * z, rh = PH * z;
+      g.clearRect(0, 0, 1920, 1080);
+      g.save();
+      g.beginPath();
+      g.roundRect(rx, ry, rw, rh, [0, 0, 16 * z, 16 * z]);
+      g.clip();
+      g.fillStyle = '#000';
+      g.fillRect(rx, ry, rw, rh);
+      const paint = (tk, alpha) => {
+        const L = tk.L;
+        if (!L.video || L.video.__missing || L.st === undefined) return;
+        // Chrome scrolled to a whole pixel; move the page by what was left over
+        const fr = Math.max(0, L.st * 60), k0 = Math.floor(fr), res = tk.info.resid || [];
+        const r = lerp(res[Math.min(res.length - 1, k0)] || 0, res[Math.min(res.length - 1, k0 + 1)] || 0, L.mix || 0);
+        const dy = ry + r * S * z;
+        let src = L.video;
+        if (L.blend && L.mix > 0.002) {
+          fg.globalAlpha = 1; fg.drawImage(L.video, 0, 0);
+          fg.globalAlpha = L.mix; fg.drawImage(L.video2, 0, 0);
+          fg.globalAlpha = 1;
+          src = full;
+        }
+        hg.imageSmoothingEnabled = true;
+        hg.drawImage(src, 0, 0, 1440, 900);
+        const detail = E.sine(span(rw / 2880, 0.6, 0.8));
+        og.clearRect(0, 0, 1920, 1080);
+        og.imageSmoothingEnabled = true;
+        og.imageSmoothingQuality = 'high';
+        og.globalAlpha = 1;
+        og.drawImage(half, rx, dy, rw, rh);
+        if (detail > 0.002) { og.globalAlpha = detail; og.drawImage(src, rx, dy, rw, rh); }
+        g.globalAlpha = alpha;
+        g.drawImage(off, 0, 0);
+        g.globalAlpha = 1;
+      };
+      if (prev && cur.xf && into < cur.xf + 0.02) paint(prev, 1);
+      paint(cur, prev && cur.xf ? E.sine(span(into, 0, cur.xf)) : 1);
+      g.restore();
       // the address bar and its loading line
       const path = (prev && into < XF / 2 ? prev : cur).info.path || '/';
       const shown = path === '/' ? '' : path;
