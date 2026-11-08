@@ -37,3 +37,23 @@ s = s.replace(pin, pin + " id: 'approach', markers: { fontSize: '26px', startCol
 open(p, 'w').write(s)
 PY
 fi
+
+# The first walkable version, before the house had a kitchen or a lower floor,
+# with the same free camera and the walk reachable from the recorder.
+w=video/.versions/9124819
+if [ ! -d "$w" ]; then
+  git worktree add --detach "$w" 9124819
+  ln -s "$PWD/node_modules" "$w/node_modules"
+  python3 - "$w/src/main.js" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+a = "    post.grade.uniforms.uTime.value = time;\n    post.composer.render();\n"
+hook = "    if (window.__aura?.cam) { const c = window.__aura.cam; camera.clearViewOffset(); camera.fov = c.fov; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); camera.position.set(...c.pos); camera.lookAt(...c.tgt); }\n"
+assert s.count(a) >= 1
+s = s.replace(a, hook + a, 1)
+b = "scene, camera, renderer, M, house, atmo, lenis,"
+assert b in s
+s = s.replace(b, b + " walk,", 1)
+open(p, 'w').write(s)
+PY
+fi

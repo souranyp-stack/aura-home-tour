@@ -65,6 +65,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "video/.versions/pin-bug", "--port", "5308", "--strictPort"],
       "port": 5308
+    },
+    {
+      "name": "broll-first-walk",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/9124819", "--port", "5309", "--strictPort"],
+      "port": 5309
     }
   ]
 }

@@ -10,7 +10,7 @@ const list = SHOTS.filter((s) => (!want.length || want.some((w) => s.name.starts
 // a fresh page for every shot, so nothing one shot leaves behind (scroll,
 // eased progress, GPU memory) reaches the next
 for (const shot of list) {
-  const session = await openPage({ url: shot.url, init: shot.init, ...(shot.cleanCss ? { cleanCss: shot.cleanCss } : {}) });
+  const session = await openPage({ url: shot.url, init: shot.init, width: shot.width, height: shot.height, dsf: shot.dsf, touch: shot.touch, ...(shot.cleanCss ? { cleanCss: shot.cleanCss } : {}) });
   await record(session, { out: `clips/${shot.name}.mp4`, ...shot });
   await session.close();
 }

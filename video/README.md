@@ -210,3 +210,35 @@ and ScrollTrigger's markers on. At 1920×1080 it starts 1,379 px early.
 | 1:36 | "It's MIT licensed, so I kept the license notice" | THIRD_PARTY_NOTICES.md |
 | 1:41 | "wired it to upgrade normal links," | the link and initMetalButtons |
 | 1:45 | "so it still works without WebGL." | the same link with and without |
+
+# The build: walking through the house
+
+B-roll for "5. Walking through the house" (`node edit/render.mjs --cut=ch5`, add
+`--clean` for no titles). `out/aura-build-walking-through.mp4`, 1:15. The walk shots are
+the real walk mode driven by real mouse, key and touch input (`clicks`, `hover` and
+the phone shot in shots.mjs). The "before" is 9124819, the first version you could walk.
+The cutaways slice the real model at waist height (`renderer.clippingPlanes`) and are
+seen from straight above. The site's plans are a mirror image of the model, so the
+wipes flip the drawing, as the desk opening does. The sound meters are the real
+`walk.hearing()` numbers along the shot, saved to `edit/cuts/c5-sound.js` when it records.
+
+| Cut | Script line | Picture |
+| --- | --- | --- |
+| 0:00 | "Then I wanted people to actually walk inside." | the real click on Walk the house |
+| 0:04 | "Drag to look," | a real drag |
+| 0:06 | "walk with the keys" | a real W, the key lit |
+| 0:08 | "or a touch stick on your phone," | a phone viewport, real touch on the stick |
+| 0:10 | "and jump to ... named places" | real clicks: fire, kitchen, bedroom, bath, gallery, cliff |
+| 0:14 | "or four times of day." | real clicks through the four hours |
+| 0:17 | "walking exposed everything the camera had been hiding." | 9124819, walking |
+| 0:21 | "The dining chairs faced backwards." | the chairs, backs to the table |
+| 0:23 | "The plans drew a stair that didn't exist." | the plan's stair beside the blank wall where it would be |
+| 0:27 | "the plans showed bedrooms and bathrooms," | the old plan, wiped to the model cut open: nothing inside |
+| 0:32 | "the lower floor was a solid block," | the plinth from the sea |
+| 0:35 | "and there was no kitchen at all." | where the kitchen is now |
+| 0:38 | "Nowhere to cook, sleep or wash." | the line |
+| 0:40 | "The fix was one file, walkPlan.js." | the real room table |
+| 0:43 | "the 3D walls, the walls you bump into, and the drawn plans all read from it." | three branches: the cutaway, the real collision map with a visitor sliding along it, the plan |
+| 0:52 | "So they can never disagree again." | wipe from today's plan to today's model, lined up |
+| 0:55 | "one source of truth." | kitchen, stair, bedroom, bath, then the line |
+| 1:03 | "Then sound..." | sea to door to fire, the door closing, the curtains, real sound numbers |

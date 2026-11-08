@@ -20,13 +20,13 @@ export const CLEAN_CSS = `
   ::-webkit-scrollbar { display: none !important; }
 `;
 
-export async function openPage({ url, width = 1920, height = 1080, dsf = 2, clean = false, css = '', cleanCss = CLEAN_CSS, init = '' }) {
+export async function openPage({ url, width = 1920, height = 1080, dsf = 2, clean = false, css = '', cleanCss = CLEAN_CSS, init = '', touch = false }) {
   const browser = await chromium.launch({
     executablePath: CHROME,
     headless: true,
     args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars', '--mute-audio', '--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
   });
-  const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: dsf });
+  const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: dsf, hasTouch: touch });
   page.on('pageerror', (e) => console.error('[page error]', e.message));
   page.on('console', (m) => { if (m.type() === 'error') console.error('[console]', m.text()); });
   await page.addInitScript({ content: readFileSync(join(here, 'virtual-time.js'), 'utf8') });

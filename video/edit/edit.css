@@ -224,3 +224,24 @@ canvas.layer { width: 1920px; height: 1080px; }
 .c4-sp { right: 40px; top: 330px; padding: 16px 16px 12px; }
 .c1-ring path { fill: none; }
 .c4-head b { font: italic 300 64px/1 var(--serif); }
+
+/* ---------------------------------------------------------------- chapter 5 */
+.c5-big { font-size: 110px; }
+.c5-keys { position: absolute; left: 96px; bottom: 170px; display: grid; grid-template-columns: repeat(3, 76px); gap: 10px; }
+.c5-keys kbd { width: 76px; height: 76px; display: grid; place-content: center; border-radius: 14px; font: 500 30px var(--sans); color: var(--ivory); background: rgba(14, 12, 10, 0.68); border: 1px solid rgba(244, 239, 230, 0.3); backdrop-filter: blur(10px); }
+.c5-keys kbd.w { grid-column: 2; }
+.c5-keys kbd:nth-child(2) { grid-column: 1; }
+.c5-keys kbd.on { background: var(--bronze-hi); color: #16120d; box-shadow: 0 0 26px rgba(237, 201, 143, 0.65); }
+.c5-phone { position: absolute; left: 734px; top: 69px; width: 452px; height: 941px; border-radius: 62px; background: #050403; border: 2px solid rgba(244, 239, 230, 0.26); box-shadow: 0 50px 140px rgba(0, 0, 0, 0.7); }
+.c5-screen { transform-origin: 0 0; border-radius: 88px; }
+.c5-src { position: absolute; left: 50%; top: 170px; padding: 18px 40px; border-radius: 16px; font: 500 46px var(--mono); color: #16120d; background: var(--bronze-hi); box-shadow: 0 0 60px rgba(237, 201, 143, 0.35); }
+.c5-lines { position: absolute; inset: 0; }
+.c5-lines path { fill: none; stroke: var(--bronze-hi); stroke-width: 2.5; stroke-dasharray: 1; filter: drop-shadow(0 0 6px rgba(237, 201, 143, 0.5)); }
+.c5-name { font: 300 38px/1.1 var(--serif); color: var(--ivory); margin-bottom: 6px; }
+.c5-meter { position: absolute; left: 72px; top: 330px; width: 330px; display: grid; gap: 22px; padding: 24px; border-radius: 16px; background: rgba(12, 10, 9, 0.62); border: 1px solid rgba(237, 201, 143, 0.24); backdrop-filter: blur(14px); }
+.c5-m__t { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.c5-m__t .cap { font-size: 13px; letter-spacing: 0.2em; }
+.c5-m__t b { font: 500 18px var(--mono); color: var(--ivory); }
+.c5-m__bar { height: 6px; border-radius: 3px; background: rgba(244, 239, 230, 0.14); overflow: hidden; }
+.c5-m__bar i { display: block; height: 100%; background: var(--bronze-hi); transform-origin: left; }
+canvas.c5-screen { width: 780px !important; height: 1688px !important; }

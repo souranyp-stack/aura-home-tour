@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 // Every shot of the intro B-roll, in script order. Each one is recorded on its
 // own (npm run record -- <name>) into clips/<name>.mp4 and cut together by
 // edit.mjs. Frame functions run in the page with E (lib/ease.js) in scope;
@@ -6,6 +7,7 @@
 const CUR = 'http://localhost:5288/?capture';
 const V1 = 'http://localhost:5301/';
 const V2 = 'http://localhost:5302/'; // 45dc2b6, the commit after the review
+const WK = 'http://localhost:5309/'; // 9124819, the first version you could walk
 const ACC = 'http://localhost:5306/', BOX = 'http://localhost:5307/', BUG = 'http://localhost:5308/'; // c68c346 accordion, 008c734 boxed map, 7eadd7c with the pin bug put back
 const TW = 'http://localhost:5303/', AX = 'http://localhost:5304/', WN = 'http://localhost:5305/'; // 09a5de2 tower, 9c39d09 axonometric, 616b83a window
 // the first version has its own markup; keep only its picture
@@ -106,8 +108,9 @@ const pointer = (page, x, y) => page.evaluate(([x, y]) => {
     c = document.createElement('div'); c.id = 'broll-pointer';
     c.style.cssText = 'position:fixed;left:0;top:0;width:34px;height:34px;z-index:99999;pointer-events:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.55))';
     c.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34"><path d="M5 2.5v17.2l4.7-4.3 3 6.6 3-1.4-3-6.4 6.3-.5z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/></svg>';
-    document.body.appendChild(c);
   }
+  const host = document.body.classList.contains('is-walking') ? document.getElementById('walk') : document.body;
+  if (c.parentNode !== host) host.appendChild(c);
   c.style.transform = `translate(${x - 5}px, ${y - 2.5}px)`;
 }, [x, y]);
 // the pointer comes in, runs along the metal, back to the middle, presses and holds
@@ -122,6 +125,50 @@ const hover = (sel) => async (i, n, page) => {
 };
 // the page's own big canvases keep WebGL; only the buttons lose it
 const NO_BUTTON_GL = `(() => { const g = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (k, o) { return this.classList.contains('metal__fx') ? null : g.call(this, k, o); }; })();`;
+
+// ---- chapter 5 helpers
+// the real walk mode, opened at a place; stand() keeps its real UI but gives a clean camera path
+const openWalk = (place, extra = '') => `(i, t, n) => {
+  const S = window.__shot, a = window.__aura; a.director = null;
+  if (!S.open) { S.open = true; a.walk.open(${J(place)}); }
+  ${extra}
+}`;
+// a pointer travelling to each button in turn and really clicking it: [[seconds, selector or [selector, text]], ...]
+const clicks = (list, from = [960, 700]) => {
+  let pts = null;
+  return async (i, n, page) => {
+    // measured once the first frame has run, so a walk opened by it has its buttons laid out
+    if (!pts || i === 1) pts = await page.evaluate((list) => list.map(([, q]) => {
+      const [sel, txt] = Array.isArray(q) ? q : [q];
+      const el = [...document.querySelectorAll(sel)].find((e) => !txt || e.textContent.trim() === txt);
+      const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height * 0.56];
+    }), list);
+    const t = i / 60;
+    let k = 0; while (k < list.length - 1 && t > list[k][0]) k++;
+    const p0 = k ? pts[k - 1] : from, t0 = k ? list[k - 1][0] : 0, t1 = list[k][0];
+    const q = sine((t - Math.max(t0, t1 - 0.8)) / Math.min(t1 - t0, 0.8));
+    const x = p0[0] + (pts[k][0] - p0[0]) * q, y = p0[1] + (pts[k][1] - p0[1]) * q;
+    await page.mouse.move(x, y);
+    await pointer(page, x, y);
+    for (const [ct] of list) if (i === Math.round(ct * 60)) { await page.mouse.down(); await page.mouse.up(); }
+  };
+};
+// the house cut open at height y, seen from straight above; sunlight falls straight in
+const CUT_CAM = { pos: [2.5, 140, 4.99], tgt: [2.5, 1, 5], fov: 7.6 };
+const cutOpen = `const V = a.camera.position.constructor; a.renderer.clippingPlanes = [{ normal: new V(0, -1, 0), constant: 2.1 }]; if (!window.__noShadow) { window.__noShadow = 1; a.scene.traverse((o) => { if (o.isDirectionalLight) o.castShadow = false; }); }`;
+// the site's lower plan, flipped to read the same way round as the model from above (the desk opening flips it too)
+const planFn = `(i, t, n) => {
+  if (document.getElementById('broll-plan')) return;
+  const svg = document.querySelector('#planLower svg').cloneNode(true);
+  svg.querySelectorAll('*').forEach((n) => n.removeAttribute('style')); // the page draws it on as you scroll
+  svg.style.cssText = 'display:block;position:absolute;left:-41.5px;top:-196.5px;width:2003px;height:auto;transform:scaleX(-1);transform-origin:50% 50%;max-width:none;overflow:visible';
+  svg.querySelectorAll('text').forEach((t) => { t.style.transformBox = 'fill-box'; t.style.transformOrigin = '50% 50%'; t.style.transform = 'scaleX(-1)'; });
+  const d = document.createElement('div'); d.id = 'broll-plan';
+  d.style.cssText = 'position:fixed;inset:0;z-index:99998;background:#100e0c;overflow:hidden';
+  d.appendChild(svg); document.body.appendChild(d);
+}`;
+const WALK_CSS_HIDE = '#walk, #top, #filmUi { opacity: 0 !important; } html, body { cursor: none !important; }';
+const SOUND_FILE = 'edit/cuts/c5-sound.js';
 
 export const SHOTS = [
   // "This is an architectural plan. Lines on paper. Walls, rooms, a stair."
@@ -284,6 +331,97 @@ export const SHOTS = [
   // a plain link at the end of the film, upgraded, and with WebGL taken away from the buttons
   { name: 'c4_link', url: CUR, clean: false, seconds: 7, preroll: 150, outW: 3840, crf: 16, frameFn: scroll('#spacer', 0.97, 0.97), before: hover('.frame--atmo a[data-metal]') },
   { name: 'c4_link_nogl', url: CUR, init: NO_BUTTON_GL, clean: false, seconds: 7, preroll: 150, outW: 3840, crf: 16, frameFn: scroll('#spacer', 0.97, 0.97), before: hover('.frame--atmo a[data-metal]') },
+
+  // ---- Chapter 5 · "Walking through the house" (edit/cuts/ch5.js)
+  // the real walk mode, driven with the real mouse, keys and touch
+  { name: 'c5_enter', url: CUR, clean: false, seconds: 7, preroll: 150, outW: 3840, crf: 16, frameFn: scroll('#spacer', 0.97, 0.97), before: clicks([[3.0, '.frame--atmo button[data-walk]']], [1100, 760]) },
+  { name: 'c5_drag', url: CUR, clean: false, seconds: 6, preroll: 150, frameFn: openWalk('living'), before: async (i, n, page) => {
+      const k = sine(Math.min(1, i / (n * 0.9))), x = 1300 - 640 * k, y = 620 + Math.sin(k * 3.1) * 40;
+      await page.mouse.move(x, y); await pointer(page, x, y);
+      if (i === 1) await page.mouse.down();
+      if (i === n - 2) await page.mouse.up();
+    } },
+  { name: 'c5_keys', url: CUR, clean: false, seconds: 5.5, preroll: 150, frameFn: openWalk('terrace', "if (!S.at) { S.at = 1; a.walk.stand({ at: [2.25, -5.5], level: 'upper', look: [2.25, 5.3, 6] }); }"), before: async (i, n, page) => {
+      if (i === 24) await page.keyboard.down('KeyW');
+      if (i === n - 36) await page.keyboard.up('KeyW');
+    } },
+  { name: 'c5_phone', url: CUR, width: 390, height: 844, dsf: 3, touch: true, outW: 1170, clean: false, seconds: 6, preroll: 180, frameFn: openWalk('living'), before: (() => {
+      let cdp, c;
+      const send = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y, id: 1 }] });
+      return async (i, n, page) => {
+        if (i === 0 && !c) { cdp = await page.context().newCDPSession(page); }
+        if (i === 12) { const r = await page.evaluate(() => { const b = document.querySelector('.walk__stick').getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2, b.height]; }); c = r; await send('touchStart', r[0], r[1]); }
+        if (c && i > 12 && i < n - 30) { const k = sine((i - 12) / 40), w = Math.sin((i / n) * 5) * 0.14; await send('touchMove', c[0] + c[2] * 0.36 * w, c[1] - c[2] * 0.36 * k); }
+        if (c && i === n - 30) await send('touchEnd');
+      };
+    })() },
+  { name: 'c5_places', url: CUR, clean: false, seconds: 9.5, preroll: 150, outW: 3840, crf: 16, frameFn: openWalk('living'), before: clicks([[0.9, ['.walk__places button', 'Fire']], [2.3, ['.walk__places button', 'Kitchen']], [3.7, ['.walk__places button', 'Bedroom']], [5.1, ['.walk__places button', 'Bathroom']], [6.5, ['.walk__places button', 'Gallery']], [7.9, ['.walk__places button', 'Cliff edge']]]) },
+  { name: 'c5_hours', url: CUR, clean: false, seconds: 9, preroll: 150, outW: 3840, crf: 16, frameFn: openWalk('living', "if (!S.at) { S.at = 1; a.walk.stand({ at: [10.3, 0.2], level: 'upper', look: [-6, 4.95, 0.6] }); }"), before: clicks([[1.0, ['.walk__hours button', 'Dawn']], [3.2, ['.walk__hours button', 'Noon']], [5.4, ['.walk__hours button', 'Golden hour']], [7.4, ['.walk__hours button', 'Night']]]) },
+  // the walls you bump into: the real collision test sampled over one bedroom, and a
+  // visitor moved through it by the real move(), sliding along what stops them
+  { name: 'c5_collision', url: CUR, clean: true, seconds: 8, preroll: 20, outW: 3840, crf: 16, before: async (i, n, page) => {
+      await page.evaluate(async () => { window.__wp = window.__wp || await import('/src/world/walkPlan.js'); });
+    }, frameFn: `(i, t, n) => {
+      const S = window.__shot; if (!window.__wp) return;
+      const M = 58.9, sx = (x) => 960 - (x - 2.5) * M, sy = (z) => 540 - (z - 5) * M, wx = (px) => 2.5 - (px - 960) / M, wz = (py) => 5 - (py - 540) / M;
+      if (!S.c) {
+        S.plan = window.__wp.createFloorPlan([]);
+        const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:99998;background:#100e0c';
+        const c = document.createElement('canvas'); c.width = 3840; c.height = 2160; c.style.cssText = 'position:absolute;inset:0;width:1920px;height:1080px'; d.appendChild(c); document.body.appendChild(d);
+        S.c = c.getContext('2d'); S.c.scale(2, 2); S.bg = document.createElement('canvas'); S.bg.width = 3840; S.bg.height = 2160;
+        const g = S.bg.getContext('2d'); g.scale(2, 2); g.fillStyle = 'rgba(237,201,143,0.2)';
+        for (let y = 430; y < 890; y += 1) for (let x = 770; x < 1530; x += 1) if (S.plan.canStand(wx(x + 0.5), wz(y + 0.5), 'lower')) g.fillRect(x, y, 1.02, 1.02);
+        S.st = { x: -1.5, z: -0.5, level: 'lower' }; S.trail = []; S.hit = 0; S.done = -1;
+      }
+      if (i === S.done || i < 0) return; if (i === 0 && S.done === 0) return; S.done = i;
+      const SEG = [[0.9, 0.42, 1.5], [0, 1, 1.95], [1, 0, 0.5], [0, 1, 1.2]];
+      let T = 0, w = SEG[SEG.length - 1]; for (const q of SEG) { if (t < T + q[2]) { w = q; break; } T += q[2]; }
+      const L = Math.hypot(w[0], w[1]), dt = 1 / 60, px = S.st.x, pz = S.st.z, v = 2.1;
+      if (i > 0) S.plan.move(S.st, (w[0] / L) * v * dt, (w[1] / L) * v * dt);
+      const went = Math.hypot(S.st.x - px, S.st.z - pz) / (v * dt);
+      S.hit = i > 0 && went < 0.75 ? 1 : S.hit * 0.92;
+      S.trail.push([sx(S.st.x), sy(S.st.z)]);
+      const g = S.c; g.clearRect(0, 0, 1920, 1080); g.drawImage(S.bg, 0, 0, 1920, 1080);
+      g.strokeStyle = '#edc98f'; g.lineWidth = 2; g.lineJoin = 'round'; g.beginPath(); S.trail.forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y))); g.stroke();
+      const [x, y] = S.trail[S.trail.length - 1];
+      g.fillStyle = 'rgba(224,99,90,' + (0.5 * S.hit).toFixed(3) + ')'; g.beginPath(); g.arc(x, y, 12 + 16 * S.hit, 0, 7); g.fill();
+      g.fillStyle = '#fff4e3'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill();
+    }` },
+  // what the first walkable version really was (9124819)
+  { name: 'c5_old_walk', url: WK, clean: true, cleanCss: WALK_CSS_HIDE, seconds: 6, preroll: 120, frameFn: `(i, t, n) => { const a = window.__aura, k = E.sine(i / (n - 1)); if (!a.walk.active) a.walk.open('living'); a.cam = { pos: E.v([1.5, 5.67, -2.4], [2.6, 5.5, -0.7], k), tgt: E.v([-3, 4.9, 4.8], [6.5, 4.7, 3], k), fov: 50 }; }` },
+  ...[['old', WK], ['now', CUR]].flatMap(([k, url]) => {
+    const old = k === 'old', G = { time: 19.3, interior: 0.5, fire: 1, mist: 0.05, veil: 0 }, N = { time: 13, mist: 0.02, interior: 0.4, fire: 0, veil: 0 };
+    const at = (name, seconds, env, cam0, cam1, more = '') => ({ name: `c5_${k}_${name}`, url, clean: true, cleanCss: WALK_CSS_HIDE, seconds, preroll: 120, outW: name === 'cut' ? 3840 : 1920, crf: name === 'cut' ? 16 : undefined, frameFn: `(i, t, n) => {
+      const a = window.__aura, k = E.sine(i / (n - 1)), A = ${J(cam0)}, B = ${J(cam1)}, cam = { pos: E.v(A.pos, B.pos, k), tgt: E.v(A.tgt, B.tgt, k), fov: E.lerp(A.fov, B.fov, k) };
+      ${more}
+      ${old ? `if (!a.walk.active) a.walk.open('dining'); Object.assign(a.walk.env, ${J(env)}); a.cam = cam;` : `a.director = { kind: 'pose', env: ${J(env)}, door: 1, ao: false, cam };`}
+    }` });
+    return [
+      at('chairs', 5, G, { pos: [3.2, 5.3, -0.6], tgt: [6.5, 4.65, 3], fov: 44 }, { pos: [3.6, 5.2, -0.1], tgt: [6.5, 4.65, 3], fov: 42 }),
+      at('kitchen', 5, G, { pos: [11, 5.6, 2.4], tgt: [8.2, 4.7, 6.6], fov: 56 }, { pos: [10.6, 5.55, 2.9], tgt: [8.2, 4.7, 6.6], fov: 54 }),
+      at('cut', 8, N, CUT_CAM, CUT_CAM, `${cutOpen}`),
+      ...(old ? [at('west', 5, N, { pos: [-24, 3, 2], tgt: [-11, 2, 2], fov: 50 }, { pos: [-22, 3, 2.4], tgt: [-11, 2, 2], fov: 50 }), at('front', 6, N, { pos: [3, 3, -38], tgt: [3, 2, 0], fov: 40 }, { pos: [3, 2.2, -33], tgt: [3, 2, 0], fov: 40 })] : []),
+    ];
+  }),
+  { name: 'c5_plan_old', url: WK, clean: true, seconds: 2, preroll: 30, outW: 3840, crf: 16, frameFn: planFn },
+  { name: 'c5_plan_now', url: CUR, clean: true, seconds: 2, preroll: 30, outW: 3840, crf: 16, frameFn: planFn },
+  // the rest of the house, once it was built
+  { name: 'c5_tour_kitchen', url: CUR, clean: true, seconds: 4, frameFn: walk(GOLD, [[7.2, 5.67, 3.6], [6.4, 5.62, 4.3]], [[10.6, 4.7, 6.8], [10.8, 4.7, 7]], 54) },
+  { name: 'c5_tour_stair', url: CUR, clean: true, seconds: 4, frameFn: walk(DUSK_IN, [[-0.5, 5.67, 7.5], [-1.5, 5.3, 7.5]], [[-6.6, 2.4, 7.5], [-7.2, 2.2, 7.5]], 60, { levelFn: "() => 'inside'" }) },
+  { name: 'c5_tour_bath', url: CUR, clean: true, seconds: 4, frameFn: walk({ time: 19.4, mist: 0.05, interior: 0.65, fire: 1, veil: 0 }, [[6.95, 1.58, 5.75], [6.6, 1.56, 5.72]], [[3.6, 1.05, 5.35], [3.5, 1.0, 5.3]], 58, { levelFn: "() => 'lower'" }) },
+  // sound: outside, in through the open door, the door closing, up to the fire. The real
+  // hearing() numbers are saved for the meters in the edit.
+  (() => { const log = []; return { name: 'c5_sound', url: CUR, clean: false, seconds: 15, preroll: 150, frameFn: openWalk('terrace', `
+      const u = E.linear(i / (n - 1));
+      const p = E.path([[2.25, -7.0], [2.25, -5.6], [2.25, -4.0], [1.6, -2.2], [1.6, -2.1], [1.6, -2.0], [-1.0, -0.4], [-3.6, 0.9], [-5.6, 2.6]], E.sine(u));
+      const l = E.path([[-2, 4.8, 8], [-1, 4.8, 8], [0, 4.9, 8], [-2, 4.9, 7], [-3, 4.9, 6.5], [-4, 4.9, 6.2], [-6.2, 4.9, 6], [-7, 4.9, 5.9], [-7.2, 4.9, 5.75]], E.sine(u));
+      a.walk.stand({ at: [p[0], p[1]], level: 'upper', look: l });
+      if (i === 400) document.querySelectorAll('.walk__switches button')[2].click();
+      if (i === 620) document.querySelectorAll('.walk__switches button')[3].click();
+    `), before: async (i, n, page) => {
+      log[i] = await page.evaluate(() => { const h = window.__aura.walk.hearing(); return [h.outside, h.muffle, h.fire].map((v) => +v.toFixed(3)); });
+      if (i === n - 1) writeFileSync(SOUND_FILE, `window.__C5_SOUND = ${JSON.stringify(log)};\n`);
+    } }; })(),
 ];
 
 // Node-side copies for crops and mouse paths
