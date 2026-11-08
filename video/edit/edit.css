@@ -155,3 +155,29 @@ canvas.layer { width: 1920px; height: 1080px; }
 .s-zero { position: absolute; left: 50%; top: 48%; display: grid; justify-items: center; gap: 16px; }
 .s-zero__n { font: 300 300px/0.8 var(--serif); color: var(--ivory); text-shadow: 0 10px 80px rgba(0, 0, 0, 0.6); }
 .s-shade { position: absolute; inset: 0; background: radial-gradient(ellipse 62% 46% at 12% 100%, rgba(6, 5, 4, 0.82), rgba(6, 5, 4, 0) 100%); }
+
+/* ---------------------------------------------------------------- chapter 2 */
+.c2-not { left: 50%; top: 46%; }
+.c2-not .c1-not__w { font-size: 120px; }
+.c2-card { margin-top: -180px; }
+.c2-list { position: absolute; left: 340px; top: 210px; display: grid; gap: 22px; }
+.c2-list > .cap { margin-bottom: 10px; color: var(--bronze); }
+.c2-row { display: flex; align-items: baseline; gap: 34px; }
+.c2-row em { font: italic 300 72px/1 var(--serif); color: var(--bronze); width: 56px; }
+.c2-row b { font: 300 62px/1.1 var(--serif); color: var(--ivory); }
+.c2-fix { position: absolute; left: 72px; bottom: 60px; display: grid; gap: 8px; max-width: 1400px; }
+.c2-fix .cap { color: var(--bronze-hi); }
+.c2-fix b { font: 300 66px/1.05 var(--serif); color: var(--ivory); text-shadow: 0 2px 30px rgba(0, 0, 0, 0.5); }
+.c2-fix p { font: 400 28px/1.3 var(--sans); color: rgba(244, 239, 230, 0.86); text-shadow: 0 1px 16px rgba(0, 0, 0, 0.6); }
+.c2-tag { position: absolute; top: 46px; padding: 9px 18px; border-radius: 8px; background: rgba(10, 9, 8, 0.62); border: 1px solid rgba(244, 239, 230, 0.28); backdrop-filter: blur(10px); font: 600 18px var(--sans); letter-spacing: 0.2em; text-transform: uppercase; color: var(--ivory); }
+.c2-panel { border-radius: 26px; }
+.c2-count { position: absolute; top: 730px; display: flex; align-items: baseline; justify-content: center; gap: 16px; }
+.c2-count b { font: 300 92px/1 var(--serif); color: var(--ivory); font-variant-numeric: tabular-nums; }
+.c2-hint { position: absolute; left: 0; right: 0; top: 130px; text-align: center; color: rgba(244, 239, 230, 0.75); }
+.c2-sixty { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 22px; }
+.c2-sixty__n { font: 300 340px/0.85 var(--serif); color: var(--ivory); text-shadow: 0 10px 80px rgba(0, 0, 0, 0.45); }
+.c2-diff { font-size: 30px; }
+.c2-del { color: #d98a7e; }
+.c2-add { color: #b9c98a; }
+.c2-code { min-height: 300px; margin: -150px 0 0 -740px; width: 1480px; }
+.c2-end__a { font: 300 92px/1.1 var(--serif); color: var(--ivory); }

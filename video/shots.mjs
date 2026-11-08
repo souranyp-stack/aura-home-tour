@@ -5,6 +5,7 @@
 
 const CUR = 'http://localhost:5288/?capture';
 const V1 = 'http://localhost:5301/';
+const V2 = 'http://localhost:5302/'; // 45dc2b6, the commit after the review
 // the first version has its own markup; keep only its picture
 const V1_CLEAN = 'body > :not(canvas) { opacity: 0 !important; } html, body { cursor: none !important; }';
 
@@ -49,6 +50,31 @@ const scroll = (sel, a, b, ease = 'sine') => `(i, t, n) => {
 const v1 = (p0, p1) => `(i, t, n) => { window.__aura.setProgress(E.lerp(${p0}, ${p1}, E.sine(i / (n - 1)))); }`;
 
 const stairLevel = "(p) => (p[0] > -0.66 ? 'upper' : p[0] > -6.6 ? 'inside' : 'lower')";
+
+
+// A before/after pair: the same shot in the reviewed version and the fixed one.
+// { p, a, b }: a free camera moving a -> b at a fixed point of the film.
+// { p0, p1 }: each version's own camera over that part of the film.
+// paint: every mesh a flat colour of its own, so each colour is a draw call.
+const pair = (name, seconds, { p, a, b, p0, p1, paint }) => [['b', V1], ['a', V2]].map(([k, url]) => ({
+  name: `${name}_${k}`, url, clean: true, cleanCss: V1_CLEAN, seconds,
+  frameFn: `(i, t, n) => {
+    const A = window.__aura, k = E.sine(i / (n - 1)), a = ${J(a ?? null)}, b = ${J(b ?? null)};
+    A.setProgress(${p ?? `E.lerp(${p0}, ${p1}, k)`});
+    A.cam = a ? { pos: E.v(a.pos, b.pos, k), tgt: E.v(a.tgt, b.tgt, k), fov: E.lerp(a.fov, b.fov, k) } : null;
+    if (${!!paint} && !window.__painted) {
+      window.__painted = true;
+      let c = 0;
+      A.scene.traverse((o) => {
+        if (!o.isMesh || Array.isArray(o.material) || !o.material || !o.material.isMeshStandardMaterial) return;
+        const m = o.material.clone();
+        m.map = m.normalMap = m.roughnessMap = m.metalnessMap = m.aoMap = m.bumpMap = m.emissiveMap = null;
+        m.color.set(0); m.emissive.setHSL((c++ * 0.61803) % 1, 0.8, 0.5); m.emissiveIntensity = 1; m.needsUpdate = true;
+        o.material = m;
+      });
+    }
+  }`,
+}));
 
 export const SHOTS = [
   // "This is an architectural plan. Lines on paper. Walls, rooms, a stair."
@@ -143,6 +169,21 @@ export const SHOTS = [
   // "But look closer." the cliff and the walls, whole frames at 4K for slow push-ins in the edit
   { name: 'c1_cliff4k', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 7, outW: 3840, crf: 16, frameFn: v1(0.60, 0.63) },
   { name: 'c1_brick4k', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 5, outW: 3840, crf: 16, frameFn: v1(0.425, 0.445) },
+
+  // ---- Chapter 2 · "The creative-director review" (edit/cuts/ch2.js). d668dca was
+  // reviewed; 45dc2b6 is the commit that fixed the five problems. Each pair is one
+  // shot in both versions: a shared free camera, or each version's own film camera.
+  ...pair('c2_cliff', 5.5, { p: 0.62, a: { pos: [-38, 2.5, -62], tgt: [2, -4, -6], fov: 30 }, b: { pos: [-30, 1.6, -54], tgt: [2, -4, -6], fov: 30 } }),
+  ...pair('c2_wall', 5.5, { p: 0.62, a: { pos: [-7.2, 3.9, -15.8], tgt: [-9.6, 3, -11], fov: 30 }, b: { pos: [-8.0, 3.7, -14.4], tgt: [-9.6, 3, -11], fov: 30 } }),
+  ...pair('c2_gold', 11, { p: 0.66, a: { pos: [-60, 3, -98], tgt: [3, 6.4, 0], fov: 24 }, b: { pos: [-50, 4.5, -104], tgt: [3, 6.4, 0], fov: 24 } }),
+  ...pair('c2_blank', 11, { p0: 0.24, p1: 0.33 }),
+  ...pair('c2_sculpt', 5.5, { p0: 0.02, p1: 0.08 }),
+  ...pair('c2_build', 5.5, { p0: 0.15, p1: 0.33 }),
+  ...pair('c2_calls', 11, { p: 0.9, paint: true, a: { pos: [2.2, 5.65, -1.2], tgt: [-5, 4.8, 5], fov: 50 }, b: { pos: [1.5, 5.6, -0.5], tgt: [-5, 4.8, 5], fov: 50 } }),
+  // "Then I set a hard rule": the film, and ambient occlusion on and off in a wide shot
+  { name: 'c2_film', url: CUR, clean: true, seconds: 6, frameFn: film({ p: 0.47 }, { p: 0.66 }) },
+  ...[['on', true], ['off', false]].map(([k, ao]) => ({ name: `c2_ao_${k}`, url: CUR, clean: true, seconds: 8, frameFn: pose(GOLD,
+      { pos: [-72, 2.4, -90], tgt: [3, 6, 0], fov: 24 }, { pos: [-60, 3.6, -98], tgt: [3, 6.4, 0], fov: 23 }, { ao }) })),
 ];
 
 // Node-side copies for crops and mouse paths

@@ -7,9 +7,9 @@ import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const [out, json, url = 'http://localhost:5288/?capture'] = process.argv.slice(2);
+const [out, json, url = 'http://localhost:5288/?capture', css = ''] = process.argv.slice(2);
 const list = JSON.parse(json);
-const s = await openPage({ url, clean: true });
+const s = await openPage({ url, clean: !css, css });
 await s.page.evaluate(() => window.__vt.enable());
 const dir = mkdtempSync(join(tmpdir(), 'look-'));
 const files = [];

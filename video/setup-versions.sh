@@ -8,4 +8,12 @@ for c in d668dca 45dc2b6; do
   [ -d "video/.versions/$c" ] && continue
   git worktree add --detach "video/.versions/$c" "$c"
   ln -s "$PWD/node_modules" "video/.versions/$c/node_modules"
+  # a free camera for matched before/after shots (window.__aura.cam = {pos, tgt, fov})
+  python3 - "video/.versions/$c/src/main.js" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p).read()
+hook = "    if (window.__aura?.cam) { const c = window.__aura.cam; camera.clearViewOffset(); camera.fov = c.fov; camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); camera.position.set(...c.pos); camera.lookAt(...c.tgt); }\n"
+a = "    apply(prog, time, dt);\n"
+open(p, 'w').write(s.replace(a, a + hook))
+PY
 done

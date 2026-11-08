@@ -127,3 +127,27 @@ B-roll for the script from "What we're building and the stack" through the end o
 | 0:58 | "But look closer. The cliff looks like crazy paving." | push-in on v1's cliff, annotated |
 | 1:02 | "The walls look like grey brick." | v1's brick pillar, annotated |
 | 1:05 | "It's a demo, not architecture." | v1 dimmed, the line as a title |
+
+# The build: the creative-director review
+
+B-roll for "2. The creative-director review" (`node edit/render.mjs --cut=ch2`, add
+`--clean` for no titles). `out/aura-build-creative-director-review.mp4`, 1:24.
+Before is d668dca, after is 45dc2b6 (the commit that fixed the five problems), shot
+from a shared camera (`window.__aura.cam`, added to the worktrees by
+setup-versions.sh) so the wipes line up.
+
+| Cut | Script line | Picture |
+| --- | --- | --- |
+| 0:00 | "This is the move I use on every project." | v1's cliff, dimmed |
+| 0:03 | "Instead of saying 'make it better,'" | the phrase struck out |
+| 0:05 | "I ask the AI to criticize its own work first." | the review prompt typed |
+| 0:11 | "It came back with five problems." | the five, listed |
+| 0:14 | 1. Materials read fake | wipes on the cliff, then the walls |
+| 0:24 | 2. No golden hour | wipe on the wide view |
+| 0:34 | 3. The camera stared at a blank wall | side by side |
+| 0:44 | 4. The sculpture didn't make sense | side by side, then the assembly |
+| 0:54 | 5. Performance | every mesh a colour, 349 to 119 draw calls |
+| 1:04 | "Then I set a hard rule: ...60 frames per second." | the film, "60" |
+| 1:09 | "turning off ambient occlusion..." | ambient occlusion on/off wipe on one shot |
+| 1:15 | "and capping the pixel ratio." | the real one-line change |
+| 1:19 | "You don't notice the difference. Your laptop fan does." | golden plate, the line as a title |
