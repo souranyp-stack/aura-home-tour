@@ -209,7 +209,9 @@ async function boot() {
     }
     // compose the subject opposite the copy: sideways on wide screens, upward on tall ones
     let ox = aspect >= 1 ? -shift : 0, oy = aspect >= 1 ? 0 : 0.09;
-    if (deskProg < 0.999) ({ fov, ox, oy } = desk.pose(deskProg, aspect, fov, ox, oy, camPos, camTgt));
+    // a directed shot can hold the desk camera at another point of the move
+    const poseK = import.meta.env.DEV && window.__aura?.director?.poseAt != null ? window.__aura.director.poseAt : deskProg;
+    if (deskProg < 0.999) ({ fov, ox, oy } = desk.pose(poseK, aspect, fov, ox, oy, camPos, camTgt));
     camera.fov = fov;
     camera.aspect = aspect;
     const W = innerWidth, H = innerHeight;
@@ -523,7 +525,7 @@ async function boot() {
   if (import.meta.env.DEV) {
     // Dev hook: render an exact scroll position synchronously (for capture in throttled tabs).
     window.__aura = {
-      scene, camera, renderer, M, house, atmo, lenis,
+      scene, camera, renderer, M, house, atmo, lenis, desk,
       // jump the page to an element (fraction of its height) through Lenis
       go: async (sel, frac = 0, wait = 1800) => {
         const el = document.querySelector(sel);

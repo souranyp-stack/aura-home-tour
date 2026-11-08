@@ -6,6 +6,7 @@
 const CUR = 'http://localhost:5288/?capture';
 const V1 = 'http://localhost:5301/';
 const V2 = 'http://localhost:5302/'; // 45dc2b6, the commit after the review
+const TW = 'http://localhost:5303/', AX = 'http://localhost:5304/', WN = 'http://localhost:5305/'; // 09a5de2 tower, 9c39d09 axonometric, 616b83a window
 // the first version has its own markup; keep only its picture
 const V1_CLEAN = 'body > :not(canvas) { opacity: 0 !important; } html, body { cursor: none !important; }';
 
@@ -75,6 +76,17 @@ const pair = (name, seconds, { p, a, b, p0, p1, paint }) => [['b', V1], ['a', V2
     }
   }`,
 }));
+
+
+// a free camera around the desk, given in the desk's own coordinates (metres)
+const deskCam = (a, b, desk = 0.01) => `(i, t, n) => {
+  const k = E.sine(i / (n - 1)), A = ${J(a)}, B = ${J(b)};
+  const g = window.__aura.desk.scene.children.find((c) => c.scale.x > 1);
+  g.updateMatrixWorld(true);
+  const m = g.matrixWorld.elements;
+  const W = ([x, y, z]) => [m[0] * x + m[4] * y + m[8] * z + m[12], m[1] * x + m[5] * y + m[9] * z + m[13], m[2] * x + m[6] * y + m[10] * z + m[14]];
+  window.__aura.director = { kind: 'film', desk: ${desk}, p: 0, cam: { pos: W(E.v(A.pos, B.pos, k)), tgt: W(E.v(A.tgt, B.tgt, k)), fov: E.lerp(A.fov, B.fov, k) } };
+}`;
 
 export const SHOTS = [
   // "This is an architectural plan. Lines on paper. Walls, rooms, a stair."
@@ -184,6 +196,34 @@ export const SHOTS = [
   { name: 'c2_film', url: CUR, clean: true, seconds: 6, frameFn: film({ p: 0.47 }, { p: 0.66 }) },
   ...[['on', true], ['off', false]].map(([k, ao]) => ({ name: `c2_ao_${k}`, url: CUR, clean: true, seconds: 8, frameFn: pose(GOLD,
       { pos: [-72, 2.4, -90], tgt: [3, 6, 0], fov: 24 }, { pos: [-60, 3.6, -98], tgt: [3, 6.4, 0], fov: 23 }, { ao }) })),
+
+  // ---- Chapter 3 · "The hero: plans that become a house" (edit/cuts/ch3.js)
+  // the three heroes as the page showed them, type and all
+  { name: 'c3_tower_ui', url: TW, clean: false, seconds: 7, frameFn: `() => { window.__aura.setProgress(0); }` },
+  { name: 'c3_axo_ui', url: AX, clean: false, seconds: 7, frameFn: `() => { window.__aura.setProgress(0); }` },
+  { name: 'c3_now_ui', url: CUR, clean: false, seconds: 8, preroll: 60, frameFn: `() => { window.__aura.director = null; }` },
+  // version one: the stacked tower
+  { name: 'c3_tower', url: TW, clean: true, cleanCss: V1_CLEAN, seconds: 10, frameFn: `(i, t, n) => { window.__aura.setProgress(E.lerp(0, 0.05, E.sine(i / (n - 1)))); }` },
+  // version two: the exploded axonometric, whole frames for close-ups of its lines and dust
+  { name: 'c3_axo4k', url: AX, clean: true, cleanCss: V1_CLEAN, seconds: 18, outW: 3840, crf: 16, frameFn: `(i, t, n) => { window.__aura.setProgress(E.lerp(0, 0.03, E.sine(i / (n - 1)))); }` },
+  // version three: the walls rise, at an even speed so the edit can time it to the words
+  { name: 'c3_rise4k', url: CUR, clean: true, seconds: 14, preroll: 10, outW: 3840, crf: 16, frameFn: film({ desk: 0.02 }, { desk: 0.62 }, 'linear') },
+  // one camera, one house, from the desk into the gallery
+  { name: 'c3_onecam', url: CUR, clean: true, seconds: 9, frameFn: `(i, t, n) => {
+      const s = E.sine(i / (n - 1));
+      window.__aura.director = s < 0.8 ? { kind: 'film', desk: E.lerp(0.1, 1, s / 0.8), p: 0 } : { kind: 'film', desk: 1, p: E.lerp(0, 0.03, (s - 0.8) / 0.2) };
+    }` },
+  // the first attempt: a window cut in the paper
+  { name: 'c3_win', url: WN, clean: true, cleanCss: V1_CLEAN, seconds: 10, frameFn: `(i, t, n) => { const a = window.__aura; a.setDesk(E.lerp(0.15, 0.72, E.sine(i / (n - 1)))); a.setProgress(0); }` },
+  // the plan and the model from one top-down camera, to wipe between
+  { name: 'c3_plan_flat', url: CUR, clean: true, seconds: 7, outW: 3840, crf: 16, frameFn: `() => { window.__aura.director = { kind: 'film', desk: 0.02, p: 0, poseAt: 0.02 }; }` },
+  { name: 'c3_plan_risen', url: CUR, clean: true, seconds: 7, outW: 3840, crf: 16, frameFn: `(i, t, n) => { window.__aura.director = { kind: 'film', desk: E.lerp(0.31, 0.38, E.sine(i / (n - 1))), p: 0, poseAt: 0.02 }; }` },
+  // the desk, close up (positions are the desk's own, in metres)
+  { name: 'c3_macro_lamp', url: CUR, clean: true, seconds: 3.5, frameFn: deskCam({ pos: [0.02, 0.26, -0.16], tgt: [0.2, 0.27, -0.45], fov: 30 }, { pos: [0.05, 0.27, -0.19], tgt: [0.2, 0.27, -0.45], fov: 30 }) },
+  { name: 'c3_macro_weight', url: CUR, clean: true, seconds: 3.5, frameFn: deskCam({ pos: [-0.24, 0.1, -0.16], tgt: [-0.3855, 0.03, -0.262], fov: 28 }, { pos: [-0.27, 0.09, -0.19], tgt: [-0.3855, 0.03, -0.262], fov: 28 }) },
+  { name: 'c3_macro_mug', url: CUR, clean: true, seconds: 3.5, frameFn: deskCam({ pos: [0.36, 0.17, 0.0], tgt: [0.478, 0.05, 0.167], fov: 28 }, { pos: [0.39, 0.15, -0.02], tgt: [0.478, 0.05, 0.167], fov: 28 }) },
+  { name: 'c3_macro_rule', url: CUR, clean: true, seconds: 3.5, frameFn: deskCam({ pos: [-0.06, 0.14, 0.44], tgt: [0.3, 0, 0.345], fov: 24 }, { pos: [0.02, 0.14, 0.44], tgt: [0.3, 0, 0.345], fov: 24 }) },
+  { name: 'c3_macro_pencils', url: CUR, clean: true, seconds: 3.5, frameFn: deskCam({ pos: [-0.12, 0.2, -0.2], tgt: [-0.2605, 0.09, -0.397], fov: 30 }, { pos: [-0.14, 0.18, -0.22], tgt: [-0.2605, 0.09, -0.397], fov: 30 }) },
 ];
 
 // Node-side copies for crops and mouse paths

@@ -5,6 +5,7 @@
   const E = {
     clamp, lerp,
     // eases: in-out sine is the gentlest, quint the most "designed"
+    linear: (t) => clamp(t),
     sine: (t) => -(Math.cos(Math.PI * clamp(t)) - 1) / 2,
     cubic: (t) => { t = clamp(t); return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; },
     quint: (t) => { t = clamp(t); return t < 0.5 ? 16 * t ** 5 : 1 - Math.pow(-2 * t + 2, 5) / 2; },

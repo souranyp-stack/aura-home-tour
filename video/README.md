@@ -151,3 +151,26 @@ setup-versions.sh) so the wipes line up.
 | 1:09 | "turning off ambient occlusion..." | ambient occlusion on/off wipe on one shot |
 | 1:15 | "and capping the pixel ratio." | the real one-line change |
 | 1:19 | "You don't notice the difference. Your laptop fan does." | golden plate, the line as a title |
+
+# The build: the hero
+
+B-roll for "3. The hero: plans that become a house" (`node edit/render.mjs --cut=ch3`,
+add `--clean` for no titles). `out/aura-build-the-hero.mp4`, 1:20. The heroes are the
+real commits: tower 09a5de2, axonometric 9c39d09, window attempt 616b83a, today's desk.
+
+| Cut | Script line | Picture |
+| --- | --- | --- |
+| 0:00 | "three versions... taste matters more than code." | the three heroes side by side |
+| 0:06 | "Version one was a stacked tower sculpture..." | the tower |
+| 0:13 | "It had nothing to do with the house." | the tower beside the finished house |
+| 0:16 | "Version two was an exploded axonometric..." | one shot, the frame moving from the whole model to the bronze lines to the beam and dust |
+| 0:30 | "...now the opening image is the product." | the v2 hero with its type |
+| 0:33 | "Version three is what you saw at the start." | today's desk opening |
+| 0:36 | "...the actual plans, lying on a walnut desk." | push-in on the plan |
+| 0:40 | "the walls rise straight out of the drawing." | the rise |
+| 0:46 | "Walls first... then the floors, then the roof." | the rise again, closer, labelled |
+| 0:52 | (zoom on the desk) | weight, mug, rule, pencils, lamp |
+| 0:58 | "a window cut into the paper" | 616b83a opening |
+| 1:04 | "It read as a square overlay." | the window, outlined |
+| 1:07 | "one camera and one house the whole way through." | desk into gallery, one take |
+| 1:13 | "...baked from the real floor plans, so it always matches the model." | wipe from the plan to the model, one top-down camera |

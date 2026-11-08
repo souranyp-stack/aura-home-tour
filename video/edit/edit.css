@@ -181,3 +181,11 @@ canvas.layer { width: 1920px; height: 1080px; }
 .c2-add { color: #b9c98a; }
 .c2-code { min-height: 300px; margin: -150px 0 0 -740px; width: 1480px; }
 .c2-end__a { font: 300 92px/1.1 var(--serif); color: var(--ivory); }
+
+/* ---------------------------------------------------------------- chapter 3 */
+.c3-panel { border-radius: 40px; }
+.c3-under { position: absolute; text-align: center; }
+.c3-taste { position: absolute; left: 0; right: 0; top: 800px; text-align: center; font: italic 300 76px/1.1 var(--serif); color: var(--bronze); }
+.c3-w { font-size: 76px; }
+.c3-ne { position: absolute; left: 50%; top: 493px; font: 300 120px/1 var(--serif); color: var(--bronze-hi); text-shadow: 0 0 30px rgba(0, 0, 0, 0.8); }
+.c1-ring rect { fill: none; stroke: var(--bronze-hi); stroke-width: 3; stroke-dasharray: 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 8px rgba(237, 201, 143, 0.6)); }

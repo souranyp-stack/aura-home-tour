@@ -29,6 +29,24 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "video/.versions/45dc2b6", "--port", "5302", "--strictPort"],
       "port": 5302
+    },
+    {
+      "name": "broll-hero-tower",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/09a5de2", "--port", "5303", "--strictPort"],
+      "port": 5303
+    },
+    {
+      "name": "broll-hero-axo",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/9c39d09", "--port", "5304", "--strictPort"],
+      "port": 5304
+    },
+    {
+      "name": "broll-hero-window",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/616b83a", "--port", "5305", "--strictPort"],
+      "port": 5305
     }
   ]
 }
