@@ -131,6 +131,18 @@ export const SHOTS = [
   // "...into something like this." (end card plate)
   { name: '17_end', url: CUR, clean: true, seconds: 9, frameFn: pose({ ...GOLD, time: 19.7, interior: 0.75 },
       { pos: [38, 9, -58], tgt: [2, 5.5, 0], fov: 30 }, { pos: [50, 21, -70], tgt: [2, 5, 0], fov: 32 }) },
+
+  // ---- Chapter 1 · "The first prompt: a film in eight chapters" (edit/cuts/ch1.js)
+  // v1's eight chapters for the storyboard, each a few seconds of gentle drift
+  ...[[0.02, 0.035], [0.09, 0.105], [0.235, 0.25], [0.405, 0.42], [0.565, 0.58], [0.715, 0.73], [0.85, 0.865], [0.955, 0.97]]
+    .map(([a, b], i) => ({ name: `c1_sb${i + 1}`, url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 3.5, frameFn: v1(a, b) })),
+  // "The masses floated, assembled, turned into stone and glass."
+  { name: 'c1_float', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 4, frameFn: v1(0.02, 0.11) },
+  { name: 'c1_assemble', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 4, frameFn: v1(0.15, 0.33) },
+  { name: 'c1_sweep', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 4, frameFn: v1(0.34, 0.47) },
+  // "But look closer." the cliff and the walls, whole frames at 4K for slow push-ins in the edit
+  { name: 'c1_cliff4k', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 7, outW: 3840, crf: 16, frameFn: v1(0.60, 0.63) },
+  { name: 'c1_brick4k', url: V1, clean: true, cleanCss: V1_CLEAN, seconds: 5, outW: 3840, crf: 16, frameFn: v1(0.425, 0.445) },
 ];
 
 // Node-side copies for crops and mouse paths

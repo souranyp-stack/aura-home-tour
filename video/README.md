@@ -102,3 +102,28 @@ the site's text so it keeps working if the layout moves a little.
 The "Included in package" list on designcode.io steps on the real clock rather
 than the page's, so it ran about 4x fast in the recording; the edit plays that
 stretch at 0.25x to put it back at its own pace.
+
+# The build: stack and first prompt
+
+B-roll for the script from "What we're building and the stack" through the end of
+"1. The first prompt" (`node edit/render.mjs --cut=ch1`, add `--clean` for no titles).
+`out/aura-build-stack-first-prompt.mp4`, 1:10.
+
+| Cut | Script line | Picture |
+| --- | --- | --- |
+| 0:00 | "I built it in the terminal with Claude Code, running Opus 5.5." | terminal, `claude` launching |
+| 0:05 | "The stack is small:" | the real package.json dependencies |
+| 0:07 | "Three.js for the 3D," | the sculpture in its beam |
+| 0:09 | "GSAP and ScrollTrigger for the scroll choreography," | the paper roll unrolling |
+| 0:12 | "Lenis for smooth scrolling," | the materials gallery |
+| 0:14 | "and Vite to build it." | `npm run build` output |
+| 0:16 | "And one rule from day one: no image files." | src/core, world, story, ui, then 0 image files |
+| 0:20 | "Keep that in mind, because it saves me at the very end." | procedural stone macro |
+| 0:25 | (the prompt on screen) | the first prompt typed, story beats underlined |
+| 0:37 | "I didn't ask for 'a 3D house website.'" | the phrase struck out beside the prompt |
+| 0:40 | "chapter by chapter, like a storyboard. That's the most important tip" | v1's eight chapters as a storyboard |
+| 0:46 | "The more you describe the experience, not the tech" | the line as type over the board |
+| 0:51 | "And version one worked. The masses floated, assembled, turned into stone and glass." | v1, one beat per word |
+| 0:58 | "But look closer. The cliff looks like crazy paving." | push-in on v1's cliff, annotated |
+| 1:02 | "The walls look like grey brick." | v1's brick pillar, annotated |
+| 1:05 | "It's a demo, not architecture." | v1 dimmed, the line as a title |
