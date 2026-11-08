@@ -114,7 +114,7 @@ const pointer = (page, x, y) => page.evaluate(([x, y]) => {
   c.style.transform = `translate(${x - 5}px, ${y - 2.5}px)`;
 }, [x, y]);
 // the pointer comes in, runs along the metal, back to the middle, presses and holds
-const hover = (sel) => async (i, n, page) => {
+const hover = (sel, click = false) => async (i, n, page) => {
   const r = await page.evaluate((sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }, sel);
   const P = ([u, v]) => [r[0] + r[2] * u, r[1] + r[3] * v];
   const [x, y] = catmull([[-0.6, 2.6], [-0.2, 1.4], [0.12, 0.55], [0.5, 0.42], [0.9, 0.58], [0.62, 0.5], [0.3, 0.46], [0.5, 0.5]].map(P), sine(Math.min(1, i / (n * 0.78))));
@@ -122,6 +122,7 @@ const hover = (sel) => async (i, n, page) => {
   await pointer(page, x, y);
   // pressed, never released: the ripple shows and nothing is submitted or opened
   if (i === Math.round(n * 0.84)) await page.mouse.down();
+  if (click && i === Math.round(n * 0.89)) await page.mouse.up();
 };
 // the page's own big canvases keep WebGL; only the buttons lose it
 const NO_BUTTON_GL = `(() => { const g = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (k, o) { return this.classList.contains('metal__fx') ? null : g.call(this, k, o); }; })();`;
@@ -422,6 +423,36 @@ export const SHOTS = [
       log[i] = await page.evaluate(() => { const h = window.__aura.walk.hearing(); return [h.outside, h.muffle, h.fire].map((v) => +v.toFixed(3)); });
       if (i === n - 1) writeFileSync(SOUND_FILE, `window.__C5_SOUND = ${JSON.stringify(log)};\n`);
     } }; })(),
+
+  // ---- Intro, second version (edit/cuts/intro2.js)
+  // the real lower plan, drawn line by line on black
+  { name: 'c7_plan', url: CUR, clean: true, seconds: 9, preroll: 30, outW: 3840, crf: 16, frameFn: `(i, t, n) => {
+      const S = window.__shot;
+      if (!S.lines) {
+        const svg = document.querySelector('#planLower svg').cloneNode(true);
+        svg.querySelectorAll('*').forEach((x) => x.removeAttribute('style'));
+        svg.style.cssText = 'position:absolute;left:201px;top:-60px;width:1500px;height:auto;max-width:none;overflow:visible';
+        const d = document.createElement('div'); d.style.cssText = 'position:fixed;inset:0;z-index:99998;background:#0c0a09;overflow:hidden'; d.appendChild(svg); document.body.appendChild(d);
+        const all = [...svg.querySelectorAll('line,rect,polyline,polygon,circle,path')].filter((x) => !x.closest('pattern'));
+        S.dashed = all.filter((x) => getComputedStyle(x).strokeDasharray !== 'none');
+        S.lines = all.filter((x) => !S.dashed.includes(x));
+        S.lines.forEach((x) => { x.setAttribute('pathLength', 1); x.style.strokeDasharray = '1'; x.style.fillOpacity = 0; });
+        S.text = [...svg.querySelectorAll('text')];
+      }
+      const N = S.lines.length;
+      S.lines.forEach((x, k) => { const a = (k / N) * 2.9; x.style.strokeDashoffset = 1 - E.cubic(E.span(t, a, a + 0.55)); x.style.fillOpacity = E.sine(E.span(t, 3.0, 3.8)); });
+      const o = E.sine(E.span(t, 2.6, 3.6));
+      S.text.forEach((x) => { x.style.opacity = o; }); S.dashed.forEach((x) => { x.style.opacity = o; });
+    }` },
+  // the house as its real wireframe and as itself, on one camera, to wipe between
+  ...[['wire', true], ['real', false]].map(([k, w]) => ({ name: `c7_${k}`, url: CUR, clean: true, seconds: 8, preroll: 40, frameFn: `(i, t, n) => {
+      const a = window.__aura, u = E.sine(i / (n - 1));
+      if (${w} && !window.__w) { let M; a.scene.traverse((o) => { if (!M && o.isMesh && o.material && o.material.isMeshBasicMaterial) M = o.material.constructor; }); window.__w = new M({ color: 0xf2d7a8, wireframe: true, transparent: true, opacity: 0.2, toneMapped: false }); a.scene.overrideMaterial = window.__w; }
+      a.director = { kind: 'pose', env: ${J(GOLD)}, door: 0, ao: false, cam: { pos: E.v([-46, 6, -58], [-34, 8, -62], u), tgt: [3, 6, -1], fov: 27 } };
+    }` })),
+  // the bronze buttons in the hero, on a real hover: the header link, and Walk the house, clicked
+  { name: 'c7_hover_top', url: CUR, clean: false, seconds: 5, preroll: 300, outW: 3840, crf: 16, frameFn: `() => { window.__aura.director = null; window.__aura.lenis.scrollTo(0, { immediate: true, force: true }); }`, before: hover('.top a[data-metal]') },
+  { name: 'c7_hover_walk', url: CUR, clean: false, seconds: 6.5, preroll: 300, outW: 3840, crf: 16, frameFn: `() => { window.__aura.director = null; window.__aura.lenis.scrollTo(0, { immediate: true, force: true }); }`, before: hover('.hero__walk', true) },
 ];
 
 // Node-side copies for crops and mouse paths

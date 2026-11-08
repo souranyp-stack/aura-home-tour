@@ -267,3 +267,13 @@ branch the desk opening was built on. The delete command is only typed, never ru
 | 0:51 | "go walk around the house." | the walk in a browser, the real address |
 | 0:56 | "which part you want a deep dive on." | six tiles, the question |
 | 1:01 | "Subscribe, and I'll see you in the next one." | end card over golden hour |
+
+# Intro, second version
+
+The same 1:24 and the same words as the first intro, in a kinetic-type language
+(`node edit/render.mjs --cut=intro2`). `out/aura-intro-broll-v2.mp4`, titled only.
+Bold tight sans against italic serif, words replacing each other on the beat, cards
+turning in from depth, and thin bronze light between scenes. `c7_wire` is the real model
+with a wireframe material on the same camera as `c7_real`, and `c7_plan` is the real
+lower plan drawn line by line. The tilted wall in "0 image files" is 384 real frames of
+the site, built by `node edit/make-wall.mjs` into `edit/assets/` (not in git).

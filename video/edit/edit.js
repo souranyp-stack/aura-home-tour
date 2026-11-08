@@ -237,7 +237,7 @@
 
   const ready = (async () => {
     // web fonts load on first use; ask for every face up front so no frame falls back
-    await Promise.all(['300 100px "Cormorant Garamond"', 'italic 300 100px "Cormorant Garamond"', '500 20px Manrope', '600 20px Manrope', '400 23px "JetBrains Mono"'].map((f) => document.fonts.load(f)));
+    await Promise.all(['300 100px "Cormorant Garamond"', 'italic 300 100px "Cormorant Garamond"', '500 20px Manrope', '600 20px Manrope', '400 23px "JetBrains Mono"', '600 100px "Inter Tight"'].map((f) => document.fonts.load(f)));
     await document.fonts.ready;
     await Promise.all([...videos.values()].map((v) => (v.readyState >= 1 ? 0 : new Promise((r) => {
       v.onloadedmetadata = r;
