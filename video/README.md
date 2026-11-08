@@ -242,3 +242,28 @@ wipes flip the drawing, as the desk opening does. The sound meters are the real
 | 0:52 | "So they can never disagree again." | wipe from today's plan to today's model, lined up |
 | 0:55 | "one source of truth." | kitchen, stair, bedroom, bath, then the line |
 | 1:03 | "Then sound..." | sea to door to fire, the door closing, the curtains, real sound numbers |
+
+# The build: what I learned and outro
+
+B-roll for "What I learned and outro" (`node edit/render.mjs --cut=outro`, add `--clean`
+for no titles). `out/aura-build-what-i-learned.mp4`, 1:09. The log is the site's real
+history up to 03e3f97 (`edit/cuts/outro-log.js`), and hero-desk-prologue is the real
+branch the desk opening was built on. The delete command is only typed, never run.
+
+| Cut | Script line | Picture |
+| --- | --- | --- |
+| 0:00 | "So what actually made this work? Four things." | golden hour, title |
+| 0:03 | "One: describe the experience, not the tech." | v1's eight chapters as a storyboard |
+| 0:09 | "Two: ask the AI to critique before it improves." | "make it better" struck out, the real line, wipe from before to after |
+| 0:16 | "Three: keep one source of truth," | today's plan wiped to the model |
+| 0:20 | "Four: commit every step." | the real git log, 32 commits |
+| 0:23 | "started as an experiment on its own branch." | `git switch -c hero-desk-prologue` and its two commits |
+| 0:28 | "thrown it away in one command." | `git branch -D` over the desk |
+| 0:32 | "Opus wrote most of the code." | the real rise code |
+| 0:35 | "the tower was the wrong hero," | the tower |
+| 0:40 | "or that paper should curl." | the roll |
+| 0:42 | "That part is still you." | the line |
+| 0:45 | "check out DesignCode, link in the description." | designcode.io, link pill |
+| 0:51 | "go walk around the house." | the walk in a browser, the real address |
+| 0:56 | "which part you want a deep dive on." | six tiles, the question |
+| 1:01 | "Subscribe, and I'll see you in the next one." | end card over golden hour |

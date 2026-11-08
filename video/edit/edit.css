@@ -245,3 +245,24 @@ canvas.layer { width: 1920px; height: 1080px; }
 .c5-m__bar { height: 6px; border-radius: 3px; background: rgba(244, 239, 230, 0.14); overflow: hidden; }
 .c5-m__bar i { display: block; height: 100%; background: var(--bronze-hi); transform-origin: left; }
 canvas.c5-screen { width: 780px !important; height: 1688px !important; }
+
+/* ---------------------------------------------------------------- outro */
+.c6-shade { background: radial-gradient(ellipse 80% 55% at 18% 100%, rgba(6, 5, 4, 0.9), rgba(6, 5, 4, 0) 100%); }
+.c6-l { position: absolute; left: 96px; bottom: 76px; display: flex; align-items: flex-end; gap: 34px; }
+.c6-l em { font: italic 300 190px/0.78 var(--serif); color: var(--bronze); }
+.c6-l div { display: grid; gap: 12px; padding-bottom: 6px; }
+.c6-l b { font: 300 66px/1.05 var(--serif); color: var(--ivory); text-shadow: 0 2px 30px rgba(0, 0, 0, 0.5); white-space: nowrap; }
+.c6-q { position: absolute; left: 50%; top: 150px; font: italic 300 72px/1.1 var(--serif); color: var(--ivory); white-space: nowrap; text-shadow: 0 2px 40px rgba(0, 0, 0, 0.75); }
+.c6-log { width: 1240px; min-height: 0; margin: -320px 0 0 -620px; }
+.c6-log__v { height: 500px; overflow: hidden; padding: 20px 44px; }
+.c6-row { font: 400 30px/1.7 var(--mono); color: rgba(244, 239, 230, 0.82); white-space: nowrap; }
+.c6-row.hot { color: var(--bronze-hi); }
+.c6-count { position: absolute; right: 96px; top: 60px; display: flex; align-items: baseline; gap: 14px; }
+.c6-count b { font: 300 92px/1 var(--serif); color: var(--ivory); }
+.c6-term { min-height: 0; margin-top: -210px; width: 1400px; margin-left: -700px; }
+.c6-term--one { margin-top: -130px; }
+.c6-one { position: absolute; left: 50%; top: 660px; font: italic 300 92px/1 var(--serif); color: var(--ivory); white-space: nowrap; text-shadow: 0 2px 40px rgba(0, 0, 0, 0.7); }
+canvas.c6-dc { width: 1920px !important; height: 1200px !important; transform-origin: 50% 50%; }
+.c6-site { bottom: 40px; }
+.c6-ask { top: 860px; font-size: 76px; }
+.c6-term .s-win__b { font-size: 30px; }
