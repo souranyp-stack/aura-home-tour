@@ -47,6 +47,24 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["vite", "video/.versions/616b83a", "--port", "5305", "--strictPort"],
       "port": 5305
+    },
+    {
+      "name": "broll-accordion",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/c68c346", "--port", "5306", "--strictPort"],
+      "port": 5306
+    },
+    {
+      "name": "broll-boxed-map",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/008c734", "--port", "5307", "--strictPort"],
+      "port": 5307
+    },
+    {
+      "name": "broll-pin-bug",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["vite", "video/.versions/pin-bug", "--port", "5308", "--strictPort"],
+      "port": 5308
     }
   ]
 }

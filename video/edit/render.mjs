@@ -51,7 +51,7 @@ if (stills) {
 }
 
 const from = Math.round(Number(arg('from') ?? 0) * 60), to = Math.min(total, Math.round(Number(arg('to') ?? total / 60) * 60));
-const base = { sponsor: 'aura-sponsor-designcode', page: `page-${arg('take')}`, ch1: 'aura-build-stack-first-prompt', ch2: 'aura-build-creative-director-review', ch3: 'aura-build-the-hero' }[cutName] || 'aura-intro-broll';
+const base = { sponsor: 'aura-sponsor-designcode', page: `page-${arg('take')}`, ch1: 'aura-build-stack-first-prompt', ch2: 'aura-build-creative-director-review', ch3: 'aura-build-the-hero', ch4: 'aura-build-the-landing-page' }[cutName] || 'aura-intro-broll';
 const out = join(root, 'out', `${base}${clean ? '-clean' : ''}${arg('from') || arg('to') ? `-${from / 60}-${to / 60}` : ''}.mp4`);
 const ff = spawn(ffmpegPath, [
   '-y', '-loglevel', 'error', '-f', 'image2pipe', '-framerate', '60', '-c:v', 'mjpeg', '-i', '-',

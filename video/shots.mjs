@@ -6,6 +6,7 @@
 const CUR = 'http://localhost:5288/?capture';
 const V1 = 'http://localhost:5301/';
 const V2 = 'http://localhost:5302/'; // 45dc2b6, the commit after the review
+const ACC = 'http://localhost:5306/', BOX = 'http://localhost:5307/', BUG = 'http://localhost:5308/'; // c68c346 accordion, 008c734 boxed map, 7eadd7c with the pin bug put back
 const TW = 'http://localhost:5303/', AX = 'http://localhost:5304/', WN = 'http://localhost:5305/'; // 09a5de2 tower, 9c39d09 axonometric, 616b83a window
 // the first version has its own markup; keep only its picture
 const V1_CLEAN = 'body > :not(canvas) { opacity: 0 !important; } html, body { cursor: none !important; }';
@@ -87,6 +88,40 @@ const deskCam = (a, b, desk = 0.01) => `(i, t, n) => {
   const W = ([x, y, z]) => [m[0] * x + m[4] * y + m[8] * z + m[12], m[1] * x + m[5] * y + m[9] * z + m[13], m[2] * x + m[6] * y + m[10] * z + m[14]];
   window.__aura.director = { kind: 'film', desk: ${desk}, p: 0, cam: { pos: W(E.v(A.pos, B.pos, k)), tgt: W(E.v(A.tgt, B.tgt, k)), fov: E.lerp(A.fov, B.fov, k) } };
 }`;
+
+// the real page, scrolled by viewport heights either side of an element's top,
+// plus optionally a share of the element's own height (ha, hb)
+const scrollVh = (sel, a, b, ease = 'sine', ha = 0, hb = 0) => `(i, t, n) => {
+  const S = window.__shot, aura = window.__aura;
+  aura.director = null;
+  if (S.top === undefined) { const el = document.querySelector(${J(sel)}); const r = el.getBoundingClientRect(); S.top = r.top + scrollY; S.h = r.height; }
+  const k = E.${ease}(i / (n - 1)), y0 = S.top + S.h * ${ha} + innerHeight * ${a}, y1 = S.top + S.h * ${hb} + innerHeight * ${b};
+  aura.lenis.scrollTo(E.lerp(y0, y1, k), { immediate: true, force: true });
+}`;
+
+// a pointer drawn into the page, since a headless screenshot has none of its own
+const pointer = (page, x, y) => page.evaluate(([x, y]) => {
+  let c = document.getElementById('broll-pointer');
+  if (!c) {
+    c = document.createElement('div'); c.id = 'broll-pointer';
+    c.style.cssText = 'position:fixed;left:0;top:0;width:34px;height:34px;z-index:99999;pointer-events:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.55))';
+    c.innerHTML = '<svg viewBox="0 0 24 24" width="34" height="34"><path d="M5 2.5v17.2l4.7-4.3 3 6.6 3-1.4-3-6.4 6.3-.5z" fill="#fff" stroke="#111" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+    document.body.appendChild(c);
+  }
+  c.style.transform = `translate(${x - 5}px, ${y - 2.5}px)`;
+}, [x, y]);
+// the pointer comes in, runs along the metal, back to the middle, presses and holds
+const hover = (sel) => async (i, n, page) => {
+  const r = await page.evaluate((sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return [b.left, b.top, b.width, b.height]; }, sel);
+  const P = ([u, v]) => [r[0] + r[2] * u, r[1] + r[3] * v];
+  const [x, y] = catmull([[-0.6, 2.6], [-0.2, 1.4], [0.12, 0.55], [0.5, 0.42], [0.9, 0.58], [0.62, 0.5], [0.3, 0.46], [0.5, 0.5]].map(P), sine(Math.min(1, i / (n * 0.78))));
+  await page.mouse.move(x, y);
+  await pointer(page, x, y);
+  // pressed, never released: the ripple shows and nothing is submitted or opened
+  if (i === Math.round(n * 0.84)) await page.mouse.down();
+};
+// the page's own big canvases keep WebGL; only the buttons lose it
+const NO_BUTTON_GL = `(() => { const g = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (k, o) { return this.classList.contains('metal__fx') ? null : g.call(this, k, o); }; })();`;
 
 export const SHOTS = [
   // "This is an architectural plan. Lines on paper. Walls, rooms, a stair."
@@ -224,6 +259,31 @@ export const SHOTS = [
   { name: 'c3_macro_mug', url: CUR, clean: true, seconds: 3.5, frameFn: deskCam({ pos: [0.36, 0.17, 0.0], tgt: [0.478, 0.05, 0.167], fov: 28 }, { pos: [0.39, 0.15, -0.02], tgt: [0.478, 0.05, 0.167], fov: 28 }) },
   { name: 'c3_macro_rule', url: CUR, clean: true, seconds: 3.5, frameFn: deskCam({ pos: [-0.06, 0.14, 0.44], tgt: [0.3, 0, 0.345], fov: 24 }, { pos: [0.02, 0.14, 0.44], tgt: [0.3, 0, 0.345], fov: 24 }) },
   { name: 'c3_macro_pencils', url: CUR, clean: true, seconds: 3.5, frameFn: deskCam({ pos: [-0.12, 0.2, -0.2], tgt: [-0.2605, 0.09, -0.397], fov: 30 }, { pos: [-0.14, 0.18, -0.22], tgt: [-0.2605, 0.09, -0.397], fov: 30 }) },
+
+  // ---- Chapter 4 · "The landing page sections with GSAP" (edit/cuts/ch4.js). The real
+  // page below the film; 4K where the edit moves in on a detail.
+  { name: 'c4_handover', url: CUR, clean: true, seconds: 7, preroll: 90, frameFn: scrollVh('.manifesto', -1.5, 0.05, 'cubic') },
+  { name: 'c4_manifesto', url: CUR, clean: true, seconds: 10, preroll: 120, outW: 3840, crf: 16, frameFn: scroll('.manifesto', 0.0, 1.0) },
+  { name: 'c4_section', url: CUR, clean: true, seconds: 8, preroll: 90, outW: 3840, crf: 16, frameFn: scrollVh('#sectionDraw', -0.9, -0.08) },
+  { name: 'c4_plans', url: CUR, clean: true, seconds: 7, preroll: 90, outW: 3840, crf: 16, frameFn: scrollVh('.plan', -0.85, -0.65, 'sine', 0, 1) },
+  { name: 'c4_materials', url: CUR, clean: true, seconds: 10, preroll: 150, frameFn: scroll('#materials', 0.0, 0.96) },
+  { name: 'c4_day', url: CUR, clean: true, seconds: 12, preroll: 120, outW: 3840, crf: 16, frameFn: scroll('#daylight', 0.02, 0.98, 'linear') },
+  { name: 'c4_roll', url: CUR, clean: true, seconds: 14, preroll: 150, outW: 3840, crf: 16, frameFn: scroll('#sheet', 0.0, 1.0) },
+  { name: 'c4_approach', url: CUR, clean: true, seconds: 13, preroll: 150, frameFn: scroll('#approach', 0.0, 0.96) },
+  // the first version of the paper: CSS panels on hinges (c68c346), and the boxed map (008c734)
+  { name: 'c4_accordion', url: ACC, clean: true, seconds: 12, preroll: 120, outW: 3840, crf: 16, frameFn: scroll('#sheet', 0.0, 1.0) },
+  { name: 'c4_boxed', url: BOX, clean: true, seconds: 6, preroll: 120, frameFn: scroll('#approach', 0.08, 0.9) },
+  // the pin bug, put back in 7eadd7c: the approach's pin created before the Materials pin
+  { name: 'c4_bug', url: BUG, clean: true, seconds: 7, preroll: 120, frameFn: `(i, t, n) => {
+      const a = window.__aura; a.director = null;
+      const st = window.__ST.getById('approach');
+      a.lenis.scrollTo(E.lerp(st.start - 760, st.start + 240, E.linear(i / (n - 1))), { immediate: true, force: true });
+    }` },
+  // the liquid bronze button, and the same button with WebGL taken away from it
+  { name: 'c4_button', url: CUR, clean: true, seconds: 9, preroll: 120, outW: 3840, crf: 16, frameFn: scrollVh('.form .btn', -0.55, -0.55), before: hover('.form .btn') },
+  // a plain link at the end of the film, upgraded, and with WebGL taken away from the buttons
+  { name: 'c4_link', url: CUR, clean: false, seconds: 7, preroll: 150, outW: 3840, crf: 16, frameFn: scroll('#spacer', 0.97, 0.97), before: hover('.frame--atmo a[data-metal]') },
+  { name: 'c4_link_nogl', url: CUR, init: NO_BUTTON_GL, clean: false, seconds: 7, preroll: 150, outW: 3840, crf: 16, frameFn: scroll('#spacer', 0.97, 0.97), before: hover('.frame--atmo a[data-metal]') },
 ];
 
 // Node-side copies for crops and mouse paths

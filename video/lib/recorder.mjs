@@ -20,7 +20,7 @@ export const CLEAN_CSS = `
   ::-webkit-scrollbar { display: none !important; }
 `;
 
-export async function openPage({ url, width = 1920, height = 1080, dsf = 2, clean = false, css = '', cleanCss = CLEAN_CSS }) {
+export async function openPage({ url, width = 1920, height = 1080, dsf = 2, clean = false, css = '', cleanCss = CLEAN_CSS, init = '' }) {
   const browser = await chromium.launch({
     executablePath: CHROME,
     headless: true,
@@ -31,6 +31,7 @@ export async function openPage({ url, width = 1920, height = 1080, dsf = 2, clea
   page.on('console', (m) => { if (m.type() === 'error') console.error('[console]', m.text()); });
   await page.addInitScript({ content: readFileSync(join(here, 'virtual-time.js'), 'utf8') });
   await page.addInitScript({ content: readFileSync(join(here, 'ease.js'), 'utf8') });
+  if (init) await page.addInitScript({ content: init });
   await page.goto(url, { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('loader')?.classList.contains('is-done') || !document.getElementById('loader'), null, { timeout: 180000 });
   await page.evaluate(() => document.fonts?.ready);

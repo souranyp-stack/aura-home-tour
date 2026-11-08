@@ -174,3 +174,39 @@ real commits: tower 09a5de2, axonometric 9c39d09, window attempt 616b83a, today'
 | 1:04 | "It read as a square overlay." | the window, outlined |
 | 1:07 | "one camera and one house the whole way through." | desk into gallery, one take |
 | 1:13 | "...baked from the real floor plans, so it always matches the model." | wipe from the plan to the model, one top-down camera |
+
+# The build: the landing page sections
+
+B-roll for "4. The landing page sections with GSAP" (`node edit/render.mjs --cut=ch4`,
+add `--clean` for no titles). `out/aura-build-the-landing-page.mp4`, 1:50. The accordion
+is c68c346 and the boxed map 008c734. The pin bug is the real one, put back by
+setup-versions.sh: 7eadd7c with the approach's pin created before the Materials pin
+and ScrollTrigger's markers on. At 1920×1080 it starts 1,379 px early.
+
+| Cut | Script line | Picture |
+| --- | --- | --- |
+| 0:00 | "After the film, the page becomes a proper landing page," | the film handing over to the page |
+| 0:04 | "and every section is animated with GSAP." | the six sections running side by side |
+| 0:08 | Manifesto | the sentence lit word by word |
+| 0:14 | Drawings | section A-A, then the plans, drawing themselves |
+| 0:23 | Materials | the pinned gallery |
+| 0:30 | A day on the headland | eighteen hours and the dial |
+| 0:37 | The drawing | the roll unrolling |
+| 0:41 | The approach | the flight down the road, the boxed map as an inset |
+| 0:48 | "Two lessons from this part." | title |
+| 0:50 | "First, the paper roll." | the closed roll |
+| 0:52 | "CSS panels folding like an accordion," | c68c346 unfolding |
+| 0:57 | "it looked stiff, because CSS can only hinge." | frozen on a fold, the crease drawn in |
+| 1:01 | "Paper curls." | the line over the roll |
+| 1:02 | "unrolls along a spiral," | the roll beside its spiral, from the sheet's real numbers |
+| 1:08 | "and the roll shrinks as it goes." | close on the end of the roll |
+| 1:11 | "a GSAP gotcha that cost me an hour." | the comment in page.js |
+| 1:15 | "measures pinned sections in the order you create them." | diagram, in order |
+| 1:19 | "Create them out of order..." | diagram, out of order |
+| 1:22 | (the wrong place) | the real bug, the map landing early |
+| 1:25 | "Mine started 1,400 pixels too early." | the count |
+| 1:28 | "this button comes from ThreeUI, the Liquid Metal Button." | push in on Send enquiry |
+| 1:33 | "Metal pours across it when you hover." | the hover, then the press |
+| 1:36 | "It's MIT licensed, so I kept the license notice" | THIRD_PARTY_NOTICES.md |
+| 1:41 | "wired it to upgrade normal links," | the link and initMetalButtons |
+| 1:45 | "so it still works without WebGL." | the same link with and without |
