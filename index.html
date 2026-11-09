@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AURA — The Living Sanctuary</title>
+  <meta name="description" content="AURA is a concept residence on a limestone headland 38 metres above the sea: a stone plinth set into the rock and a glass pavilion above it, shown as a film rendered live in your browser." />
+  <meta name="theme-color" content="#0b0a09" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>html,body{background:#0b0a09;margin:0}.loader{position:fixed;inset:0;z-index:60;background:#0b0a09}</style>
+  <script type="module" crossorigin src="./assets/index-B5ZT1eZw.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-B5MX4CKl.css">
+</head>
+<body>
+  <canvas id="gl" aria-hidden="true"></canvas>
+
+  <div class="loader" id="loader" role="status" aria-live="polite">
+    <svg class="mark mark--xl" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="27" r="17" />
+      <path d="M6 45h52" />
+    </svg>
+    <p class="loader__word">AURA</p>
+    <p class="loader__status" id="loaderStatus">Quarrying stone</p>
+    <div class="loader__bar"><span id="loaderBar"></span></div>
+  </div>
+
+  <header class="top" id="top">
+    <span class="top__progress" id="topProgress" aria-hidden="true"></span>
+    <a class="brand" href="#" data-jump="0" aria-label="AURA, back to the beginning">
+      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+        <circle cx="32" cy="27" r="17" />
+        <path d="M6 45h52" />
+      </svg>
+      <span>AURA</span>
+    </a>
+    <nav class="top__nav" aria-label="Sections">
+      <a href="#" data-jump="0">Film</a>
+      <a href="#residence">Residence</a>
+      <a href="#plans">Drawings</a>
+      <a href="#daylight">A day</a>
+      <a href="#materials">Materials</a>
+      <a href="#details">Details</a>
+      <button type="button" data-walk>Walk</button>
+    </nav>
+    <div class="top__actions">
+      <button class="top__sound" id="soundToggle" type="button" aria-pressed="false" aria-label="Unmute sound" title="Unmute sound">
+        <span aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+      </button>
+      <a class="pill" href="#enquire" data-metal>Private viewing</a>
+    </div>
+  </header>
+
+  <!-- ─────────────── the film: fixed overlays driven by scroll ─────────────── -->
+  <div class="film-ui" id="filmUi">
+    <main class="story" id="story">
+      <section class="frame frame--hero" data-in="-1" data-out="0.055">
+        <div class="hero__scrim" aria-hidden="true"></div>
+        <p class="eyebrow"><span>Concept residence</span><span>38 m above the sea</span></p>
+        <div class="hero__main">
+          <h1 class="hero__word">AURA</h1>
+          <p class="hero__sub"><em>The living</em> sanctuary</p>
+          <div class="hero__cta">
+            <button class="pill hero__walk" type="button" data-walk data-metal>Walk the house</button>
+            <a class="hero__begin" href="#" data-begin><i aria-hidden="true">↓</i><span class="sr-only">Begin the film</span></a>
+          </div>
+        </div>
+      </section>
+
+      <section class="frame frame--left" data-in="0.075" data-out="0.145">
+        <h2>The house,<br /><em>drawn apart</em></h2>
+        <p>Before it was built, it was taken to pieces: nine masses lifted off one another, each one still above the place it will land. The bronze lines show where each one falls.</p>
+      </section>
+
+      <section class="frame frame--right" data-in="0.215" data-out="0.30">
+        <h2>Gravity<br /><em>decides</em></h2>
+        <p>Each mass comes down its own line, from the ground up. The limestone blade slides into the rock. The floor plate reaches nearly five metres past the cliff, and the roof lands last, as thin as a sheet of paper.</p>
+      </section>
+
+      <section class="frame frame--left frame--low" data-in="0.345" data-out="0.44">
+        <h2>Matter rises<br /><em>from the ground</em></h2>
+        <ul class="spec">
+          <li><span>Walls</span>Split-face limestone, quarried on site</li>
+          <li><span>Floors</span>Vein-cut travertine &amp; white oak</li>
+          <li><span>Edges</span>Patinated bronze</li>
+          <li><span>Openings</span>Low-iron glass, floor to ceiling</li>
+        </ul>
+      </section>
+
+      <section class="frame frame--right frame--low" data-in="0.5" data-out="0.6">
+        <h2>Then the world<br /><em>arrives</em></h2>
+        <p>A limestone headland, an open western sea and nothing between the terrace and the horizon.</p>
+        <dl class="stats">
+          <div><dt>38 m</dt><dd>above the sea</dd></div>
+          <div><dt>580 m²</dt><dd>of living space</dd></div>
+          <div><dt>4.5 m</dt><dd>terrace beyond the edge</dd></div>
+        </dl>
+      </section>
+
+      <section class="frame frame--center" data-in="0.665" data-out="0.735">
+        <h2>The glass<br /><em>steps aside</em></h2>
+      </section>
+
+      <section class="frame frame--left" data-in="0.78" data-out="0.875">
+        <h2>Inside, the horizon<br /><em>is the fourth wall</em></h2>
+        <p>Oak underfoot, a fire set into the stone, and twenty metres of glass facing the sunset.</p>
+      </section>
+
+      <section class="frame frame--left frame--atmo" data-in="0.925" data-out="2">
+        <h2>Live in it<br /><em>at any hour</em></h2>
+        <p>The house is rendered live. Change the hour, the weather, the lights and the fire, and watch the stone respond.</p>
+        <div class="frame__cta">
+          <button class="pill" type="button" data-walk data-metal>Walk the house</button>
+          <a class="pill" href="#enquire" data-metal>Request a viewing</a>
+        </div>
+      </section>
+    </main>
+
+    <aside class="controls" id="controls" aria-label="Environment controls">
+      <div class="controls__head">
+        <p class="eyebrow">Atmosphere</p>
+        <p class="controls__clock" id="clock">19:43</p>
+      </div>
+      <div class="presets" role="group" aria-label="Time presets">
+        <button type="button" data-preset="dawn">Dawn</button>
+        <button type="button" data-preset="noon">Noon</button>
+        <button type="button" data-preset="golden">Golden</button>
+        <button type="button" data-preset="night">Night</button>
+      </div>
+      <label class="ctl">
+        <span class="ctl__row"><span>Daylight</span><output id="timeOut">19:43</output></span>
+        <input type="range" id="time" min="5" max="23.5" step="0.05" value="19.72" />
+      </label>
+      <div class="ctl">
+        <span class="ctl__row"><span>Weather</span><output id="mistOut">Clear</output></span>
+        <div class="seg" role="radiogroup" aria-label="Weather">
+          <button type="button" role="radio" data-mist="0.06" aria-checked="true">Clear</button>
+          <button type="button" role="radio" data-mist="0.42" aria-checked="false">Haze</button>
+          <button type="button" role="radio" data-mist="0.9" aria-checked="false">Sea fog</button>
+        </div>
+      </div>
+      <label class="ctl">
+        <span class="ctl__row"><span>Interior light</span><output id="lightOut">75%</output></span>
+        <input type="range" id="light" min="0" max="1" step="0.01" value="0.75" />
+      </label>
+      <label class="ctl">
+        <span class="ctl__row"><span>Sheer curtains</span><output id="veilOut">Open</output></span>
+        <input type="range" id="veil" min="0" max="1" step="0.01" value="0" />
+      </label>
+      <div class="ctl ctl--toggle">
+        <span>Hearth</span>
+        <button type="button" class="switch" id="fire" role="switch" aria-checked="true"><span></span></button>
+      </div>
+    </aside>
+
+    <div class="index" id="index">
+      <p class="index__now"><span id="chapterName">Prologue</span></p>
+      <div class="cue" id="cue" aria-hidden="true"><i></i><span>Nine masses · one house</span></div>
+      <nav class="index__ticks" id="rail" aria-label="Chapters"></nav>
+    </div>
+  </div>
+
+  <div class="spacer" id="spacer"></div>
+
+  <!-- ─────────────── the landing page ─────────────── -->
+  <div class="page" id="page">
+    <section class="manifesto" aria-label="Intent">
+      <div class="manifesto__inner">
+        <p class="manifesto__label"><span>A</span>The intent</p>
+        <p class="manifesto__text" id="manifesto">We wanted a house that sits on the rock as if it had always been there, and leaves the horizon exactly as it found it.</p>
+        <p class="manifesto__sign">— Design brief, sheet 01</p>
+      </div>
+    </section>
+
+    <section class="sec sec--intro" id="residence" aria-labelledby="residence-h">
+      <div class="sec__label" data-reveal>The residence</div>
+      <div class="intro">
+        <h2 class="display" id="residence-h" data-split>A house built from the headland it stands on.</h2>
+        <div class="intro__body" data-reveal>
+          <p>AURA is a concept for a single-family house on a limestone promontory 38 metres above an open western sea. It has two levels. Below is a stone plinth set into the rock for sleeping and bathing. Above is a glass pavilion for living, cooking and watching the weather come in.</p>
+          <p>The stone dug out for the plinth becomes its walls. A limestone blade 26 metres long anchors the house to the cliff and carries the roof, which reaches nine metres out over the terrace without a column on the sea side.</p>
+        </div>
+      </div>
+      <dl class="facts" id="facts">
+        <div><dt>Built area</dt><dd><b data-count="580">580</b> m²</dd></div>
+        <div><dt>Terrace</dt><dd><b data-count="180">180</b> m²</dd></div>
+        <div><dt>Levels</dt><dd><b data-count="2">2</b></dd></div>
+        <div><dt>Bedrooms</dt><dd><b data-count="4">4</b></dd></div>
+        <div><dt>Clear height</dt><dd><b data-count="3.45" data-dec="2">3.45</b> m</dd></div>
+        <div><dt>Sea glazing</dt><dd><b data-count="20">20</b> m</dd></div>
+        <div><dt>Pool</dt><dd><b data-count="12.9" data-dec="1">12.9</b> × 3.2 m</dd></div>
+        <div><dt>Elevation</dt><dd>+<b data-count="38">38</b> m</dd></div>
+      </dl>
+    </section>
+
+    <section class="daylight" id="daylight" aria-labelledby="daylight-h">
+      <div class="daylight__pin">
+        <div class="daylight__top">
+          <div class="sec__label">A day on the headland</div>
+          <h2 class="display display--s" id="daylight-h" data-split>Eighteen hours, one scroll.</h2>
+        </div>
+        <div class="daylight__clock" aria-live="off"><span id="dayClock">05:24</span></div>
+        <div class="daylight__instrument" id="dayDial" aria-hidden="true"></div>
+        <p class="daylight__moment" id="dayMoment">First light. The sea turns pewter before the sky does.</p>
+        <p class="daylight__note">Rendered live as you scroll</p>
+      </div>
+    </section>
+
+    <section class="sec sec--plans" id="plans" aria-labelledby="plans-h">
+      <div class="sec__label" data-reveal>Drawings</div>
+      <div class="sec__head">
+        <h2 class="display display--s" id="plans-h" data-split>Two levels, one wall.</h2>
+        <p data-reveal>The spine wall runs through both floors and out past the cliff edge. Every room faces the sea, and the service spaces sit against the hill. Scroll to draw the house.</p>
+      </div>
+      <figure class="section-draw" id="sectionDraw" aria-label="Cross-section through the headland">
+        <figcaption class="section-draw__hint">Swipe to read the drawing</figcaption>
+      </figure>
+      <div class="plans">
+        <figure class="plan">
+          <div class="plan__draw" id="planUpper"></div>
+          <figcaption><span>Upper level</span>Living pavilion · +4.05 m</figcaption>
+        </figure>
+        <figure class="plan">
+          <div class="plan__draw" id="planLower"></div>
+          <figcaption><span>Lower level</span>Stone plinth · ±0.00 m</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="sheet" id="sheet" aria-labelledby="sheet-h">
+      <div class="sheet__pin">
+        <div class="sheet__copy">
+          <div class="sec__label">The drawing</div>
+          <h2 class="display display--s" id="sheet-h" data-split>Unroll the house.</h2>
+          <p>Sheet A-101, the upper level at 1:100, rolled the way the builders received it. Keep scrolling to open it.</p>
+        </div>
+        <canvas class="sheet__canvas" id="rollCanvas" role="img" aria-label="Sheet A-101: the upper level plan, unrolling across a table"></canvas>
+        <p class="sheet__hint" aria-hidden="true"><i></i>Scroll to unroll</p>
+      </div>
+    </section>
+
+    <section class="materials" id="materials" aria-labelledby="materials-h">
+      <div class="materials__pin">
+        <div class="materials__intro">
+          <div class="sec__label" data-reveal>Materials</div>
+          <h2 class="display display--s" id="materials-h" data-split>Six materials, chosen to weather.</h2>
+          <p data-reveal>Each sample is the same surface the film uses, lit in real time as the page loads. Nothing is painted, laminated or veneered.</p>
+        </div>
+        <ul class="swatches" id="swatches">
+          <li data-swatch="limestone"><div class="swatch__img"><i></i></div><h3>Split-face limestone</h3><p>Quarried from the plinth excavation and dry-laid in long, low courses. Used for the spine, the fin and the hearth.</p></li>
+          <li data-swatch="travertine"><div class="swatch__img"><i></i></div><h3>Vein-cut travertine</h3><p>Honed and unfilled, so the pores stay open and grip wet feet. Used for the terraces, the pool coping and the gallery wall.</p></li>
+          <li data-swatch="oak"><div class="swatch__img"><i></i></div><h3>White oak</h3><p>Wide boards with a hard-wax oil finish. Used for the floor and the soffit, so floor and ceiling read as one material.</p></li>
+          <li data-swatch="bronze"><div class="swatch__img"><i></i></div><h3>Patinated bronze</h3><p>Left to darken in the salt air. Used for the roof edge, the mullions and the door pulls.</p></li>
+          <li data-swatch="boucle"><div class="swatch__img"><i></i></div><h3>Wool bouclé</h3><p>A heavy, undyed weave for the living-room seating.</p></li>
+          <li data-swatch="leather"><div class="swatch__img"><i></i></div><h3>Saddle leather</h3><p>Vegetable-tanned, for the lounge chairs. It darkens where hands rest.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="sec sec--details" id="details" aria-labelledby="details-h">
+      <div class="sec__label" data-reveal>Details at 1:1</div>
+      <div class="sec__head">
+        <h2 class="display display--s" id="details-h" data-split>The house is in the joints.</h2>
+        <p data-reveal>Close-ups rendered from the same model. Hover to look closer.</p>
+      </div>
+      <div class="details">
+        <figure class="detail detail--tall"><div class="detail__frame"><div class="detail__img" data-still="roofEdge"></div></div><figcaption><span>Roof edge</span>A 220 mm bronze fascia over a 120 mm shadow gap. From the terrace, the roof is a single line.</figcaption></figure>
+        <figure class="detail"><div class="detail__frame"><div class="detail__img" data-still="leather"></div></div><figcaption><span>Saddle leather</span>Channels stuffed and stitched by hand, so the seams carry the light.</figcaption></figure>
+        <figure class="detail"><div class="detail__frame"><div class="detail__img" data-still="pool"></div></div><figcaption><span>Vanishing edge</span>The water stops 12 mm below the stone and spills toward the sea.</figcaption></figure>
+        <figure class="detail detail--wide"><div class="detail__frame"><div class="detail__img" data-still="stone"></div></div><figcaption><span>Dry-laid limestone</span>No mortar: each course is shimmed and split by hand, so the joints are shadow.</figcaption></figure>
+        <figure class="detail"><div class="detail__frame"><div class="detail__img" data-still="teak"></div></div><figcaption><span>Teak chaise</span>Twenty-two slats, a hinged back and a piped cushion.</figcaption></figure>
+        <figure class="detail"><div class="detail__frame"><div class="detail__img" data-still="fire"></div></div><figcaption><span>Firebox</span>Blackened steel set proud of the stone, on a bed of ceramic pebbles.</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="sec sec--spaces" id="spaces" aria-labelledby="spaces-h">
+      <div class="sec__label" data-reveal>Spaces</div>
+      <div class="sec__head">
+        <h2 class="display display--s" id="spaces-h" data-split>Three hours of the same day.</h2>
+        <div class="spaces__intro">
+          <p data-reveal>Taken from the live model as you reach this section. Each one is the same house at a different hour.</p>
+          <div class="spaces__walk" data-reveal><button class="pill" type="button" data-walk data-metal>Walk through it yourself</button></div>
+        </div>
+      </div>
+      <div class="stills">
+        <figure class="still still--wide"><div class="still__frame"><div class="still__img" data-still="terrace"></div></div><figcaption><span>19:30</span>The terrace and the vanishing edge</figcaption></figure>
+        <figure class="still"><div class="still__frame"><div class="still__img" data-still="hearth"></div></div><figcaption><span>21:40</span>The hearth after dark</figcaption></figure>
+        <figure class="still still--offset"><div class="still__frame"><div class="still__img" data-still="fog"></div></div><figcaption><span>07:05</span>Sea fog over the headland</figcaption></figure>
+      </div>
+    </section>
+
+    <section class="sec sec--climate" aria-labelledby="climate-h">
+      <div class="sec__label" data-reveal>How it lives</div>
+      <h2 class="display display--s" id="climate-h" data-split>Designed for the climate, not against it.</h2>
+      <ol class="climate">
+        <li><b><span data-count="11">11</span> h</b><h3>Thermal lag</h3><p>Stone walls 600 mm thick soak up the afternoon heat and give it back after midnight.</p></li>
+        <li><b><span data-count="0">0</span></b><h3>Air-conditioned rooms</h3><p>The pavilion's glass walls slide open on two sides, so the onshore breeze crosses the room from the sea to the hill.</p></li>
+        <li><b><span data-count="86">86</span> m²</b><h3>Hidden solar</h3><p>Photovoltaic panels sit flush inside the bronze roof edge. They can't be seen from the terrace or the sea.</p></li>
+        <li><b><span data-count="38">38</span> m³</b><h3>Rainwater</h3><p>A cistern under the entry court collects every winter storm for the garden and the pool.</p></li>
+      </ol>
+    </section>
+
+    <section class="approach" id="approach" aria-labelledby="approach-h">
+      <div class="approach__pin">
+        <canvas class="approach__canvas" id="coastCanvas" role="img" aria-label="Relief map of the coast, following the road from the harbour to the house"></canvas>
+        <div class="approach__tags" id="coastTags" aria-hidden="true"><i class="cmap__head" id="coastHead"></i></div>
+        <div class="approach__copy">
+          <div class="sec__label">The approach</div>
+          <h2 class="display display--s" id="approach-h" data-split>Six kilometres of coast road, then nothing.</h2>
+        </div>
+        <div class="approach__compass" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="23"/><g id="coastNeedle"><path d="M32,13 L37,32 L32,28.5 L27,32 Z"/><text x="32" y="9" text-anchor="middle">N</text></g></svg>
+        </div>
+        <div class="approach__panel">
+          <div class="approach__read" aria-hidden="true">
+            <p class="approach__km"><b id="coastKm">00.0</b><span>km</span></p>
+            <p class="approach__alt"><span id="coastAlt">+3 m</span> elevation</p>
+          </div>
+          <div class="approach__route">
+            <svg class="approach__profile" id="coastProfile" viewBox="0 0 1000 96" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <ol class="approach__steps" id="approachSteps">
+              <li data-km="0"><b>00.0 km</b>The harbour village</li>
+              <li data-km="2.4"><b>02.4 km</b>The coast road leaves the last houses</li>
+              <li data-km="4.6"><b>04.6 km</b>Through the olive terraces</li>
+              <li data-km="5.9"><b>05.9 km</b>A bronze gate in a dry-stone wall</li>
+              <li data-km="6.2"><b>06.2 km</b>AURA, 38 m above the sea</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta" id="enquire" aria-labelledby="enquire-h">
+      <div class="cta__bg" data-still-bg="terrace"></div>
+      <div class="cta__inner">
+        <div class="enquire__copy">
+          <div class="sec__label" data-reveal>Private viewing</div>
+          <h2 class="display" id="enquire-h" data-split>Walk through it with the architect.</h2>
+          <p data-reveal>Viewings are held one party at a time, in the model or on the headland. Tell us a little about yourself and we'll reply within two working days.</p>
+          <p class="enquire__note" data-reveal>AURA is an architectural concept. This form doesn't send anything yet.</p>
+        </div>
+        <form class="form" id="enquireForm" novalidate data-reveal>
+          <label><span>Name</span><input name="name" autocomplete="name" required /></label>
+          <label><span>Email</span><input name="email" type="email" autocomplete="email" required /></label>
+          <label class="form__wide"><span>Interest</span>
+            <select name="interest">
+              <option>A private viewing</option>
+              <option>Commissioning a residence</option>
+              <option>Press and publication</option>
+            </select>
+          </label>
+          <label class="form__wide"><span>Message <i>(optional)</i></span><textarea name="message" rows="3"></textarea></label>
+          <button class="btn" type="submit" data-metal><span>Send enquiry</span><i aria-hidden="true">→</i></button>
+          <p class="form__status" id="formStatus" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+
+    <footer class="foot" id="foot">
+      <div class="foot__top">
+        <p class="foot__line" data-reveal>The living sanctuary. An architectural concept rendered in real time. Every surface is generated in the browser, with no photographs and no downloaded textures.</p>
+        <nav class="foot__nav" aria-label="Footer">
+          <a href="#" data-jump="0">Watch the film</a>
+          <a href="#residence">Residence</a>
+          <a href="#plans">Drawings</a>
+          <a href="#materials">Materials</a>
+          <a href="#enquire">Private viewing</a>
+        </nav>
+        <a class="foot__top-link" href="#" data-jump="0" aria-label="Back to the start of the film">↑</a>
+      </div>
+      <p class="foot__word" aria-hidden="true">AURA</p>
+      <div class="foot__small"><span>© 2026 AURA</span><span>Concept, not for sale</span><span>Built with three.js and GSAP</span></div>
+    </footer>
+  </div>
+
+  <!-- ─────────────── walking the house ─────────────── -->
+  <div class="walk" id="walk" role="dialog" aria-label="Walk through the house" hidden>
+    <div class="walk__surface" aria-hidden="true"></div>
+    <div class="walk__ui">
+      <div class="walk__where" aria-live="polite">
+        <h2 id="walkWhere"></h2>
+        <p id="walkNote"></p>
+      </div>
+      <button class="walk__leave" type="button">Leave <kbd>Esc</kbd></button>
+      <div class="walk__map" aria-hidden="true"></div>
+      <div class="walk__dock">
+        <p class="walk__hint"><span class="walk__hint-mouse">Drag to look. Click the floor, or use W A S D, to walk. Hold Shift to go faster. M mutes.</span><span class="walk__hint-touch">Drag to look. Use the stick, or tap the floor, to walk.</span></p>
+        <div class="walk__places" role="group" aria-label="Go to a place"></div>
+        <div class="walk__lower">
+          <div class="walk__hours" role="group" aria-label="Time of day"></div>
+          <div class="walk__switches" role="group" aria-label="Sound, door and curtains"></div>
+        </div>
+      </div>
+      <div class="walk__stick" aria-hidden="true"><i></i></div>
+    </div>
+    <div class="walk__veil" aria-hidden="true"></div>
+  </div>
+
+</body>
+</html>
