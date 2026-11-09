@@ -20,7 +20,18 @@ const cursor=(x,y,z=1)=>`<svg class="abs" style="left:${x}px;top:${y}px;filter:d
 const me=(right,h,bottom=-14)=>`<img id="me" src="src/me.png" style="right:${right}px;bottom:${bottom}px;height:${h}px">`;
 const shade='<div class="abs" style="inset:0;background:linear-gradient(rgba(6,7,28,.9),rgba(6,7,28,.5) 34%,transparent 58%)"></div>';
 const side='<div class="abs" style="inset:0;background:linear-gradient(90deg,transparent 58%,rgba(5,6,20,.82) 86%)"></div>';
+const logo=(x,y)=>`<div class="abs" style="left:${x}px;top:${y}px;display:flex;align-items:center;gap:16px;padding:12px 30px 12px 12px;border-radius:24px;background:rgba(9,9,20,.88);border:2px solid rgba(255,206,120,.62);box-shadow:0 0 34px rgba(255,170,70,.45)"><img src="src/claude.png" style="width:82px;height:82px"><span style="font:700 46px 'Inter Tight';color:#fff;letter-spacing:-.01em">Claude Code</span></div>`;
+const wide='<img class="abs grade" src="src/gold.png" style="width:1480px;left:-107px;top:-30px">';
+const low='<div class="abs" style="inset:0;background:linear-gradient(transparent 62%,rgba(5,5,14,.72))"></div>';
 const H={
+d:`${wide}${shade}${low}
+ <div class="t abs" style="left:34px;top:16px;font-size:90px">I built a</div>
+ <div class="t abs" style="left:30px;top:106px;font-size:154px;white-space:nowrap"><span class="gold">Walkable 3D house</span></div>
+ ${cursor(1010,430)}${logo(30,590)}`,
+e:`${wide}${shade}${low}
+ <div class="t abs" style="left:34px;top:16px;font-size:90px">This is</div>
+ <div class="t abs" style="left:30px;top:104px;font-size:188px"><span class="gold">a website</span></div>
+ ${cursor(1010,430)}${logo(30,590)}`,
 a:`<img class="abs grade" src="src/gold.png" style="width:1300px;left:-150px;top:20px">${shade}${side}
  <div class="t abs" style="left:34px;top:18px;font-size:86px">This is</div>
  <div class="t abs gold-w" style="left:30px;top:100px;font-size:188px"><span class="gold">a website</span></div>
