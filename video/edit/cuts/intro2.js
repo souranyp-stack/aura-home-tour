@@ -4,7 +4,10 @@
 // wall of frames, thin bronze light between scenes.
 window.CUTS = window.CUTS || {};
 window.CUTS.intro2 = (api) => {
-  const { add, drift, E, span, lerp, css, bell, masked, rise, V1_LOOK, drawCode } = api;
+  const { add: addAt, drift, E, span, lerp, css, bell, masked, rise, V1_LOOK, drawCode, T } = api;
+  // everything after version one moves up, since those lines got shorter
+  let OFF = 0;
+  const add = (s) => addAt({ ...s, at: s.at + OFF });
 
   const frameOf = (c) => {
     const w = Math.min(1920, c.w), x = Math.min(1920 - w, Math.max(0, c.x - w / 2)), y = Math.min(1080 - (w * 9) / 16, Math.max(0, c.y - (w * 9) / 32));
@@ -47,10 +50,10 @@ window.CUTS.intro2 = (api) => {
 
   // a clip on a card, turning in from depth and leaving towards the camera
   const card = (src, at, dur, from, { x = 830, y = 250, w = 940, speed = 1, tilt = -9, filter = '', crop } = {}) => add({ src, at, dur, from, speed, crop, cls: 'k-card', fx: (lt, L) => {
-    const e = E.outExpo(span(lt, 0, 0.7)), o = E.inCubic(span(lt, L.dur - 0.22, L.dur)), k = E.sine(lt / L.dur), sc = w / 1920;
+    const e = E.outExpo(span(lt, 0, 0.7)), o = E.inCubic(span(lt, L.dur - 0.22, L.dur)), k = E.sine(lt / L.dur), sc = w / 1920, X = T ? x : (1920 - w) / 2;
     css(L.el, {
       opacity: Math.min(1, e * 1.6) * (1 - o),
-      transform: `translate(${x + (1 - e) * 260 + o * -80}px, ${y + (1 - e) * 60}px) perspective(1400px) rotateY(${(1 - e) * -34 + tilt + k * 4}deg) rotateX(${(1 - e) * 12}deg) scale(${sc * lerp(0.86, 1, e) * (1 + o * 0.08)})`,
+      transform: `translate(${X + (1 - e) * 260 + o * -80}px, ${y + (1 - e) * 60}px) perspective(1400px) rotateY(${(1 - e) * -34 + tilt + k * 4}deg) rotateX(${(1 - e) * 12}deg) scale(${sc * lerp(0.86, 1, e) * (1 + o * 0.08)})`,
       filter: `${filter}${e < 0.98 ? ` blur(${((1 - e) * 8).toFixed(2)}px)` : ''}` || 'none',
     });
   } });
@@ -89,7 +92,7 @@ window.CUTS.intro2 = (api) => {
   add({ src: 'c7_plan', at: 6.0, dur: 1.2, from: 5.6, speed: 0.4, crop: moves([[5.6, { x: 800, y: 380, w: 760 }], [6.08, { x: 720, y: 360, w: 620 }]]), fx: drift({ s: [1, 1] }) });
   type(6.05, 1.1, [['a', 'b'], ['stair.', 'i']], { size: 190, bottom: 70, stagger: 0.05, shade: true });
   // 0:07 "Now watch what happens when I scroll."
-  add({ src: 'c7_plan', at: 7.2, dur: 2.05, from: 6.5, speed: 0.2, crop: moves([[6.5, { x: 960, y: 540, w: 1500 }], [6.92, { x: 960, y: 540, w: 1420 }]]), fx: drift({ s: [1, 1], filter: 'brightness(0.32)' }) });
+  add({ src: 'c7_plan', at: 7.2, dur: 2.05, from: 6.5, speed: 0.2, crop: moves([[6.5, { x: 960, y: 540, w: 1500 }], [6.92, { x: 960, y: 540, w: 1420 }]]), fx: drift({ s: [1, 1], filter: `brightness(${T ? 0.32 : 0.7})` }) });
   type(7.3, 1.9, [['Now watch what happens', 'b'], ['when I scroll.', 'i']], { size: 104, align: 'center', y: 430, stagger: 0.05 });
   add({ titles: true, at: 7.5, dur: 1.75, html: '<div class="k-scroll"><i></i></div>', fx: (lt, L) => {
     const u = (lt * 1.2) % 1; css(L.el.firstChild, { opacity: E.sine(span(lt, 0, 0.3)) * (1 - E.sine(span(lt, 1.45, 1.75))) }); css(L.el.querySelector('i'), { transform: `translateY(${u * 30}px)`, opacity: 1 - u });
@@ -124,7 +127,7 @@ window.CUTS.intro2 = (api) => {
   add({ type: 'browser', src: 'c7_hover_top', at: 30.6, dur: 1.95, from: 0.1, fx: (lt, L) => {
     const e = E.outExpo(span(lt, 0, 0.9)), d = E.sine(lt / L.dur);
     css(L.el, { opacity: Math.min(1, e * 1.5) * (1 - E.sine(span(lt, 1.75, 1.95))) });
-    css(L.win, { transform: `translate(250px, ${60 + (1 - e) * 240}px) scale(${lerp(0.5, 0.62, e) * lerp(1, 1.02, d)}) rotateX(${(1 - e) * 28 + 4}deg) rotateY(${-16 + (1 - e) * -14 + d * 4}deg) rotateZ(${(1 - e) * 5}deg)` });
+    css(L.win, { transform: `translate(${T ? 250 : 0}px, ${60 + (1 - e) * 240}px) scale(${lerp(0.5, 0.62, e) * lerp(1, 1.02, d)}) rotateX(${(1 - e) * 28 + 4}deg) rotateY(${-16 + (1 - e) * -14 + d * 4}deg) rotateZ(${(1 - e) * 5}deg)` });
     css(L.page, { borderRadius: '0 0 22px 22px' }); css(L.frameEl, { opacity: 1 });
     css(L.back, { opacity: 0 });
     L.chips.forEach((c) => css(c, { opacity: 0 }));
@@ -175,19 +178,18 @@ window.CUTS.intro2 = (api) => {
 
   // ------------------------------------------------------------ 0:55.1 "Most of the code was written by Claude Opus 5.5."
   streak(55.1);
-  add({ type: 'code', at: 55.1, dur: 3.3, fx: (lt, L) => { css(L.el, { opacity: E.sine(span(lt, 0, 0.3)) * (1 - E.sine(span(lt, L.dur - 0.2, L.dur))), filter: 'brightness(0.32)' }); drawCode(L, lt + 0.4); } });
+  add({ type: 'code', at: 55.1, dur: 3.3, fx: (lt, L) => { css(L.el, { opacity: E.sine(span(lt, 0, 0.3)) * (1 - E.sine(span(lt, L.dur - 0.2, L.dur))), filter: `brightness(${T ? 0.32 : 0.75})` }); drawCode(L, lt + 0.4); } });
   type(55.3, 3.0, [['Most of the code, written by', 'b']], { size: 76, align: 'center', y: 380 });
   type(55.6, 2.7, [['Claude Opus 5.5', 'i']], { size: 190, align: 'center', y: 470, keep: false });
 
-  // ------------------------------------------------------------ 0:58.4 "But the first version looked nothing like this."
-  room(58.4, 8.0);
-  [['15a_v1_brick', 60.4, 2.0, 0.4, [['The cliff:', 'b'], ['crazy paving.', 'i']]], ['15c_v1_sculpture', 62.4, 2.0, 0.5, [['The hero:', 'b'], ['a random sculpture.', 'i']]], ['15d_v1_room', 64.4, 2.0, 0.5, [['And', 'b'], ['no kitchen.', 'i']]]].forEach(([src, at, dur, from, parts], i) => {
-    card(i === 0 ? '15b_v1_cliff' : src, at, dur, from, { filter: V1_LOOK, tilt: i % 2 ? -7 : -11 });
-    type(at, dur, parts, { x: 96, y: 370, width: 760, size: 112, stagger: 0.04 });
-  });
-  card('15a_v1_brick', 58.4, 2.0, 0.4, { filter: V1_LOOK, x: 480, y: 180, w: 960, tilt: 0 });
-  type(58.5, 1.9, [['The first version', 'b'], ['looked nothing like this.', 'i']], { size: 100, align: 'center', y: 800 });
-  eyebrow(60.4, 6.0, 'Version 1');
+  // ------------------------------------------------------------ 0:58.4 "But it didn't start like this. This is version one."
+  room(58.4, 4.3);
+  card('15b_v1_cliff', 58.4, 2.15, 0.4, { filter: V1_LOOK, x: 480, y: 170, w: 960, tilt: 0 });
+  type(58.5, 2.0, [['But it didn’t', 'b'], ['start like this.', 'i']], { size: 104, align: 'center', y: 790 });
+  card('15d_v1_room', 60.55, 2.15, 0.5, { filter: V1_LOOK, x: 480, y: 170, w: 960, tilt: 0 });
+  type(60.6, 2.0, [['This is', 'b'], ['version one.', 'i']], { size: 104, align: 'center', y: 790 });
+  eyebrow(58.5, 4.2, 'Version 1');
+  OFF = -3.7;
   // the quick flash of v1
   [['15a_v1_brick', 1.9], ['15b_v1_cliff', 2.4], ['15c_v1_sculpture', 2.2], ['15d_v1_room', 2.4], ['15b_v1_cliff', 0.6], ['15c_v1_sculpture', 1.2]]
     .forEach(([src, from], i) => add({ src, at: 66.4 + i * 0.1, dur: 0.1, from, speed: 0, fx: drift({ s: [1.04, 1.04], filter: `${V1_LOOK} contrast(1.2)` }) }));
@@ -204,7 +206,7 @@ window.CUTS.intro2 = (api) => {
 
   // ------------------------------------------------------------ 1:10.5 "The prompts I used, the mistakes, and the few tricks..."
   room(70.5, 5.0);
-  add({ at: 70.5, dur: 1.75, cls: 'k-prompt', html: '<div class="k-pc"><span class="cap">Prompt</span><p>“can it be a paper plan that we roll smoothly instead”</p></div>', fx: (lt, L) => {
+  add({ at: 70.5, dur: 1.75, cls: 'k-prompt', html: `<div class="k-pc"${T ? '' : ' style="left:510px"'}><span class="cap">Prompt</span><p>“can it be a paper plan that we roll smoothly instead”</p></div>`, fx: (lt, L) => {
     const e = E.outExpo(span(lt, 0, 0.7)), o = E.inCubic(span(lt, L.dur - 0.2, L.dur));
     css(L.el.firstChild, { opacity: Math.min(1, e * 1.5) * (1 - o), transform: `translate(${(1 - e) * 200}px, ${(1 - e) * 40}px) perspective(1400px) rotateY(${(1 - e) * -30 - 9}deg)` });
   } });
@@ -216,9 +218,9 @@ window.CUTS.intro2 = (api) => {
 
   // 1:15.5 "...turn an architectural plan, or any idea,"
   streak(75.55);
-  add({ src: 'c7_plan', at: 75.55, dur: 2.55, from: 6.5, speed: 0.3, crop: moves([[6.5, { x: 960, y: 540, w: 1500 }], [7.3, { x: 960, y: 540, w: 1360 }]]), fx: drift({ s: [1, 1], filter: 'brightness(0.3)' }) });
-  type(75.65, 1.3, [['An architectural', 'b'], ['plan,', 'i']], { size: 120, align: 'center', y: 450 });
-  type(77.0, 1.1, [['or any', 'b'], ['idea,', 'i']], { size: 150, align: 'center', y: 450 });
+  add({ src: 'c7_plan', at: 75.55, dur: 2.55, from: 6.5, speed: 0.3, crop: moves([[6.5, { x: 960, y: 540, w: 1500 }], [7.3, { x: 960, y: 540, w: 1360 }]]), fx: drift({ s: [1, 1], filter: `brightness(${T ? 0.3 : 0.7})` }) });
+  type(75.65, 1.3, [['Direct', 'b'], ['AI', 'i']], { size: 150, align: 'center', y: 450 });
+  type(77.0, 1.1, [['from one', 'b'], ['idea', 'i']], { size: 150, align: 'center', y: 450 });
 
   // ------------------------------------------------------------ 1:18 "...into something like this."
   streak(78.1);
@@ -228,5 +230,5 @@ window.CUTS.intro2 = (api) => {
     rise([L.el.querySelector('.end__s i')], lt, 0.7, { dur: 1.2 });
   } });
 
-  return { duration: 84, fadeIn: 0.5, grain: () => 0.07 };
+  return { duration: 80.3, fadeIn: 0.5, grain: () => 0.07 };
 };

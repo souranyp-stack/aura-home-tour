@@ -270,8 +270,8 @@ branch the desk opening was built on. The delete command is only typed, never ru
 
 # Intro, second version
 
-The same 1:24 and the same words as the first intro, in a kinetic-type language
-(`node edit/render.mjs --cut=intro2`). `out/aura-intro-broll-v2.mp4`, titled only.
+The hook as rewritten after the first intro, without the list of version one's flaws, in a kinetic-type language
+(`node edit/render.mjs --cut=intro2`, add `--clean` for no titles). `out/aura-intro-broll-v3.mp4`, 1:20.
 Bold tight sans against italic serif, words replacing each other on the beat, cards
 turning in from depth, and thin bronze light between scenes. `c7_wire` is the real model
 with a wireframe material on the same camera as `c7_real`, and `c7_plan` is the real
