@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter+Tight:wght@600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0}html,body{width:1280px;height:720px;overflow:hidden;background:#05060f}
+#s{position:absolute;inset:0;overflow:hidden}.abs{position:absolute}
+.grade{filter:saturate(1.4) contrast(1.14) brightness(1.04)}
+.t{font-family:Anton;text-transform:uppercase;line-height:1;letter-spacing:.005em;color:#fff;filter:drop-shadow(0 6px 0 rgba(0,0,0,.55)) drop-shadow(0 14px 26px rgba(0,0,0,.65))}
+.gold{background:linear-gradient(#fff3c9 6%,#ffc44d 46%,#ff8a16 92%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.chip{position:absolute;display:flex;align-items:center;gap:12px;padding:12px 20px;border-radius:14px;background:rgba(9,9,20,.86);border:2px solid rgba(255,206,120,.7);font:700 25px 'Inter Tight';color:#fff;box-shadow:0 0 30px rgba(255,170,70,.45)}
+.chip b{color:#ffc44d;font-weight:700}
+.url{position:absolute;display:flex;align-items:center;gap:9px;padding:9px 20px;border-radius:30px;background:rgba(8,8,16,.88);border:1.5px solid rgba(255,255,255,.28);font:600 23px 'Inter Tight';color:#fff}
+.url i{width:11px;height:11px;border-radius:50%;background:#62d36a;box-shadow:0 0 10px #62d36a}
+#me{position:absolute;filter:drop-shadow(0 0 2px rgba(255,255,255,.6)) drop-shadow(-10px 0 34px rgba(255,186,90,.55)) saturate(1.08) contrast(1.05)}
+.seam{position:absolute;top:-40px;bottom:-40px;width:6px;background:#fff0cf;box-shadow:0 0 30px 12px #ffb765,0 0 90px 34px rgba(255,150,50,.7);transform:rotate(9deg)}
+</style>
+<div id="s"></div>
+<script>
+const v=new URLSearchParams(location.search).get('v')||'a',s=document.getElementById('s');
+const cursor=(x,y,z=1)=>`<svg class="abs" style="left:${x}px;top:${y}px;filter:drop-shadow(0 5px 10px rgba(0,0,0,.7))" width="${70*z}" height="${70*z}" viewBox="0 0 24 24"><path d="M5 2.5v17.2l4.7-4.3 3 6.6 3-1.4-3-6.4 6.3-.5z" fill="#fff" stroke="#111" stroke-width="1.1" stroke-linejoin="round"/></svg>`;
+const me=(right,h,bottom=-14)=>`<img id="me" src="src/me.png" style="right:${right}px;bottom:${bottom}px;height:${h}px">`;
+const shade='<div class="abs" style="inset:0;background:linear-gradient(rgba(6,7,28,.9),rgba(6,7,28,.5) 34%,transparent 58%)"></div>';
+const side='<div class="abs" style="inset:0;background:linear-gradient(90deg,transparent 58%,rgba(5,6,20,.82) 86%)"></div>';
+const H={
+a:`<img class="abs grade" src="src/gold.png" style="width:1300px;left:-150px;top:20px">${shade}${side}
+ <div class="t abs" style="left:34px;top:18px;font-size:86px">This is</div>
+ <div class="t abs gold-w" style="left:30px;top:100px;font-size:188px"><span class="gold">a website</span></div>
+ <div class="url" style="left:210px;top:470px"><i></i>aura-living-sanctuary.aura.build</div>${cursor(540,510)}
+ ${me(-90,640)}
+ <div class="chip" style="left:30px;bottom:26px">Claude <b>Opus 5.5</b> + Three.js</div>`,
+b:`<img class="abs grade" src="src/plan.png" style="width:2300px;left:-1090px;top:-340px;filter:saturate(1.5) contrast(1.15) brightness(1.08)">
+ <div class="abs" style="inset:0;clip-path:polygon(38% 0,100% 0,100% 100%,27% 100%)"><img class="abs grade" src="src/gold.png" style="width:1240px;left:40px;top:60px">${side}</div>
+ <div class="seam" style="left:32.5%"></div>${shade}
+ <div class="t abs" style="left:34px;top:20px;font-size:100px">From a plan</div>
+ <div class="t abs" style="left:30px;top:124px;font-size:122px"><span class="gold">To a 3D website</span></div>
+ ${me(-90,640)}
+ <div class="chip" style="left:30px;bottom:26px">Claude <b>Opus 5.5</b> + Three.js</div>`,
+c:`<img class="abs grade" src="src/gold.png" style="width:1300px;left:-150px;top:20px">${shade}${side}
+ <div class="t abs" style="left:30px;top:6px;font-size:300px"><span class="gold">0</span></div>
+ <div class="t abs" style="left:216px;top:32px;font-size:130px">Images</div>
+ <div class="t abs" style="left:216px;top:166px;font-size:118px"><span class="gold">All code</span></div>
+ ${me(-90,640)}
+ <div class="chip" style="left:30px;bottom:26px">Claude <b>Opus 5.5</b> + Three.js</div>`};
+s.innerHTML=H[v];
+</script>
